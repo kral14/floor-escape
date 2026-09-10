@@ -1,0 +1,33 @@
+[
+  {
+    "code": "START-DIAMONDS-2026",
+    "blueDiamonds": 20,
+    "redDiamonds": 10,
+    "used": false,
+    "createdAt": "2026-09-10T15:00:00.000Z"
+  },
+  {
+    "code": "GIFT-QVDZ-NV8H-TSAV",
+    "blueDiamonds": 15,
+    "redDiamonds": 5,
+    "used": true,
+    "createdAt": "2026-09-10T11:10:13.800Z",
+    "usedAt": "2026-09-10T11:10:17.655Z"
+  },
+  {
+    "code": "GIFT-PFXM-PM5D-QRCA",
+    "blueDiamonds": 5,
+    "redDiamonds": 3,
+    "used": true,
+    "createdAt": "2026-09-10T11:13:21.646151+00:00",
+    "usedAt": "2026-09-10T11:13:24.163335+00:00"
+  },
+  {
+    "code": "GIFT-MC3D-EBEH-HS44",
+    "blueDiamonds": 1000,
+    "redDiamonds": 940,
+    "used": true,
+    "createdAt": "2026-09-10T11:24:49.519361+00:00",
+    "usedAt": "2026-09-10T11:24:57.778087+00:00"
+  }
+]

@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Floor Escape: Trap Bullet Deluxe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; outline: none !important; }
+        body { font-family: 'Rajdhani', sans-serif; background: #07070d; color: #f1f5f9; overflow: hidden; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+        .glass-panel {
+            background: rgba(18, 18, 30, 0.82);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: rgba(26, 26, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .glass-card:hover:not(.disabled) {
+            border-color: rgba(0, 255, 204, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 255, 204, 0.18);
+        }
+
+        .glass-card.disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.8); }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .btn-shimmer {
+            background: linear-gradient(90deg, #00ffcc 0%, #00b8ff 50%, #00ffcc 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        .btn-diamond {
+            background: linear-gradient(90deg, #38bdf8 0%, #818cf8 50%, #38bdf8 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        #toast-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .toast-msg {
+            animation: fadeInOut 2.5s forwards ease-in-out;
+            white-space: nowrap;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-12px) scale(0.92); }
+            12% { opacity: 1; transform: translateY(0) scale(1); }
+            85% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-15px) scale(0.95); }
+        }
+
+        .stat-panel {
+            background: rgba(13, 13, 26, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .trap-icon-box {
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .glass-card:hover .trap-icon-box { transform: scale(1.12) rotate(-4deg); }
+
+        .d-pad-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.1s;
+        }
+        .d-pad-btn:active { background: rgba(0, 255, 204, 0.35); transform: scale(0.9); }
+
+        .keybind-badge {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            transition: all 0.2s ease;
+            min-width: 34px;
+            text-align: center;
+        }
+        .keybind-badge:hover {
+            border-color: #00ffcc;
+            background: rgba(0, 255, 204, 0.25);
+            transform: scale(1.08);
+        }
+        .keybind-badge.recording {
+            animation: pulseRecord 0.8s infinite alternate;
+            background: rgba(244, 63, 94, 0.45);
+            border-color: #f43f5e;
+            color: #ffffff;
+            font-weight: 900;
+        }
+        @keyframes pulseRecord {
+            from { box-shadow: 0 0 6px rgba(244, 63, 94, 0.5); }
+            to { box-shadow: 0 0 16px rgba(244, 63, 94, 1); }
+        }
+
+        .shake {
+            animation: screenShake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes screenShake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+            40%, 60% { transform: translate3d(3px, 0, 0); }
+        }
+
+        @media (max-width: 640px) {
+            .glass-panel { padding: 8px; }
+            .stat-panel { padding: 4px 8px; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen w-screen overflow-hidden bg-slate-950 select-none m-0 p-2">
+
+    <!-- SABİT ÖLÇÜLÜ ƏSAS OYUN ÇƏRÇİVƏSİ (1140x750 px) -->
+    <div id="game-app-wrapper" style="width: 1140px; height: 750px; min-width: 1140px; max-width: 1140px; min-height: 750px; max-height: 750px;" class="flex flex-col justify-between items-center relative select-none">
+
+        <!-- ÜST STATİSTİKA VƏ MENYU PANELİ -->
+        <header class="w-full glass-panel rounded-2xl p-3 flex justify-between items-center shadow-2xl z-20 gap-2 shrink-0" style="height: 60px; min-height: 60px; max-height: 60px;">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-orbitron font-bold text-lg text-slate-950 shadow-lg shadow-cyan-500/30">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+                <h1 class="font-orbitron font-extrabold text-sm sm:text-base tracking-wider text-cyan-400 leading-tight">FLOOR ESCAPE</h1>
+                <p class="text-[11px] text-slate-400 font-semibold flex items-center gap-2">
+                    <span>LAVAYA MƏRMİ ATAN</span>
+                    <span class="text-amber-400 font-orbitron text-[10px]" id="stat-best-floor">🏆 REKORD: 1</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 my-1 sm:my-0 flex-wrap">
+            <!-- QIZIL -->
+            <div class="flex items-center gap-2 stat-panel px-3 py-1.5 rounded-xl border border-amber-500/30">
+                <i class="fa-solid fa-coins text-amber-400 text-base animate-pulse"></i>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-400 leading-none">QIZIL</span>
+                    <span id="stat-gold" class="font-orbitron text-amber-300 font-bold text-sm sm:text-base">0</span>
+                </div>
+            </div>
+
+            <!-- ALMAZ (DIAMOND) -->
+            <div class="flex items-center gap-2 stat-panel px-3 py-1.5 rounded-xl border border-sky-400/40 bg-sky-950/20">
+                <i class="fa-solid fa-gem text-sky-400 text-base animate-bounce"></i>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-sky-300 leading-none font-bold">ALMAZ</span>
+                    <span id="stat-diamonds" class="font-orbitron text-sky-200 font-black text-sm sm:text-base">0</span>
+                </div>
+            </div>
+
+            <!-- QAT -->
+            <div class="flex items-center gap-2 stat-panel px-3 py-1.5 rounded-xl border border-cyan-500/30">
+                <i class="fa-solid fa-stairs text-cyan-400 text-base"></i>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-400 leading-none">QAT</span>
+                    <span id="stat-floor" class="font-orbitron text-cyan-300 font-bold text-sm sm:text-base">1</span>
+                </div>
+            </div>
+
+            <!-- TƏLƏB OLUNAN XAL BARI -->
+            <div class="flex items-center gap-2 stat-panel px-3 py-1.5 rounded-xl border border-emerald-500/30 min-w-[105px] sm:min-w-[125px]">
+                <i class="fa-solid fa-shield-halved text-emerald-400 text-base"></i>
+                <div class="flex flex-col w-full">
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                        <span>XAL</span>
+                        <span id="stat-req-txt" class="text-emerald-300 font-bold">0/3</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div id="stat-req-bar" class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full w-0% transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOMBO -->
+            <div class="flex items-center gap-2 stat-panel px-2.5 py-1.5 rounded-xl border border-purple-500/30 hidden sm:flex">
+                <i class="fa-solid fa-fire text-purple-400 text-base"></i>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-400 leading-none">KOMBO</span>
+                    <span id="stat-combo" class="font-orbitron text-purple-300 font-bold text-sm">0</span>
+                </div>
+            </div>
+
+            <!-- DASH COOLDOWN BARI -->
+            <div class="flex items-center gap-2 stat-panel px-2.5 py-1.5 rounded-xl border border-blue-500/30">
+                <i class="fa-solid fa-forward text-blue-400 text-base"></i>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-400 leading-none">DASH</span>
+                    <span id="stat-dash-status" class="font-orbitron text-blue-300 font-bold text-xs">HAZIR</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- ALMAZ SAYĞACI (LABORATORİYA YALNIZ OYUN BİTDİKDƏ AÇILIR) -->
+            <div class="px-3 py-1.5 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-300 font-orbitron font-bold text-xs flex items-center gap-1.5 shadow-sm" title="Almazlar: Yalnız oyun bitdikdən sonra Laboratoriyada istifadə olunur">
+                <i class="fa-solid fa-gem text-sky-400 text-xs"></i>
+                <span id="stat-header-diamonds">0 💎</span>
+            </div>
+            <button tabindex="-1" id="btn-sound" onclick="toggleAudio(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 transition" title="Səsi Aç/Bağla">
+                <i class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+            <button tabindex="-1" id="btn-pause" onclick="togglePause(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-amber-400 transition" title="Fasilə">
+                <i class="fa-solid fa-pause text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="toast-container"></div>
+
+    <!-- ƏSAS OYUN VƏ MAĞAZA -->
+    <main id="main-view" style="width: 1140px; height: 680px; min-width: 1140px; max-width: 1140px; min-height: 680px; max-height: 680px;" class="flex flex-row gap-3 relative overflow-hidden shrink-0">
+        
+        <!-- OYUN CANVAS-I -->
+        <div id="canvas-container" style="width: 800px; height: 680px; min-width: 800px; max-width: 800px; min-height: 680px; max-height: 680px;" class="relative bg-slate-950/95 rounded-2xl overflow-hidden glass-panel border border-slate-800 shadow-inner flex shrink-0">
+            
+            <canvas id="gameCanvas" width="800" height="680" style="width: 800px; height: 680px; min-width: 800px; max-width: 800px; min-height: 680px; max-height: 680px; display: block;" class="cursor-crosshair bg-slate-950/90"></canvas>
+
+            <!-- QAT TAYMERİ -->
+            <div class="absolute top-4 right-4 glass-panel px-3 py-1.5 rounded-full border border-slate-700 flex items-center gap-2 pointer-events-none z-10">
+                <i class="fa-solid fa-clock text-cyan-400 text-xs"></i>
+                <span id="floor-timer" class="font-orbitron text-xs text-slate-300 tracking-wider">⏱ 0s</span>
+            </div>
+
+            <!-- SƏRHƏD STATUSU -->
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 glass-panel px-4 py-1.5 rounded-full border border-slate-700 flex items-center gap-2 transition-all duration-300 pointer-events-none z-10">
+                <div id="border-icon-dot" class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></div>
+                <span id="border-status-text" class="font-orbitron text-xs text-slate-300 tracking-wider">SƏRHƏD: BAĞLI</span>
+            </div>
+
+            <!-- NÖVBƏTİ SİKKƏ GERİ SAYIM TAYMERİ -->
+            <div class="absolute top-4 left-4 glass-panel px-3 py-1.5 rounded-xl border border-amber-500/40 flex items-center gap-2 pointer-events-none z-10 bg-slate-950/70 shadow-lg">
+                <i class="fa-solid fa-coins text-amber-400 text-xs animate-spin" style="animation-duration: 4s;"></i>
+                <div class="flex flex-col">
+                    <span class="text-[9px] text-amber-300/80 font-semibold leading-none">NÖVBƏTİ SİKKƏ</span>
+                    <span id="coin-countdown-timer" class="font-orbitron text-xs text-amber-300 font-bold">5.0s</span>
+                </div>
+            </div>
+
+            <!-- MOBİL TOXUNMA NƏZARƏTİ (D-PAD) -->
+            <div id="touch-controls" class="absolute bottom-4 left-4 z-20 flex flex-col items-center gap-1 opacity-80 sm:hidden">
+                <button tabindex="-1" class="d-pad-btn w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center" ontouchstart="handleTouchStart('up')" ontouchend="handleTouchEnd('up')">
+                    <i class="fa-solid fa-angle-up text-xl"></i>
+                </button>
+                <div class="flex gap-1">
+                    <button tabindex="-1" class="d-pad-btn w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center" ontouchstart="handleTouchStart('left')" ontouchend="handleTouchEnd('left')">
+                        <i class="fa-solid fa-angle-left text-xl"></i>
+                    </button>
+                    <button tabindex="-1" class="d-pad-btn w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center" ontouchstart="handleTouchStart('down')" ontouchend="handleTouchEnd('down')">
+                        <i class="fa-solid fa-angle-down text-xl"></i>
+                    </button>
+                    <button tabindex="-1" class="d-pad-btn w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center" ontouchstart="handleTouchStart('right')" ontouchend="handleTouchEnd('right')">
+                        <i class="fa-solid fa-angle-right text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MOBİL ATƏŞ VƏ DASH DÜYMƏLƏRİ -->
+            <div class="absolute bottom-4 right-4 z-20 flex gap-2 sm:hidden">
+                <button tabindex="-1" onclick="triggerPlayerDash(); this.blur();" class="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center shadow-lg shadow-blue-500/40 active:scale-95 transition-transform" title="Dash">
+                    <i class="fa-solid fa-forward text-lg"></i>
+                </button>
+                <button tabindex="-1" onclick="fireBullet('wall'); this.blur();" class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-600 text-slate-950 font-bold flex items-center justify-center shadow-lg shadow-amber-500/40 active:scale-95 transition-transform" title="Barrikada At">
+                    <i class="fa-solid fa-cubes text-xl"></i>
+                </button>
+            </div>
+
+
+
+            <!-- MODAL: QAT KEÇİLDİ -->
+            <div id="floor-clear-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-30 flex flex-col justify-center items-center p-6 text-center transition-all duration-300 hidden pointer-events-auto select-none">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 text-3xl mb-3 animate-bounce">
+                    <i class="fa-solid fa-gem"></i>
+                </div>
+                <h2 class="font-orbitron font-black text-2xl text-sky-400 mb-1">QAT FƏTH EDİLDİ!</h2>
+                <p id="floor-clear-desc" class="text-slate-300 text-xs mb-2">Növbəti qata keçirsiniz...</p>
+                <div class="px-4 py-1.5 rounded-full bg-sky-500/20 border border-sky-400/50 text-sky-300 font-orbitron text-xs font-bold animate-pulse">
+                    💎 +1 ALMAZ QAZANDINIZ!
+                </div>
+            </div>
+
+            <!-- MODAL: MƏĞLUBİYYƏT EKRANI -->
+            <div id="modal-overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex flex-col justify-center items-center p-6 text-center transition-all duration-300 hidden">
+                <div class="w-20 h-20 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 text-4xl mb-4 animate-bounce">
+                    <i class="fa-solid fa-skull"></i>
+                </div>
+                <h2 class="font-orbitron font-black text-3xl text-rose-500 mb-2">MƏĞLUB OLDUNUZ!</h2>
+                <p class="text-slate-300 max-w-md text-sm mb-6">Lava dalğası sizi yaxaladı! Qalıcı yüksəltmələrdən istifadə edərək daha güclü başlayın.</p>
+
+                <div class="grid grid-cols-4 gap-3 w-full max-w-sm mb-6 text-left">
+                    <div class="glass-card p-2 rounded-xl text-center">
+                        <span class="text-[10px] text-slate-400 block">QAT</span>
+                        <span id="final-floor" class="font-orbitron font-bold text-cyan-400 text-lg">1</span>
+                    </div>
+                    <div class="glass-card p-2 rounded-xl text-center">
+                        <span class="text-[10px] text-slate-400 block">QIZIL</span>
+                        <span id="final-gold" class="font-orbitron font-bold text-amber-400 text-lg">0</span>
+                    </div>
+                    <div class="glass-card p-2 rounded-xl text-center">
+                        <span class="text-[10px] text-slate-400 block">ATILAN</span>
+                        <span id="final-traps" class="font-orbitron font-bold text-purple-400 text-lg">0</span>
+                    </div>
+                    <div class="glass-card p-2 rounded-xl text-center">
+                        <span class="text-[10px] text-slate-400 block">ALMAZ</span>
+                        <span id="final-diamonds" class="font-orbitron font-bold text-sky-400 text-lg">0</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button tabindex="-1" onclick="togglePermanentUpgradesModal(); this.blur();" class="btn-diamond text-slate-950 font-orbitron font-bold px-5 py-2.5 rounded-xl shadow-lg active:scale-95 transition text-xs">
+                        <i class="fa-solid fa-gem mr-1"></i>YÜKSƏLTMƏLƏR
+                    </button>
+                    <button tabindex="-1" onclick="restartGame(); this.blur();" class="btn-shimmer text-slate-950 font-orbitron font-bold px-6 py-2.5 rounded-xl shadow-lg hover:opacity-90 transition active:scale-95 text-xs">
+                        <i class="fa-solid fa-rotate-right mr-1"></i>YENİDƏN BAŞLA
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODAL: FASİLƏ -->
+            <div id="pause-overlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-30 flex flex-col justify-center items-center p-6 text-center hidden">
+                <h2 class="font-orbitron font-bold text-2xl text-amber-400 mb-4">⏸ OYUN DAYANDI</h2>
+                <p class="text-slate-400 text-xs mb-6 max-w-sm">W, A, S, D və ya Ox düymələri ilə hərəkət edin.<br><b>SPACE</b> ilə Dash edin.<br>Qısayollarla mərmiləri dərhal lavaya doğru atın!</p>
+                <button tabindex="-1" onclick="togglePause(); this.blur();" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-orbitron font-bold px-6 py-2.5 rounded-xl shadow-lg transition">
+                    DAVAM ET
+                </button>
+            </div>
+
+            <!-- MODAL: QALICI YÜKSƏLTMƏLƏR MENYUSU (DIAMOND SHOP) -->
+            <div id="perm-upgrades-modal" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-40 flex flex-col justify-center items-center p-4 transition-all duration-300 hidden">
+                <div class="glass-panel p-5 rounded-3xl w-full max-w-lg border border-sky-500/40 shadow-2xl flex flex-col gap-4">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400 text-lg">
+                                <i class="fa-solid fa-gem"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-orbitron font-black text-sm sm:text-base text-slate-100">QALICI LABORATORİYA</h2>
+                                <p class="text-[10px] text-slate-400 font-semibold">Maksimum Lv.10. Qiymət: səviyyə qədər Almaz (1-9 💎)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-sky-500/15 border border-sky-400/40">
+                                <i class="fa-solid fa-gem text-sky-400 text-xs animate-pulse"></i>
+                                <span id="modal-diamonds-count" class="font-orbitron text-sky-300 font-bold text-xs">0 💎</span>
+                            </div>
+                            <button tabindex="-1" onclick="togglePermanentUpgradesModal(); this.blur();" class="w-8 h-8 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-white">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- 1. BAZA SÜRƏT -->
+                        <div class="glass-card p-3 rounded-2xl flex flex-col justify-between gap-2 border border-slate-800">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-orbitron text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-bolt text-cyan-400"></i> Baza Sürət
+                                    </span>
+                                    <span id="perm-lvl-speed" class="text-[10px] font-orbitron font-bold text-cyan-400 bg-cyan-950/50 px-2 py-0.5 rounded-md">Lv.1 (4.0)</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Yeni oyuna başlarkən oyunçunun baza sürəti (Max Lv.10)</p>
+                            </div>
+                            <button tabindex="-1" id="btn-perm-speed" onclick="buyPermanentUpgrade('speed'); this.blur();" class="w-full py-1.5 rounded-xl btn-diamond text-slate-950 font-orbitron font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
+                                <span>YÜKSƏLT</span>
+                                <span class="bg-slate-950/30 text-white px-2 py-0.5 rounded-md text-[10px]">1 💎</span>
+                            </button>
+                        </div>
+
+                        <!-- 2. BAZA MAQNİT SAHƏSİ -->
+                        <div class="glass-card p-3 rounded-2xl flex flex-col justify-between gap-2 border border-slate-800">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-orbitron text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-magnet text-amber-400"></i> Baza Maqnit
+                                    </span>
+                                    <span id="perm-lvl-magnet" class="text-[10px] font-orbitron font-bold text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-md">Lv.1 (45px)</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Sikkələri daha uzaqdan cəzb etmə radiusu (Max Lv.10)</p>
+                            </div>
+                            <button tabindex="-1" id="btn-perm-magnet" onclick="buyPermanentUpgrade('magnet'); this.blur();" class="w-full py-1.5 rounded-xl btn-diamond text-slate-950 font-orbitron font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
+                                <span>YÜKSƏLT</span>
+                                <span class="bg-slate-950/30 text-white px-2 py-0.5 rounded-md text-[10px]">1 💎</span>
+                            </button>
+                        </div>
+
+                        <!-- 3. SİKKƏNİN QIZIL DƏYƏRİ -->
+                        <div class="glass-card p-3 rounded-2xl flex flex-col justify-between gap-2 border border-slate-800">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-orbitron text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-coins text-yellow-400"></i> Sikkə Dəyəri
+                                    </span>
+                                    <span id="perm-lvl-coin-val" class="text-[10px] font-orbitron font-bold text-yellow-400 bg-yellow-950/50 px-2 py-0.5 rounded-md">Lv.1 (+0)</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Yerdən yığılan hər sikkənin verdiyi əlavə qızıl (Max Lv.10)</p>
+                            </div>
+                            <button tabindex="-1" id="btn-perm-coin-val" onclick="buyPermanentUpgrade('coinVal'); this.blur();" class="w-full py-1.5 rounded-xl btn-diamond text-slate-950 font-orbitron font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
+                                <span>YÜKSƏLT</span>
+                                <span class="bg-slate-950/30 text-white px-2 py-0.5 rounded-md text-[10px]">1 💎</span>
+                            </button>
+                        </div>
+
+                        <!-- 4. SİKKƏNİN ÇIXIŞ VAXTI (TEZLİYİ) -->
+                        <div class="glass-card p-3 rounded-2xl flex flex-col justify-between gap-2 border border-slate-800">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-orbitron text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-stopwatch text-emerald-400"></i> Sikkə Çıxış Vaxtı
+                                    </span>
+                                    <span id="perm-lvl-coin-rate" class="text-[10px] font-orbitron font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-md">Lv.1 (5.0s)</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Sikkələrin düşmə intervalını azaldır (Max Lv.10)</p>
+                            </div>
+                            <button tabindex="-1" id="btn-perm-coin-rate" onclick="buyPermanentUpgrade('coinRate'); this.blur();" class="w-full py-1.5 rounded-xl btn-diamond text-slate-950 font-orbitron font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition">
+                                <span>YÜKSƏLT</span>
+                                <span class="bg-slate-950/30 text-white px-2 py-0.5 rounded-md text-[10px]">1 💎</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-between items-center gap-3">
+                        <button tabindex="-1" onclick="togglePermanentUpgradesModal(); this.blur();" class="px-4 py-2 rounded-xl glass-card text-xs font-orbitron font-bold text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-left text-[11px]"></i> MƏĞLUBİYYƏT EKRANI
+                        </button>
+                        <button tabindex="-1" onclick="togglePermanentUpgradesModal(); restartGame(); this.blur();" class="flex-1 py-2 rounded-xl btn-shimmer text-slate-950 font-orbitron font-bold text-xs transition active:scale-95 text-center shadow-lg flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-rotate-right text-xs"></i> YENİDƏN BAŞLA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL: MƏRMİ MAĞAZASI VƏ SÜRƏT/MAQNİT GÜCLƏNDİRMƏSİ -->
+        <aside style="width: 328px; height: 680px; min-width: 328px; max-width: 328px; min-height: 680px; max-height: 680px;" class="glass-panel rounded-2xl p-4 flex flex-col gap-3 justify-between overflow-y-auto shrink-0">
+            
+            <div>
+                <!-- MAĞAZA BAŞLIĞI VƏ QISAYOL DÜYMƏSİ -->
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-crosshairs text-cyan-400 text-sm"></i>
+                        <h2 class="font-orbitron font-bold text-sm text-slate-200">MƏRMİ MAĞAZASI</h2>
+                    </div>
+                    
+                    <button tabindex="-1" id="btn-toggle-keybinds" onclick="toggleKeybindMode(); this.blur();" class="px-2.5 py-1 rounded-lg text-[11px] font-orbitron font-bold flex items-center gap-1.5 glass-card border border-cyan-500/40 text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition shadow-sm" title="Qısayolları Dəyişdir">
+                        <i class="fa-solid fa-keyboard text-cyan-400"></i>
+                        <span id="keybind-mode-label">Qısayol</span>
+                    </button>
+                </div>
+
+                <div id="keybind-help-banner" class="hidden mb-2 p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px] text-cyan-300 flex items-center justify-between">
+                    <span><i class="fa-solid fa-circle-info mr-1"></i> Qısayol üçün nişana klikləyib istədiyiniz düyməni (məs: TAB, A, 1) basın.</span>
+                    <button tabindex="-1" onclick="toggleKeybindMode(); this.blur();" class="text-slate-400 hover:text-white ml-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="flex flex-col gap-2" id="shop-items-container">
+                    
+                    <!-- 1. BARRİKADA (SARI/QIZILI KUBLAR) -->
+                    <div id="shop-wall" onclick="fireBullet('wall')" class="glass-card p-2.5 rounded-xl flex items-center gap-3 cursor-pointer relative overflow-hidden group">
+                        <div class="w-11 h-11 rounded-2xl bg-amber-950/60 border border-amber-500/40 flex items-center justify-center trap-icon-box shadow-inner">
+                            <div class="flex flex-col items-center justify-center gap-0.5">
+                                <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                <div class="flex gap-0.5">
+                                    <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                    <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                </div>
+                                <div class="flex gap-0.5">
+                                    <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                    <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                    <div class="w-2.5 h-2.5 bg-amber-400 rounded-sm shadow-sm shadow-amber-400/50"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h3 class="font-orbitron text-xs font-bold text-slate-100">Barrikada</h3>
+                                <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">+1 Xal</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">2.5s lavanı dondurur</p>
+                            <div class="mt-1 flex justify-between items-center text-xs">
+                                <span class="text-amber-400 font-bold font-orbitron text-sm" id="price-wall">30 🪙</span>
+                                <span class="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">AT <i class="fa-solid fa-arrow-down"></i></span>
+                            </div>
+                        </div>
+                        <button tabindex="-1" onclick="startRebindKey('wall', event); this.blur();" id="key-badge-wall" class="keybind-badge px-2 py-1 rounded-lg text-xs font-orbitron font-black text-cyan-300" title="Qısayolu dəyişmək üçün klikləyin">
+                            1
+                        </button>
+                    </div>
+
+                    <!-- 2. BUZ (MAVİ QAR DƏNƏCİYİ) -->
+                    <div id="shop-ice" onclick="fireBullet('ice')" class="glass-card p-2.5 rounded-xl flex items-center gap-3 cursor-pointer relative overflow-hidden group">
+                        <div class="w-11 h-11 rounded-2xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center trap-icon-box shadow-inner text-cyan-400 text-xl">
+                            <i class="fa-solid fa-snowflake drop-shadow-[0_0_8px_rgba(0,255,204,0.6)]"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h3 class="font-orbitron text-xs font-bold text-slate-100">Buz Mərmisi</h3>
+                                <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded font-bold">+2 Xal</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">4s sürəti 65% azaldır</p>
+                            <div class="mt-1 flex justify-between items-center text-xs">
+                                <span class="text-amber-400 font-bold font-orbitron text-sm" id="price-ice">50 🪙</span>
+                                <span class="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">AT <i class="fa-solid fa-arrow-down"></i></span>
+                            </div>
+                        </div>
+                        <button tabindex="-1" onclick="startRebindKey('ice', event); this.blur();" id="key-badge-ice" class="keybind-badge px-2 py-1 rounded-lg text-xs font-orbitron font-black text-cyan-300" title="Qısayolu dəyişmək üçün klikləyin">
+                            2
+                        </button>
+                    </div>
+
+                    <!-- 3. ELEKTRİK ŞOKU (BƏNÖVŞƏYİ ŞİMŞƏK) -->
+                    <div id="shop-shock" onclick="fireBullet('shock')" class="glass-card p-2.5 rounded-xl flex items-center gap-3 cursor-pointer relative overflow-hidden group">
+                        <div class="w-11 h-11 rounded-2xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center trap-icon-box shadow-inner text-purple-400 text-xl">
+                            <i class="fa-solid fa-bolt drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h3 class="font-orbitron text-xs font-bold text-slate-100">Elektrik Şoku</h3>
+                                <span class="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">+3 Xal</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">120px lavanı geri itələyir</p>
+                            <div class="mt-1 flex justify-between items-center text-xs">
+                                <span class="text-amber-400 font-bold font-orbitron text-sm" id="price-shock">90 🪙</span>
+                                <span class="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">AT <i class="fa-solid fa-arrow-down"></i></span>
+                            </div>
+                        </div>
+                        <button tabindex="-1" onclick="startRebindKey('shock', event); this.blur();" id="key-badge-shock" class="keybind-badge px-2 py-1 rounded-lg text-xs font-orbitron font-black text-cyan-300" title="Qısayolu dəyişmək üçün klikləyin">
+                            3
+                        </button>
+                    </div>
+
+                    <!-- 4. PARTLAYICI MİNA -->
+                    <div id="shop-mine" onclick="fireBullet('mine')" class="glass-card p-2.5 rounded-xl flex items-center gap-3 cursor-pointer relative overflow-hidden group">
+                        <div class="w-11 h-11 rounded-2xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center trap-icon-box shadow-inner text-rose-400 text-xl">
+                            <i class="fa-solid fa-certificate drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h3 class="font-orbitron text-xs font-bold text-slate-100">Partlayıcı Mərmi</h3>
+                                <span class="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">+4 Xal</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">210px güclü partlayış zərbəsi</p>
+                            <div class="mt-1 flex justify-between items-center text-xs">
+                                <span class="text-amber-400 font-bold font-orbitron text-sm" id="price-mine">140 🪙</span>
+                                <span class="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">AT <i class="fa-solid fa-arrow-down"></i></span>
+                            </div>
+                        </div>
+                        <button tabindex="-1" onclick="startRebindKey('mine', event); this.blur();" id="key-badge-mine" class="keybind-badge px-2 py-1 rounded-lg text-xs font-orbitron font-black text-cyan-300" title="Qısayolu dəyişmək üçün klikləyin">
+                            4
+                        </button>
+                    </div>
+
+                    <!-- 5. PLAZMA (YAŞIL ATOM) -->
+                    <div id="shop-plasma" onclick="fireBullet('plasma')" class="glass-card p-2.5 rounded-xl flex items-center gap-3 cursor-pointer relative overflow-hidden group">
+                        <div class="w-11 h-11 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center trap-icon-box shadow-inner text-emerald-400 text-xl">
+                            <i class="fa-solid fa-atom drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-0.5">
+                                <h3 class="font-orbitron text-xs font-bold text-slate-100">Plazma Topu</h3>
+                                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">+5 Xal</span>
+                            </div>
+                            <p class="text-[10px] text-slate-400 leading-tight">Lavanı yandırır və 160px saxlayır</p>
+                            <div class="mt-1 flex justify-between items-center text-xs">
+                                <span class="text-amber-400 font-bold font-orbitron text-sm" id="price-plasma">190 🪙</span>
+                                <span class="text-[10px] text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">AT <i class="fa-solid fa-arrow-down"></i></span>
+                            </div>
+                        </div>
+                        <button tabindex="-1" onclick="startRebindKey('plasma', event); this.blur();" id="key-badge-plasma" class="keybind-badge px-2 py-1 rounded-lg text-xs font-orbitron font-black text-cyan-300" title="Qısayolu dəyişmək üçün klikləyin">
+                            5
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- OYUNDAXİLİ GÜCLƏNDİRMƏ (QALICI SƏVİYYƏDƏN BAŞLAYIR) -->
+            <div class="pt-3 border-t border-slate-800">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-orbitron font-bold text-slate-200">OYUNDAXİLİ GÜCLƏNDİRMƏ</span>
+                    <span class="text-[9px] font-orbitron text-cyan-400/80 font-semibold tracking-wider">LABORATORİYA AKTİV</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button tabindex="-1" id="upgrade-speed-btn" onclick="buyPlayerUpgrade('speed'); this.blur();" class="glass-card p-2 rounded-xl text-left hover:border-cyan-400 transition group relative overflow-hidden">
+                        <div class="flex justify-between items-center text-[11px] mb-1">
+                            <span class="font-bold text-slate-200 flex items-center gap-1"><i class="fa-solid fa-bolt text-cyan-400"></i> Sürət</span>
+                            <span id="lvl-speed" class="text-cyan-400 font-bold font-orbitron text-[11px]">Lv.1</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold font-orbitron text-amber-400" id="price-upgrade-speed">60 🪙</span>
+                            <span class="text-[9px] text-cyan-300 font-semibold">+0.5 Sürət</span>
+                        </div>
+                    </button>
+
+                    <button tabindex="-1" id="upgrade-magnet-btn" onclick="buyPlayerUpgrade('magnet'); this.blur();" class="glass-card p-2 rounded-xl text-left hover:border-amber-400 transition group relative overflow-hidden">
+                        <div class="flex justify-between items-center text-[11px] mb-1">
+                            <span class="font-bold text-slate-200 flex items-center gap-1"><i class="fa-solid fa-magnet text-amber-400"></i> Maqnit</span>
+                            <span id="lvl-magnet" class="text-amber-400 font-bold font-orbitron text-[11px]">Lv.1</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold font-orbitron text-amber-400" id="price-upgrade-magnet">80 🪙</span>
+                            <span class="text-[9px] text-amber-300 font-semibold">+25px Sahə</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+    </main>
+    </div> <!-- /#game-app-wrapper -->
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // SABİT STANDART QRİD VƏ OYUN MEYDANI ÖLÇÜLƏRİ (800x680: 20x17 xana, hər biri 40px)
+        const canvasWidth = 800;
+        const canvasHeight = 680;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        function resizeCanvas() {
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas);
+
+        // Brauzer yaxınlaşdırma və uzaqlaşdırmanın (Ctrl + / Ctrl - / Ctrl + Wheel) qarşısını almaq
+        window.addEventListener('wheel', e => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        window.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // WEB AUDIO CONTROLLER
+        class AudioController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playShoot() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playDash() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playImpact() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.28);
+                gain.gain.setValueAtTime(0.28, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.32);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.32);
+            }
+
+            playDoorOpen() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(1046.50, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.8);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.8);
+            }
+
+            playKeySet() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playDiamond() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(1600, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        const audio = new AudioController();
+
+        // QALICI YÜKSƏLTMƏLƏR VƏ ALMAZ (DIAMOND)
+        const MAX_PERM_LVL = 10;
+
+        const DEFAULT_PERM_UPGRADES = {
+            speedLvl: 1,      // Baza sürət (Lv.1 - Lv.10)
+            magnetLvl: 1,     // Baza maqnit (Lv.1 - Lv.10)
+            coinValLvl: 1,    // Sikkə dəyəri (Lv.1 - Lv.10)
+            coinRateLvl: 1    // Sikkə çıxış vaxtı (Lv.1 - Lv.10)
+        };
+
+        let permUpgrades = JSON.parse(localStorage.getItem('floor_escape_perm_upgrades')) || Object.assign({}, DEFAULT_PERM_UPGRADES);
+        
+        // Maksimum 10 səviyyə ilə məhdudlaşdırırıq (əgər köhnə saxlanılan səviyyə > 10 idisə 10-a endiririk)
+        permUpgrades.speedLvl = Math.min(MAX_PERM_LVL, Math.max(1, parseInt(permUpgrades.speedLvl) || 1));
+        permUpgrades.magnetLvl = Math.min(MAX_PERM_LVL, Math.max(1, parseInt(permUpgrades.magnetLvl) || 1));
+        permUpgrades.coinValLvl = Math.min(MAX_PERM_LVL, Math.max(1, parseInt(permUpgrades.coinValLvl) || 1));
+        permUpgrades.coinRateLvl = Math.min(MAX_PERM_LVL, Math.max(1, parseInt(permUpgrades.coinRateLvl) || 1));
+
+        let diamonds = parseInt(localStorage.getItem('floor_escape_diamonds') || '0');
+
+        function savePermanentData() {
+            localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
+            localStorage.setItem('floor_escape_diamonds', diamonds.toString());
+            updatePermUpgradesUI();
+        }
+
+        function getBaseSpeed() {
+            return 3.6 + (permUpgrades.speedLvl - 1) * 0.4;
+        }
+
+        function getBaseMagnetRadius() {
+            return 45 + (permUpgrades.magnetLvl - 1) * 25;
+        }
+
+        function getCoinBonusValue() {
+            return (permUpgrades.coinValLvl - 1) * 4;
+        }
+
+        function getCoinSpawnInterval() {
+            return Math.max(1.4, 5.0 - (permUpgrades.coinRateLvl - 1) * 0.4);
+        }
+
+        // QISAYOLLAR
+        const DEFAULT_KEYBINDS = {
+            wall: '1',
+            ice: '2',
+            shock: '3',
+            mine: '4',
+            plasma: '5'
+        };
+
+        let keybinds = JSON.parse(localStorage.getItem('floor_escape_custom_keybinds')) || Object.assign({}, DEFAULT_KEYBINDS);
+        let recordingTrapKey = null;
+        let keybindModeActive = false;
+
+        function formatKeyDisplay(keyStr) {
+            if (!keyStr) return '-';
+            const k = keyStr.toLowerCase();
+            if (k === 'tab') return 'TAB';
+            if (k === ' ') return 'SPACE';
+            if (k === 'capslock') return 'CAPS';
+            if (k === 'shift') return 'SHIFT';
+            if (k === 'control') return 'CTRL';
+            if (k === 'alt') return 'ALT';
+            return k.toUpperCase();
+        }
+
+        function saveKeybinds() {
+            localStorage.setItem('floor_escape_custom_keybinds', JSON.stringify(keybinds));
+            renderKeybindBadges();
+        }
+
+        function renderKeybindBadges() {
+            for (let type in keybinds) {
+                const badge = document.getElementById(`key-badge-${type}`);
+                if (badge) {
+                    badge.innerText = formatKeyDisplay(keybinds[type]);
+                }
+                const quickBar = document.getElementById(`quick-bar-${type}`);
+                if (quickBar) {
+                    quickBar.innerText = `[${formatKeyDisplay(keybinds[type])}]`;
+                }
+            }
+        }
+
+        function toggleKeybindMode() {
+            keybindModeActive = !keybindModeActive;
+            const banner = document.getElementById('keybind-help-banner');
+            const btn = document.getElementById('btn-toggle-keybinds');
+            const label = document.getElementById('keybind-mode-label');
+
+            if (keybindModeActive) {
+                banner.classList.remove('hidden');
+                btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-orbitron font-bold flex items-center gap-1.5 bg-cyan-500 text-slate-950 border border-cyan-400 transition shadow-lg shadow-cyan-500/40';
+                label.innerText = 'Dəyişilir...';
+                showToast('Qısayol rejimi: Nişana klikləyib istədiyiniz düyməni (məs: TAB) basın.', 'info');
+            } else {
+                banner.classList.add('hidden');
+                btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-orbitron font-bold flex items-center gap-1.5 glass-card border border-cyan-500/40 text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition shadow-sm';
+                label.innerText = 'Qısayol';
+                cancelRebinding();
+            }
+            if (document.activeElement) document.activeElement.blur();
+        }
+
+        function startRebindKey(type, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            audio.init();
+            cancelRebinding();
+
+            recordingTrapKey = type;
+            const badge = document.getElementById(`key-badge-${type}`);
+            if (badge) {
+                badge.classList.add('recording');
+                badge.innerText = '...';
+            }
+            showToast(`${type.toUpperCase()} üçün düyməni basın (məs: TAB, A, Q, 1)`, 'info');
+            if (document.activeElement) document.activeElement.blur();
+        }
+
+        function cancelRebinding() {
+            if (recordingTrapKey) {
+                const badge = document.getElementById(`key-badge-${recordingTrapKey}`);
+                if (badge) {
+                    badge.classList.remove('recording');
+                    badge.innerText = formatKeyDisplay(keybinds[recordingTrapKey]);
+                }
+                recordingTrapKey = null;
+            }
+        }
+
+        // QALICI YÜKSƏLTMƏ MODALI (YALNIZ OYUN BİTDİKDƏ İSTİFADƏ OLUNA BİLƏR)
+        function togglePermanentUpgradesModal() {
+            audio.init();
+            const modal = document.getElementById('perm-upgrades-modal');
+            if (modal.classList.contains('hidden')) {
+                if (!gameState.gameOver) {
+                    showToast('⚠️ Laboratoriya yalnız oyun bitdikdə (Məğlubiyyət ekranında) açıla bilər!', 'error');
+                    return;
+                }
+                modal.classList.remove('hidden');
+                updatePermUpgradesUI();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function renderPermCard(currentLvl, displayValue, badgeId, btnId) {
+            const badge = document.getElementById(badgeId);
+            const btn = document.getElementById(btnId);
+            if (!badge || !btn) return;
+
+            if (currentLvl >= MAX_PERM_LVL) {
+                badge.innerText = `Lv.10 (MAX)`;
+                badge.className = "text-[10px] font-orbitron font-black text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/40";
+                btn.disabled = true;
+                btn.className = "w-full py-1.5 rounded-xl bg-slate-800/80 text-slate-500 font-orbitron font-bold text-xs flex items-center justify-center gap-1 cursor-not-allowed opacity-60 border border-slate-700";
+                btn.innerHTML = `<i class="fa-solid fa-lock text-[10px] mr-1"></i><span>MAKSİMAL (Lv.10)</span>`;
+            } else {
+                const cost = currentLvl; // Hər yüksəltmə səviyyə dəyərində almaz istəyir (Lv.1 -> 1 💎, Lv.2 -> 2 💎 ... Lv.9 -> 9 💎)
+                badge.innerText = `Lv.${currentLvl} (${displayValue})`;
+                badge.className = "text-[10px] font-orbitron font-bold text-cyan-400 bg-cyan-950/50 px-2 py-0.5 rounded-md";
+                btn.disabled = false;
+                
+                const canAfford = diamonds >= cost;
+                btn.className = canAfford
+                    ? "w-full py-1.5 rounded-xl btn-diamond text-slate-950 font-orbitron font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition cursor-pointer shadow-md"
+                    : "w-full py-1.5 rounded-xl bg-slate-800 text-slate-400 font-orbitron font-bold text-xs flex items-center justify-center gap-1 border border-slate-700 opacity-75";
+
+                btn.innerHTML = `<span>YÜKSƏLT</span><span class="${canAfford ? 'bg-slate-950/30 text-white' : 'bg-slate-900 text-sky-300'} px-2 py-0.5 rounded-md text-[10px] font-bold">${cost} 💎</span>`;
+            }
+        }
+
+        function updatePermUpgradesUI() {
+            document.getElementById('stat-diamonds').innerText = diamonds;
+            const headerDiamonds = document.getElementById('stat-header-diamonds');
+            if (headerDiamonds) headerDiamonds.innerText = `${diamonds} 💎`;
+
+            document.getElementById('modal-diamonds-count').innerText = `${diamonds} 💎`;
+
+            renderPermCard(permUpgrades.speedLvl, getBaseSpeed().toFixed(1), 'perm-lvl-speed', 'btn-perm-speed');
+            renderPermCard(permUpgrades.magnetLvl, `${getBaseMagnetRadius()}px`, 'perm-lvl-magnet', 'btn-perm-magnet');
+            renderPermCard(permUpgrades.coinValLvl, `+${getCoinBonusValue()}`, 'perm-lvl-coin-val', 'btn-perm-coin-val');
+            renderPermCard(permUpgrades.coinRateLvl, `${getCoinSpawnInterval().toFixed(1)}s`, 'perm-lvl-coin-rate', 'btn-perm-coin-rate');
+
+            updateUI();
+        }
+
+        function buyPermanentUpgrade(type) {
+            if (!gameState.gameOver) {
+                showToast('⚠️ Laboratoriya yalnız oyun bitdikdə istifadə edilə bilər!', 'error');
+                return;
+            }
+
+            audio.init();
+            let key = type === 'speed' ? 'speedLvl' : type === 'magnet' ? 'magnetLvl' : type === 'coinVal' ? 'coinValLvl' : 'coinRateLvl';
+            let currentLvl = permUpgrades[key];
+
+            if (currentLvl >= MAX_PERM_LVL) {
+                showToast('Bu təkmilləşdirmə artıq maksimal səviyyədədir (Lv.10)!', 'info');
+                return;
+            }
+
+            const cost = currentLvl; // Level dəyərində almaz: 1->1, 2->2, ..., 9->9
+
+            if (diamonds >= cost) {
+                diamonds -= cost;
+                permUpgrades[key]++;
+
+                savePermanentData();
+                audio.playDiamond();
+                showToast(`💎 Qalıcı Yüksəltmə Alındı! (Lv.${permUpgrades[key]} üçün -${cost} 💎)`, 'success');
+
+                // Oyunçunun baza statistikalarını yeniləyirik
+                player.speed = getBaseSpeed();
+                gameState.magnetRadius = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
+                updatePermUpgradesUI();
+                updateUI();
+            } else {
+                showToast(`Almaz Çatmır! (${cost} 💎 tələb olunur)`, 'error');
+            }
+        }
+
+        // AKTİV OYUN PROQRESİNİN YADDA SAXLANILMASI (SƏHİFƏ YENİLƏNƏNDƏ İTMƏSİN)
+        function saveActiveRun() {
+            if (gameState.gameOver) {
+                clearActiveRun();
+                return;
+            }
+            const runData = {
+                hasActiveRun: true,
+                floor: gameState.floor,
+                gold: gameState.gold,
+                scoreProgress: gameState.scoreProgress,
+                scoreReq: gameState.scoreReq,
+                borderOpen: gameState.borderOpen,
+                inGameSpeedLvl: gameState.inGameSpeedLvl,
+                inGameMagnetLvl: gameState.inGameMagnetLvl,
+                totalTrapsPlaced: gameState.totalTrapsPlaced,
+                totalTrapsDestroyed: gameState.totalTrapsDestroyed,
+                maxCombo: gameState.maxCombo,
+                combo: gameState.combo,
+                floorTime: gameState.floorTime,
+                coinCountdown: gameState.coinCountdown,
+                // Lavanın dəqiq yeri və təsir sayğacları
+                monsterY: typeof monster !== 'undefined' && monster ? monster.y : null,
+                monsterSlowTimer: typeof monster !== 'undefined' && monster ? monster.slowTimer : 0,
+                monsterStunTimer: typeof monster !== 'undefined' && monster ? monster.stunTimer : 0,
+                monsterPlasmaTimer: typeof monster !== 'undefined' && monster ? monster.plasmaTimer : 0,
+                // Oyunçunun dəqiq yeri
+                playerX: typeof player !== 'undefined' && player ? player.x : null,
+                playerY: typeof player !== 'undefined' && player ? player.y : null,
+                // Meydançadakı aktiv sikkələr
+                coins: typeof coins !== 'undefined' && coins ? coins.map(c => ({ x: c.x, y: c.y, value: c.value })) : []
+            };
+            localStorage.setItem('floor_escape_active_run', JSON.stringify(runData));
+        }
+
+        function loadActiveRun() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('floor_escape_active_run'));
+                if (saved && saved.hasActiveRun) {
+                    gameState.floor = Math.max(1, parseInt(saved.floor) || 1);
+                    gameState.gold = Math.max(0, parseFloat(saved.gold) || 75);
+                    gameState.scoreProgress = Math.max(0, parseInt(saved.scoreProgress) || 0);
+                    gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
+                    gameState.borderOpen = !!saved.borderOpen;
+                    gameState.inGameSpeedLvl = Math.max(0, parseInt(saved.inGameSpeedLvl) || 0);
+                    gameState.inGameMagnetLvl = Math.max(0, parseInt(saved.inGameMagnetLvl) || 0);
+                    gameState.magnetRadius = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
+                    gameState.totalTrapsPlaced = parseInt(saved.totalTrapsPlaced) || 0;
+                    gameState.totalTrapsDestroyed = parseInt(saved.totalTrapsDestroyed) || 0;
+                    gameState.maxCombo = parseInt(saved.maxCombo) || 0;
+                    gameState.combo = parseInt(saved.combo) || 0;
+                    if (saved.floorTime !== undefined) gameState.floorTime = parseFloat(saved.floorTime) || 0;
+                    if (saved.coinCountdown !== undefined) gameState.coinCountdown = parseFloat(saved.coinCountdown) || getCoinSpawnInterval();
+
+                    // Lavanın koordinatını və parametrlərini bərpa edirik
+                    if (typeof monster !== 'undefined' && monster && saved.monsterY !== undefined && saved.monsterY !== null) {
+                        monster.y = parseFloat(saved.monsterY);
+                        monster.slowTimer = parseInt(saved.monsterSlowTimer) || 0;
+                        monster.stunTimer = parseInt(saved.monsterStunTimer) || 0;
+                        monster.plasmaTimer = parseInt(saved.monsterPlasmaTimer) || 0;
+                        monster.baseSpeed = 0.22 + (gameState.floor - 1) * 0.06;
+                        monster.speed = monster.slowTimer > 0 ? monster.baseSpeed * 0.45 : monster.baseSpeed;
+                    }
+
+                    // Oyunçunun koordinatlarını bərpa edirik
+                    if (typeof player !== 'undefined' && player && saved.playerX !== undefined && saved.playerY !== undefined && saved.playerX !== null && saved.playerY !== null) {
+                        player.x = parseFloat(saved.playerX);
+                        player.y = parseFloat(saved.playerY);
+                    }
+
+                    // Aktiv sikkələri bərpa edirik
+                    if (typeof Coin !== 'undefined' && saved.coins && Array.isArray(saved.coins) && saved.coins.length > 0) {
+                        coins = saved.coins.map(c => {
+                            const coin = new Coin(c.x, c.y);
+                            if (c.value) coin.value = c.value;
+                            return coin;
+                        });
+                    }
+
+                    return true;
+                }
+            } catch (e) {
+                console.error('Error loading active run:', e);
+            }
+            return false;
+        }
+
+        function clearActiveRun() {
+            localStorage.removeItem('floor_escape_active_run');
+        }
+
+        // OYUNUN VƏZİYYƏTİ
+        let gameState = {
+            gold: 75,
+            floor: 1,
+            bestFloor: parseInt(localStorage.getItem('floor_escape_best_floor') || '1'),
+            scoreProgress: 0,
+            scoreReq: 3,
+            borderOpen: false,
+            paused: false,
+            gameOver: false,
+            transitioning: false,
+            combo: 0,
+            maxCombo: 0,
+            totalTrapsPlaced: 0,
+            totalTrapsDestroyed: 0,
+            floorTime: 0,
+
+            // Sikkə çıxış taymeri
+            coinCountdown: getCoinSpawnInterval(),
+
+            // Oyundaxili müvəqqəti qızıl yüksəltmələri (qalıcı laboratoriya səviyyəsinin üzərinə gəlir)
+            inGameSpeedLvl: 0,
+            inGameMagnetLvl: 0,
+            magnetRadius: getBaseMagnetRadius(),
+
+            dashCooldown: 0,
+            dashMaxCooldown: 3.5,
+            dashInvulnerable: 0,
+            
+            prices: { wall: 30, ice: 50, shock: 90, mine: 140, plasma: 190 },
+            scores: { wall: 1, ice: 2, shock: 3, mine: 4, plasma: 5 },
+            destroyRewards: { wall: 6, ice: 10, shock: 14, mine: 22, plasma: 32 },
+            
+            getFloorRequirement: function(floor) {
+                return 3 + (floor - 1) * 2;
+            }
+        };
+
+        // OYUNÇU SİNİFİ
+        class Player {
+            constructor() {
+                this.x = 0;
+                this.y = 0;
+                this.radius = 14;
+                this.speed = getBaseSpeed(); // Qalıcı laboratoriyadan başlayır
+                this.color = '#00ffcc';
+                this.trail = [];
+                this.facing = Math.PI / 2;
+                this.canPassBorder = false;
+            }
+
+            reset() {
+                this.x = canvasWidth / 2;
+                this.y = 120;
+                this.speed = getBaseSpeed();
+                this.trail = [];
+                this.facing = Math.PI / 2;
+                this.canPassBorder = false;
+            }
+
+            update(keys) {
+                if (gameState.transitioning) return;
+                // Sürət = Qalıcı Baza Sürət + Oyundaxili Əlavə
+                const currentSpeed = getBaseSpeed() + gameState.inGameSpeedLvl * 0.5;
+                let dx = 0, dy = 0;
+
+                const isWallA = keybinds.wall === 'a';
+                const isMoveLeft = keys['arrowleft'] || keys['touch_left'] || (keys['a'] && !isWallA);
+
+                if (keys['w'] || keys['arrowup'] || keys['touch_up']) dy = -currentSpeed;
+                if (keys['s'] || keys['arrowdown'] || keys['touch_down']) dy = currentSpeed;
+                if (isMoveLeft) dx = -currentSpeed;
+                if (keys['d'] || keys['arrowright'] || keys['touch_right']) dx = currentSpeed;
+
+                if (dx !== 0 || dy !== 0) {
+                    this.facing = Math.atan2(dy, dx);
+                }
+
+                this.x += dx;
+                this.y += dy;
+
+                const borderY = 55;
+                if (gameState.borderOpen) {
+                    this.canPassBorder = true;
+                    this.y = Math.max(10, Math.min(canvasHeight - this.radius - 10, this.y));
+                } else {
+                    this.canPassBorder = false;
+                    this.y = Math.max(borderY + this.radius + 5, Math.min(canvasHeight - this.radius - 10, this.y));
+                }
+                this.x = Math.max(this.radius + 10, Math.min(canvasWidth - this.radius - 10, this.x));
+
+                this.trail.push({ x: this.x, y: this.y, alpha: 0.6 });
+                if (this.trail.length > 12) this.trail.shift();
+            }
+
+            dash() {
+                if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
+                if (gameState.dashCooldown <= 0) {
+                    gameState.dashCooldown = gameState.dashMaxCooldown;
+                    gameState.dashInvulnerable = 20;
+
+                    const dashDistance = 85;
+                    this.x += Math.cos(this.facing) * dashDistance;
+                    this.y += Math.sin(this.facing) * dashDistance;
+
+                    const borderY = 55;
+                    const minY = gameState.borderOpen ? 10 : borderY + this.radius + 5;
+                    this.y = Math.max(minY, Math.min(canvasHeight - this.radius - 10, this.y));
+                    this.x = Math.max(this.radius + 10, Math.min(canvasWidth - this.radius - 10, this.x));
+
+                    audio.playDash();
+                    for (let i = 0; i < 20; i++) {
+                        particles.push(new Particle(this.x, this.y, '#00ffff', 4));
+                    }
+                    showToast('⚡ DASH!', 'info');
+                }
+            }
+
+            draw() {
+                this.trail.forEach((t, i) => {
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, this.radius * (i / this.trail.length) * 0.65, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 255, 204, ${t.alpha * 0.25})`;
+                    ctx.fill();
+                });
+
+                ctx.save();
+                ctx.shadowBlur = gameState.dashInvulnerable > 0 ? 30 : 20;
+                ctx.shadowColor = gameState.dashInvulnerable > 0 ? '#ffffff' : '#00ffcc';
+                
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.8);
+                grad.addColorStop(0, gameState.dashInvulnerable > 0 ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 255, 204, 0.2)');
+                grad.addColorStop(1, 'rgba(0, 255, 204, 0)');
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gameState.dashInvulnerable > 0 ? '#ffffff' : this.color;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(this.x - 3, this.y - 4, 4.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fill();
+
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.facing);
+                ctx.beginPath();
+                ctx.moveTo(this.radius + 7, 0);
+                ctx.lineTo(this.radius - 2, -4);
+                ctx.lineTo(this.radius - 2, 4);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0, 255, 204, 0.75)';
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // CANAVAR / LAVA SİNİFİ
+        class Monster {
+            constructor() {
+                this.y = 0;
+                this.baseSpeed = 0.22;
+                this.speed = 0.22;
+                this.slowTimer = 0;
+                this.stunTimer = 0;
+                this.plasmaTimer = 0;
+                this.waveOffset = 0;
+            }
+
+            reset() {
+                this.y = canvasHeight + 50;
+                this.baseSpeed = 0.22 + (gameState.floor - 1) * 0.06;
+                this.speed = this.baseSpeed;
+                this.slowTimer = 0;
+                this.stunTimer = 0;
+                this.plasmaTimer = 0;
+                this.waveOffset = Math.random() * 100;
+            }
+
+            update() {
+                if (gameState.transitioning) return;
+                if (this.stunTimer > 0) {
+                    this.stunTimer--;
+                }
+
+                if (this.slowTimer > 0) {
+                    this.slowTimer--;
+                }
+
+                if (this.plasmaTimer > 0) {
+                    this.plasmaTimer--;
+                }
+
+                if (this.stunTimer > 0) {
+                    return;
+                }
+
+                if (this.slowTimer > 0 || this.plasmaTimer > 0) {
+                    this.speed = this.baseSpeed * 0.32;
+                } else {
+                    this.speed = this.baseSpeed;
+                }
+
+                this.y -= this.speed;
+                this.waveOffset += 0.035;
+            }
+
+            draw() {
+                const grad = ctx.createLinearGradient(0, this.y, 0, canvasHeight);
+                grad.addColorStop(0, 'rgba(255, 0, 85, 0.95)');
+                grad.addColorStop(0.25, 'rgba(255, 70, 0, 0.88)');
+                grad.addColorStop(0.6, 'rgba(180, 20, 0, 0.82)');
+                grad.addColorStop(1, 'rgba(60, 0, 15, 0.96)');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(0, canvasHeight);
+                
+                const time = Date.now() * 0.005;
+                for (let x = 0; x <= canvasWidth; x += 5) {
+                    const waveY = Math.sin(x * 0.025 + time + this.waveOffset) * 10 + 
+                                  Math.sin(x * 0.05 + time * 0.7) * 5;
+                    ctx.lineTo(x, this.y + waveY);
+                }
+                
+                ctx.lineTo(canvasWidth, canvasHeight);
+                ctx.closePath();
+                ctx.fill();
+
+                let strokeClr = '#ff0055';
+                if (this.stunTimer > 0) strokeClr = '#facc15';
+                else if (this.slowTimer > 0) strokeClr = '#00ffff';
+                else if (this.plasmaTimer > 0) strokeClr = '#10b981';
+
+                ctx.strokeStyle = strokeClr;
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = (this.stunTimer > 0 || this.slowTimer > 0) ? 30 : 20;
+                ctx.shadowColor = strokeClr;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // TƏSİR MÜDDƏTİNİ SANİYƏ İLƏ BİRBAŞA LAVANIN ÜSTÜNDƏ GÖSTƏRMƏK:
+                const activeEffect = this.stunTimer > 0 ? { txt: `🧊 DONDURULDU: ${(this.stunTimer / 60).toFixed(1)}s`, clr: '#facc15', bg: 'rgba(50, 40, 10, 0.85)' } :
+                                     this.slowTimer > 0 ? { txt: `❄️ LƏNGİMƏ: ${(this.slowTimer / 60).toFixed(1)}s`, clr: '#00ffff', bg: 'rgba(8, 40, 50, 0.85)' } :
+                                     this.plasmaTimer > 0 ? { txt: `☣️ PLAZMA: ${(this.plasmaTimer / 60).toFixed(1)}s`, clr: '#34d399', bg: 'rgba(10, 45, 25, 0.85)' } : null;
+
+                if (activeEffect) {
+                    ctx.save();
+                    const badgeY = Math.max(65, this.y - 18);
+                    const badgeX = canvasWidth / 2;
+
+                    ctx.font = 'bold 11px Orbitron';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const textWidth = ctx.measureText(activeEffect.txt).width + 24;
+
+                    ctx.fillStyle = activeEffect.bg;
+                    ctx.strokeStyle = activeEffect.clr;
+                    ctx.lineWidth = 1.8;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = activeEffect.clr;
+                    ctx.beginPath();
+                    ctx.roundRect(badgeX - textWidth / 2, badgeY - 12, textWidth, 24, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = activeEffect.clr;
+                    ctx.fillText(activeEffect.txt, badgeX, badgeY);
+                    ctx.restore();
+                }
+
+                if (this.y < canvasHeight - 60 && Math.random() < 0.25) {
+                    particles.push(new Particle(
+                        Math.random() * canvasWidth,
+                        this.y + 10,
+                        '#ff3300',
+                        4
+                    ));
+                }
+            }
+        }
+
+        // MƏRMİ SİNİFİ
+        class Bullet {
+            constructor(type, startX, startY) {
+                this.type = type;
+                this.x = startX;
+                this.y = startY;
+                this.vy = 10.5;
+                this.rotation = 0;
+                this.rotSpeed = (Math.random() - 0.5) * 0.08;
+                this.tail = [];
+            }
+
+            update() {
+                this.y += this.vy;
+                this.rotation += this.rotSpeed;
+
+                this.tail.push({ x: this.x, y: this.y, alpha: 0.7 });
+                if (this.tail.length > 8) this.tail.shift();
+            }
+
+            draw() {
+                this.tail.forEach((t, i) => {
+                    ctx.save();
+                    ctx.globalAlpha = (i / this.tail.length) * 0.35;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, 8 * (i / this.tail.length), 0, Math.PI * 2);
+                    const trailColors = {
+                        wall: '#ffaa00',
+                        ice: '#00ccff',
+                        shock: '#c084fc',
+                        mine: '#f43f5e',
+                        plasma: '#34d399'
+                    };
+                    ctx.fillStyle = trailColors[this.type] || '#ffffff';
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // 1. BARRİKADA
+                if (this.type === 'wall') {
+                    ctx.shadowBlur = 18;
+                    ctx.shadowColor = '#ffd000';
+
+                    ctx.fillStyle = 'rgba(40, 28, 10, 0.85)';
+                    ctx.strokeStyle = '#eab308';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-16, -16, 32, 32, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#facc15';
+                    const sz = 4.5;
+                    ctx.fillRect(-sz/2, -10, sz, sz);
+                    ctx.fillRect(-sz - 1, -4.5, sz, sz);
+                    ctx.fillRect(1, -4.5, sz, sz);
+                    ctx.fillRect(-sz * 1.5 - 1.5, 1, sz, sz);
+                    ctx.fillRect(-sz/2, 1, sz, sz);
+                    ctx.fillRect(sz/2 + 1.5, 1, sz, sz);
+                }
+                // 2. BUZ
+                else if (this.type === 'ice') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00ffff';
+
+                    ctx.fillStyle = 'rgba(8, 35, 45, 0.85)';
+                    ctx.strokeStyle = '#06b6d4';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-16, -16, 32, 32, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#22d3ee';
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+                    for (let a = 0; a < 3; a++) {
+                        ctx.beginPath();
+                        ctx.moveTo(-9, 0);
+                        ctx.lineTo(9, 0);
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        ctx.moveTo(5, -3);
+                        ctx.lineTo(8, 0);
+                        ctx.lineTo(5, 3);
+                        ctx.moveTo(-5, -3);
+                        ctx.lineTo(-8, 0);
+                        ctx.lineTo(-5, 3);
+                        ctx.stroke();
+
+                        ctx.rotate(Math.PI / 3);
+                    }
+                }
+                // 3. ELEKTRİK ŞOKU
+                else if (this.type === 'shock') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#c084fc';
+
+                    ctx.fillStyle = 'rgba(32, 18, 52, 0.85)';
+                    ctx.strokeStyle = '#a855f7';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-16, -16, 32, 32, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#d8b4fe';
+                    ctx.beginPath();
+                    ctx.moveTo(1, -11);
+                    ctx.lineTo(-7, 0);
+                    ctx.lineTo(-1, 0);
+                    ctx.lineTo(-2, 11);
+                    ctx.lineTo(7, -1);
+                    ctx.lineTo(1, -1);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                // 4. MİNA
+                else if (this.type === 'mine') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#f43f5e';
+
+                    ctx.fillStyle = 'rgba(48, 12, 22, 0.85)';
+                    ctx.strokeStyle = '#f43f5e';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-16, -16, 32, 32, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fb7185';
+                    ctx.beginPath();
+                    const spikes = 8;
+                    for (let s = 0; s < spikes * 2; s++) {
+                        const r = s % 2 === 0 ? 9 : 4.5;
+                        const angle = (s * Math.PI) / spikes;
+                        const px = Math.cos(angle) * r;
+                        const py = Math.sin(angle) * r;
+                        if (s === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                // 5. PLAZMA
+                else if (this.type === 'plasma') {
+                    ctx.shadowBlur = 22;
+                    ctx.shadowColor = '#34d399';
+
+                    ctx.fillStyle = 'rgba(8, 38, 28, 0.85)';
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.roundRect(-16, -16, 32, 32, 8);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#34d399';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#6ee7b7';
+                    ctx.lineWidth = 1.6;
+                    for (let o = 0; o < 3; o++) {
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, 10, 4, 0, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.rotate(Math.PI / 3);
+                    }
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // SİKKƏ SİNİFİ
+        class Coin {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 7.5;
+                this.value = Math.floor(10 + gameState.floor * 2.2) + getCoinBonusValue();
+                this.bobOffset = Math.random() * Math.PI * 2;
+            }
+
+            draw() {
+                const bob = Math.sin(Date.now() * 0.003 + this.bobOffset) * 2;
+                const currentY = this.y + bob;
+
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffd700';
+
+                const grad = ctx.createRadialGradient(this.x, currentY, 0, this.x, currentY, this.radius * 2);
+                grad.addColorStop(0, 'rgba(255, 215, 0, 0.2)');
+                grad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+                ctx.beginPath();
+                ctx.arc(this.x, currentY, this.radius * 2, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(this.x, currentY, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffd700';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(this.x - 1, currentY - 1, this.radius - 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffaa00';
+                ctx.fill();
+
+                ctx.fillStyle = '#b36b00';
+                ctx.font = 'bold 8px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('$', this.x, currentY + 0.5);
+
+                ctx.restore();
+            }
+        }
+
+        // HİSSƏCİKLƏR SİNİFİ
+        class Particle {
+            constructor(x, y, color, size = 3) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 7;
+                this.vy = (Math.random() - 0.5) * 7 - 1;
+                this.radius = Math.random() * size + 1;
+                this.color = color;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.028 + 0.015;
+                this.gravity = 0.05;
+                this.isGold = color === '#ffd700' || color === '#ffaa00';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= this.decay;
+                this.radius *= 0.995;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.shadowBlur = this.isGold ? 20 : 10;
+                ctx.shadowColor = this.isGold ? '#ffd700' : this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.5, this.radius), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        const player = new Player();
+        const monster = new Monster();
+        let bullets = [];
+        let coins = [];
+        let particles = [];
+        let keys = {};
+        let frameCount = 0;
+        let hasPassedBorder = false;
+
+        function fireBullet(type) {
+            if (gameState.gameOver || gameState.paused || gameState.transitioning) return;
+
+            const cost = Math.floor(gameState.prices[type] * Math.pow(1.10, gameState.floor - 1));
+            if (gameState.gold < cost) {
+                showToast(`Qızıl çatmır! (${cost} 🪙)`, 'error');
+                return;
+            }
+
+            gameState.gold -= cost;
+            gameState.totalTrapsPlaced++;
+            gameState.scoreProgress += gameState.scores[type];
+            gameState.combo++;
+            if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+
+            bullets.push(new Bullet(type, player.x, player.y + 16));
+            audio.playShoot();
+
+            let comboBonus = gameState.combo >= 3 ? `🔥 x${gameState.combo} Kombo!` : '';
+            showToast(`+${gameState.scores[type]} Xal! ${comboBonus}`, gameState.combo >= 3 ? 'combo' : 'success');
+            
+            checkBorderUnlock();
+            updateUI();
+            saveActiveRun();
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Tab' || e.code === 'Tab') {
+                e.preventDefault();
+            }
+
+            if (gameState.transitioning) return;
+
+            audio.init();
+            const k = e.key.toLowerCase();
+
+            if (recordingTrapKey) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (k === 'escape') {
+                    cancelRebinding();
+                    showToast('Qısayol dəyişikliyi ləğv edildi.', 'error');
+                    return;
+                }
+
+                for (let type in keybinds) {
+                    if (keybinds[type] === k && type !== recordingTrapKey) {
+                        keybinds[type] = '';
+                    }
+                }
+
+                keybinds[recordingTrapKey] = k;
+                saveKeybinds();
+                audio.playKeySet();
+                showToast(`${recordingTrapKey.toUpperCase()} üçün [${formatKeyDisplay(k)}] təyin edildi!`, 'success');
+                recordingTrapKey = null;
+
+                if (document.activeElement) document.activeElement.blur();
+                return;
+            }
+
+            keys[k] = true;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                player.dash();
+                return;
+            }
+
+            for (let type in keybinds) {
+                if (keybinds[type] && keybinds[type] === k) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fireBullet(type);
+                    return;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === 'Tab' || e.code === 'Tab') {
+                e.preventDefault();
+            }
+            keys[e.key.toLowerCase()] = false;
+        }, { passive: false });
+
+        canvas.addEventListener('click', e => {
+            if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
+            audio.init();
+            fireBullet('wall');
+        });
+
+        function handleTouchStart(dir) {
+            if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
+            audio.init();
+            keys['touch_' + dir] = true;
+        }
+        function handleTouchEnd(dir) {
+            keys['touch_' + dir] = false;
+        }
+
+        function triggerPlayerDash() {
+            if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
+            audio.init();
+            player.dash();
+        }
+
+        function showToast(text, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let badgeBg = type === 'success' ? 'bg-emerald-500' : 
+                          type === 'error' ? 'bg-rose-500' : 
+                          type === 'combo' ? 'bg-purple-500' : 
+                          type === 'gold' ? 'bg-amber-500' : 
+                          type === 'diamond' ? 'bg-sky-400' : 'bg-cyan-500';
+            
+            toast.className = `toast-msg glass-panel px-4 py-2 rounded-xl text-xs font-bold font-orbitron flex items-center gap-2 border border-slate-700 shadow-xl mb-2 text-slate-100`;
+            toast.innerHTML = `<span class="w-2 h-2 rounded-full ${badgeBg}"></span>${text}`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        // OYUNDAXİLİ SÜRƏT VƏ MAQNİT GÜCLƏNDİRMƏSİ (QIZIL İLƏ)
+        function buyPlayerUpgrade(type) {
+            audio.init();
+            if (type === 'speed') {
+                const cost = Math.floor(60 * Math.pow(1.35, gameState.inGameSpeedLvl));
+                if (gameState.gold >= cost) {
+                    gameState.gold -= cost;
+                    gameState.inGameSpeedLvl++;
+                    showToast(`Sürət Artırıldı! (Lv.${permUpgrades.speedLvl + gameState.inGameSpeedLvl})`, 'success');
+                } else {
+                    showToast(`Kifayət qədər qızıl yoxdur!`, 'error');
+                }
+            } else if (type === 'magnet') {
+                const cost = Math.floor(80 * Math.pow(1.4, gameState.inGameMagnetLvl));
+                if (gameState.gold >= cost) {
+                    gameState.gold -= cost;
+                    gameState.inGameMagnetLvl++;
+                    gameState.magnetRadius = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
+                    showToast(`Maqnit Genişləndi! (${gameState.magnetRadius}px)`, 'success');
+                } else {
+                    showToast(`Kifayət qədər qızıl yoxdur!`, 'error');
+                }
+            }
+            updateUI();
+            saveActiveRun();
+        }
+
+        function checkBorderUnlock() {
+            const req = gameState.getFloorRequirement(gameState.floor);
+            if (!gameState.borderOpen && gameState.scoreProgress >= req) {
+                gameState.borderOpen = true;
+                audio.playDoorOpen();
+                showToast(`🚪 SƏRHƏD AÇILDI! Qızıl dayandı, dərhal növbəti qata qalx!`, 'success');
+                
+                for(let i=0; i<35; i++) {
+                    particles.push(new Particle(
+                        canvasWidth/2 + (Math.random()-0.5)*250,
+                        45 + Math.random()*20,
+                        ['#00ff66', '#ffd700', '#00ffcc', '#ff00ff'],
+                        5
+                    ));
+                }
+                saveActiveRun();
+            }
+        }
+
+        function nextFloor() {
+            gameState.floor++;
+            gameState.transitioning = true;
+            keys = {};
+
+            diamonds += 1;
+            savePermanentData();
+            audio.playDiamond();
+
+            if (gameState.floor > gameState.bestFloor) {
+                gameState.bestFloor = gameState.floor;
+                localStorage.setItem('floor_escape_best_floor', gameState.bestFloor);
+                document.getElementById('stat-best-floor').innerText = `🏆 REKORD: ${gameState.bestFloor}`;
+            }
+
+            gameState.scoreProgress = 0;
+            gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
+            gameState.borderOpen = false;
+            gameState.combo = 0;
+            gameState.floorTime = 0;
+            gameState.coinCountdown = getCoinSpawnInterval();
+            hasPassedBorder = false;
+
+            bullets = [];
+            coins = [];
+            player.reset();
+            monster.reset();
+
+            spawnCoins();
+
+            const overlay = document.getElementById('floor-clear-overlay');
+            const desc = document.getElementById('floor-clear-desc');
+            desc.innerText = `${gameState.floor}-ci Qata keçdiniz! Tələb olunan xal: ${gameState.scoreReq}`;
+            overlay.classList.remove('hidden');
+
+            document.getElementById('main-view').classList.add('shake');
+            setTimeout(() => {
+                document.getElementById('main-view').classList.remove('shake');
+                overlay.classList.add('hidden');
+                gameState.transitioning = false;
+                keys = {};
+                showToast(`🚀 ${gameState.floor}-ci Qat Başladı!`, 'info');
+                saveActiveRun();
+            }, 1600);
+
+            showToast(`🎉 ${gameState.floor}-ci Qat! (+1 💎 Almaz)`, 'diamond');
+            updateUI();
+            saveActiveRun();
+        }
+
+        function spawnCoins() {
+            coins = [];
+            const coinCount = 6 + gameState.floor * 2;
+            for (let i = 0; i < coinCount; i++) {
+                coins.push(new Coin(
+                    Math.random() * (canvasWidth - 80) + 40,
+                    Math.random() * (canvasHeight - 340) + 80
+                ));
+            }
+        }
+
+        function autoSpawnCoin() {
+            if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
+            
+            // Meydançada maksimum sikkə limiti: oyunçu gec başlayanda və ya yığmayanda sikkələr yığılıb qalmasın
+            const maxAllowedCoins = 6 + gameState.floor * 2;
+            if (coins.length >= maxAllowedCoins) {
+                return;
+            }
+
+            const count = Math.min(2, maxAllowedCoins - coins.length);
+            for (let i = 0; i < count; i++) {
+                coins.push(new Coin(
+                    Math.random() * (canvasWidth - 60) + 30,
+                    Math.random() * (canvasHeight - 280) + 70
+                ));
+            }
+            showToast(`🪙 +${count} yeni sikkə!`, 'gold');
+        }
+
+        function updateUI() {
+            document.getElementById('stat-gold').innerText = Math.floor(gameState.gold);
+            document.getElementById('stat-diamonds').innerText = diamonds;
+            const headerDiamonds = document.getElementById('stat-header-diamonds');
+            if (headerDiamonds) headerDiamonds.innerText = `${diamonds} 💎`;
+            document.getElementById('stat-floor').innerText = gameState.floor;
+            document.getElementById('stat-req-txt').innerText = `${gameState.scoreProgress}/${gameState.scoreReq}`;
+            document.getElementById('stat-combo').innerText = gameState.combo;
+            
+            // OYUNDAXİLİ GÜCLƏNDİRMƏ KARTLARINDA REAL YEKUN SƏVİYYƏ VƏ DƏYƏRLƏRİN GÖSTƏRİLMƏSİ
+            const totalSpeedLvl = permUpgrades.speedLvl + gameState.inGameSpeedLvl;
+            const currentSpeedVal = (getBaseSpeed() + gameState.inGameSpeedLvl * 0.5).toFixed(1);
+            document.getElementById('lvl-speed').innerText = `Lv.${totalSpeedLvl} (${currentSpeedVal})`;
+
+            const totalMagnetLvl = permUpgrades.magnetLvl + gameState.inGameMagnetLvl;
+            const currentMagnetVal = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
+            document.getElementById('lvl-magnet').innerText = `Lv.${totalMagnetLvl} (${currentMagnetVal}px)`;
+
+            const dashTxt = document.getElementById('stat-dash-status');
+            if (gameState.dashCooldown <= 0) {
+                dashTxt.innerText = 'HAZIR';
+                dashTxt.className = 'font-orbitron text-emerald-400 font-bold text-xs';
+            } else {
+                dashTxt.innerText = `${gameState.dashCooldown.toFixed(1)}s`;
+                dashTxt.className = 'font-orbitron text-slate-400 font-bold text-xs';
+            }
+
+            const progressPercent = Math.min(100, (gameState.scoreProgress / gameState.scoreReq) * 100);
+            document.getElementById('stat-req-bar').style.width = `${progressPercent}%`;
+
+            const priceMult = Math.pow(1.10, gameState.floor - 1);
+            document.getElementById('price-wall').innerText = `${Math.floor(gameState.prices.wall * priceMult)} 🪙`;
+            document.getElementById('price-ice').innerText = `${Math.floor(gameState.prices.ice * priceMult)} 🪙`;
+            document.getElementById('price-shock').innerText = `${Math.floor(gameState.prices.shock * priceMult)} 🪙`;
+            document.getElementById('price-mine').innerText = `${Math.floor(gameState.prices.mine * priceMult)} 🪙`;
+            document.getElementById('price-plasma').innerText = `${Math.floor(gameState.prices.plasma * priceMult)} 🪙`;
+
+            document.getElementById('price-upgrade-speed').innerText = `${Math.floor(60 * Math.pow(1.35, gameState.inGameSpeedLvl))} 🪙`;
+            document.getElementById('price-upgrade-magnet').innerText = `${Math.floor(80 * Math.pow(1.4, gameState.inGameMagnetLvl))} 🪙`;
+
+            const borderText = document.getElementById('border-status-text');
+            const borderDot = document.getElementById('border-icon-dot');
+            if (gameState.borderOpen) {
+                borderText.innerText = '🌟 SƏRHƏD AÇIQ!';
+                borderText.className = 'font-orbitron text-xs text-emerald-400 font-bold tracking-wider';
+                borderDot.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-ping';
+            } else {
+                borderText.innerText = `🔒 ${gameState.scoreProgress}/${gameState.scoreReq}`;
+                borderText.className = 'font-orbitron text-xs text-slate-300 tracking-wider';
+                borderDot.className = 'w-3 h-3 rounded-full bg-rose-500 animate-pulse';
+            }
+
+            document.getElementById('floor-timer').innerText = `⏱ ${Math.floor(gameState.floorTime)}s`;
+            if (gameState.borderOpen) {
+                document.getElementById('coin-countdown-timer').innerText = 'DAYANDI';
+            } else {
+                document.getElementById('coin-countdown-timer').innerText = `${Math.max(0, gameState.coinCountdown).toFixed(1)}s`;
+            }
+        }
+
+        function drawBorderLine() {
+            const borderY = 55;
+            const isOpen = gameState.borderOpen;
+            
+            ctx.save();
+            
+            const grad = ctx.createLinearGradient(0, borderY - 15, 0, borderY + 15);
+            if (isOpen) {
+                grad.addColorStop(0, 'rgba(0, 255, 100, 0)');
+                grad.addColorStop(0.3, 'rgba(0, 255, 100, 0.3)');
+                grad.addColorStop(0.5, 'rgba(0, 255, 100, 0.6)');
+                grad.addColorStop(0.7, 'rgba(0, 255, 100, 0.3)');
+                grad.addColorStop(1, 'rgba(0, 255, 100, 0)');
+            } else {
+                grad.addColorStop(0, 'rgba(255, 50, 50, 0)');
+                grad.addColorStop(0.3, 'rgba(255, 50, 50, 0.2)');
+                grad.addColorStop(0.5, 'rgba(255, 50, 50, 0.5)');
+                grad.addColorStop(0.7, 'rgba(255, 50, 50, 0.2)');
+                grad.addColorStop(1, 'rgba(255, 50, 50, 0)');
+            }
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, borderY - 15, canvasWidth, 30);
+            
+            ctx.shadowBlur = isOpen ? 25 : 15;
+            ctx.shadowColor = isOpen ? '#00ff66' : '#ff3344';
+            ctx.strokeStyle = isOpen ? '#00ff66' : '#ff3344';
+            ctx.lineWidth = 4;
+            
+            const dashOffset = Date.now() * 0.02;
+            ctx.setLineDash(isOpen ? [15, 10] : [8, 12]);
+            ctx.lineDashOffset = -dashOffset;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, borderY);
+            ctx.lineTo(canvasWidth, borderY);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
+            
+            ctx.fillStyle = isOpen ? '#00ff66' : '#ff3344';
+            ctx.font = 'bold 11px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const label = isOpen ? '✦ KEÇİD AÇIQ - YUXARI QALX! ✦' : `✦ ${gameState.scoreProgress}/${gameState.scoreReq} XAL TƏLƏB OLUNUR ✦`;
+            ctx.fillText(label, canvasWidth / 2, borderY - 8);
+            
+            if (isOpen) {
+                ctx.fillStyle = '#00ff66';
+                ctx.font = '16px Arial';
+                ctx.textBaseline = 'middle';
+                for (let x = 40; x < canvasWidth; x += 60) {
+                    ctx.fillText('▲', x, borderY);
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w/2) r = w/2;
+                if (r > h/2) r = h/2;
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                this.closePath();
+                return this;
+            };
+        }
+
+        // ƏSAS OYUN DÖVRƏSİ
+        function gameLoop() {
+            frameCount++;
+            
+            if (!gameState.paused && !gameState.gameOver) {
+                if (!gameState.transitioning) {
+                    gameState.floorTime += 1/60;
+                    
+                    if (gameState.dashCooldown > 0) {
+                        gameState.dashCooldown -= 1/60;
+                        if (gameState.dashCooldown < 0) gameState.dashCooldown = 0;
+                    }
+                    if (gameState.dashInvulnerable > 0) {
+                        gameState.dashInvulnerable--;
+                    }
+
+                    if (!gameState.borderOpen) {
+                        gameState.coinCountdown -= 1/60;
+                        if (gameState.coinCountdown <= 0) {
+                            autoSpawnCoin();
+                            gameState.coinCountdown = getCoinSpawnInterval();
+                        }
+                    }
+                }
+
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < canvasWidth; x += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvasHeight);
+                    ctx.stroke();
+                }
+                ctx.beginPath();
+                ctx.moveTo(canvasWidth, 0);
+                ctx.lineTo(canvasWidth, canvasHeight);
+                ctx.stroke();
+
+                for (let y = 0; y < canvasHeight; y += 40) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvasWidth, y);
+                    ctx.stroke();
+                }
+                ctx.beginPath();
+                ctx.moveTo(0, canvasHeight);
+                ctx.lineTo(canvasWidth, canvasHeight);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255,255,255,0.025)';
+                ctx.font = '120px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(gameState.floor, canvasWidth/2, canvasHeight/2);
+
+                drawBorderLine();
+
+                player.update(keys);
+                player.draw();
+
+                coins.forEach((c, index) => {
+                    c.draw();
+
+                    if (!gameState.transitioning) {
+                        const dx = player.x - c.x;
+                        const dy = player.y - c.y;
+                        const dist = Math.hypot(dx, dy);
+
+                        if (dist < gameState.magnetRadius) {
+                            const pull = 3.5 + (permUpgrades.magnetLvl - 1 + gameState.inGameMagnetLvl) * 0.45;
+                            c.x += (dx / dist) * pull;
+                            c.y += (dy / dist) * pull;
+                        }
+
+                        if (dist < player.radius + c.radius) {
+                            gameState.gold += c.value;
+                            audio.playCoin();
+                            
+                            for(let i=0; i<8; i++) {
+                                particles.push(new Particle(c.x, c.y, '#ffd700', 3));
+                            }
+
+                            coins.splice(index, 1);
+                            updateUI();
+                        }
+                    }
+                });
+
+                monster.update();
+                monster.draw();
+
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    b.update();
+                    b.draw();
+
+                    if (b.y >= monster.y - 15) {
+                        const reward = gameState.destroyRewards[b.type] * (1 + (gameState.floor - 1) * 0.12);
+                        gameState.gold += Math.floor(reward);
+                        gameState.totalTrapsDestroyed++;
+
+                        audio.playImpact();
+                        showToast(`💥 DƏYDİ! +${Math.floor(reward)} 🪙`, 'gold');
+
+                        const pColors = {
+                            wall: ['#facc15', '#eab308', '#ca8a04'],
+                            ice: ['#22d3ee', '#06b6d4', '#ffffff'],
+                            shock: ['#d8b4fe', '#a855f7', '#7e22ce'],
+                            mine: ['#fb7185', '#f43f5e', '#ff3300'],
+                            plasma: ['#34d399', '#10b981', '#059669']
+                        };
+                        const clrs = pColors[b.type] || ['#ffffff', '#ffaa00'];
+                        for (let p = 0; p < 28; p++) {
+                            particles.push(new Particle(b.x, b.y, clrs[Math.floor(Math.random() * clrs.length)], 5));
+                        }
+
+                        if (b.type === 'wall') {
+                            monster.stunTimer = 150;
+                        } else if (b.type === 'ice') {
+                            monster.slowTimer = 240;
+                        } else if (b.type === 'shock') {
+                            monster.y += 120;
+                        } else if (b.type === 'mine') {
+                            monster.y += 210;
+                        } else if (b.type === 'plasma') {
+                            monster.y += 160;
+                            monster.plasmaTimer = 300;
+                        }
+
+                        bullets.splice(i, 1);
+                        updateUI();
+                        continue;
+                    }
+
+                    if (b.y > canvasHeight + 50) {
+                        bullets.splice(i, 1);
+                    }
+                }
+
+                particles.forEach((p, idx) => {
+                    p.update();
+                    p.draw();
+                    if (p.alpha <= 0) particles.splice(idx, 1);
+                });
+
+                const borderY = 55;
+                if (gameState.borderOpen && player.y <= borderY + player.radius) {
+                    if (!hasPassedBorder) {
+                        hasPassedBorder = true;
+                        setTimeout(() => {
+                            if (!gameState.gameOver) {
+                                nextFloor();
+                            }
+                        }, 250);
+                    }
+                }
+
+                if (!gameState.transitioning && gameState.dashInvulnerable <= 0 && monster.y <= player.y + player.radius) {
+                    triggerGameOver();
+                }
+
+                if (frameCount % 30 === 0 && !gameState.borderOpen) {
+                    gameState.gold += 0.15 * (1 + gameState.combo * 0.05);
+                }
+
+                if (frameCount % 20 === 0) {
+                    saveActiveRun();
+                }
+                
+                updateUI();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver() {
+            gameState.gameOver = true;
+            gameState.coinCountdown = getCoinSpawnInterval();
+            bullets = [];
+            coins = [];
+            clearActiveRun();
+            audio.playGameOver();
+            cancelRebinding();
+
+            document.getElementById('final-floor').innerText = gameState.floor;
+            document.getElementById('final-gold').innerText = Math.floor(gameState.gold);
+            document.getElementById('final-traps').innerText = gameState.totalTrapsPlaced;
+            document.getElementById('final-diamonds').innerText = diamonds;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            clearActiveRun();
+            gameState.transitioning = false;
+            keys = {};
+            gameState.gold = 75;
+            gameState.floor = 1;
+            gameState.scoreProgress = 0;
+            gameState.scoreReq = gameState.getFloorRequirement(1);
+            gameState.borderOpen = false;
+            gameState.gameOver = false;
+            gameState.paused = false;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.totalTrapsPlaced = 0;
+            gameState.totalTrapsDestroyed = 0;
+            gameState.floorTime = 0;
+            gameState.inGameSpeedLvl = 0;
+            gameState.inGameMagnetLvl = 0;
+            gameState.magnetRadius = getBaseMagnetRadius();
+            gameState.dashCooldown = 0;
+            gameState.coinCountdown = getCoinSpawnInterval();
+            hasPassedBorder = false;
+
+            document.getElementById('modal-overlay').classList.add('hidden');
+            document.getElementById('pause-overlay').classList.add('hidden');
+
+            cancelRebinding();
+            bullets = [];
+            coins = [];
+            player.reset();
+            monster.reset();
+            spawnCoins();
+            updateUI();
+            saveActiveRun();
+        }
+
+        function togglePause() {
+            if (gameState.gameOver) return;
+            gameState.paused = !gameState.paused;
+            const pauseOverlay = document.getElementById('pause-overlay');
+            if (gameState.paused) {
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseOverlay.classList.add('hidden');
+            }
+        }
+
+        function toggleAudio() {
+            audio.init();
+            audio.muted = !audio.muted;
+            const btn = document.getElementById('btn-sound');
+            btn.innerHTML = audio.muted ? `<i class="fa-solid fa-volume-xmark text-sm text-rose-400"></i>` : `<i class="fa-solid fa-volume-high text-sm"></i>`;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (!gameState.gameOver) {
+                saveActiveRun();
+            }
+        });
+
+        // Başlanğıc sazlaması
+        resizeCanvas();
+        player.reset();
+        monster.reset();
+        spawnCoins();
+
+        // Yaddaşdakı aktiv oyunu bərpa edirik (lavanın dəqiq yeri, oyunçu koordinatları, aktiv sikkələr)
+        const hasLoadedRun = loadActiveRun();
+
+        document.getElementById('stat-best-floor').innerText = `🏆 REKORD: ${gameState.bestFloor}`;
+        gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
+        renderKeybindBadges();
+        updatePermUpgradesUI();
+        updateUI();
+
+        if (hasLoadedRun) {
+            showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Lavanın yeri saxlanıldı)`, 'success');
+        }
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

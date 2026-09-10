@@ -1,0 +1,12 @@
+{
+  "name": "floor-escape-server",
+  "version": "1.0.0",
+  "description": "Floor Escape Game and Gift Code API Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["game", "arcade", "api"],
+  "author": "",
+  "license": "ISC"
+}
