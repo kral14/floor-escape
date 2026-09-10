@@ -13,11 +13,13 @@ function showDashboardView() {
     isDashboardActive = true;
     gameState.paused = true;
 
+    const authView = document.getElementById('auth-view');
     const dashView = document.getElementById('dashboard-view');
     const gameScreen = document.getElementById('game-screen-container');
 
-    if (dashView) dashView.classList.remove('hidden');
+    if (authView) authView.classList.add('hidden');
     if (gameScreen) gameScreen.classList.add('hidden');
+    if (dashView) dashView.classList.remove('hidden');
 
     updateDashboardUI();
     switchNavPage(currentNavPage || 'home');
@@ -27,11 +29,19 @@ function showGameView() {
     isDashboardActive = false;
     gameState.paused = false;
 
+    const authView = document.getElementById('auth-view');
     const dashView = document.getElementById('dashboard-view');
     const gameScreen = document.getElementById('game-screen-container');
 
+    if (authView) authView.classList.add('hidden');
     if (dashView) dashView.classList.add('hidden');
-    if (gameScreen) gameScreen.classList.remove('hidden');
+    if (gameScreen) {
+        gameScreen.classList.remove('hidden');
+        if (typeof adjustViewportFit === 'function') {
+            adjustViewportFit();
+            requestAnimationFrame(adjustViewportFit);
+        }
+    }
 
     const canvas = document.getElementById('gameCanvas');
     if (canvas) canvas.focus();
@@ -42,24 +52,25 @@ function showGameView() {
 
 function startGameFromDashboard(forceNew = false) {
     if (forceNew) {
-        restartGame();
-    } else {
-        const saved = JSON.parse(localStorage.getItem('floor_escape_active_run'));
-        if (!saved || !saved.hasActiveRun || gameState.gameOver) {
-            restartGame();
-        }
+        localStorage.removeItem('floor_escape_active_run');
     }
-    showGameView();
+    // Daşborddan oyuna eyni tabda birbaşa keçid
+    window.location.href = 'game.html';
 }
 
 function returnToDashboard() {
-    if (!gameState.gameOver) {
-        saveActiveRun();
+    try {
+        if (typeof gameState !== 'undefined' && !gameState.gameOver) {
+            if (typeof saveActiveRun === 'function') saveActiveRun();
+        }
+        if (typeof syncPlayerDataCloud === 'function') {
+            syncPlayerDataCloud(true);
+        }
+    } catch (e) {
+        console.warn('Yadda saxlanarkən xəta:', e);
     }
-    if (typeof syncPlayerDataCloud === 'function') {
-        syncPlayerDataCloud(true);
-    }
-    showDashboardView();
+    // Oyundan Daşborda eyni tabda birbaşa qayıdış
+    window.location.href = 'index.html';
 }
 
 // ==================== MENYU NAVİQASİYASI (NAV TABS) ====================
@@ -1051,7 +1062,13 @@ function initChatPolling() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initChatPolling();
-    showDashboardView();
+    if (typeof checkInitialAuthRoute === "function") {
+        checkInitialAuthRoute();
+    } else if (typeof showAuthView === "function") {
+        showAuthView();
+    } else {
+        showDashboardView();
+    }
     startDashboardPreviewAnimation();
 });
 

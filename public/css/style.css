@@ -1,3 +1,27 @@
+/* ========== GİZLİ ELEMENTLƏRİN VƏ MODALLARIN QƏTİ QORUNMASI ========== */
+.hidden,
+[hidden],
+#pause-overlay.hidden,
+#modal-overlay.hidden,
+#floor-clear-overlay.hidden,
+#chest-overlay.hidden,
+#laboratory-modal.hidden,
+#gift-modal-overlay.hidden,
+#auth-modal-overlay.hidden,
+#turret-settings-panel.hidden,
+#keybind-help-banner.hidden,
+#lab-tab-content-econ.hidden {
+    display: none !important;
+}
+
+@media (min-width: 640px) {
+    .sm\:hidden,
+    #touch-controls,
+    .touch-controls {
+        display: none !important;
+    }
+}
+
 * {
     box-sizing: border-box;
     user-select: none;
@@ -11,12 +35,14 @@ html, body {
     padding: 0;
     width: 100vw;
     height: 100vh;
+    box-sizing: border-box;
     overflow: hidden;
     touch-action: none;
     overscroll-behavior: none;
     font-family: 'Rajdhani', sans-serif;
     background: #07070d;
     color: #f1f5f9;
+    position: relative;
 }
 
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
@@ -433,3 +459,55 @@ input, textarea {
 }
 
 
+
+/* EKRANLARIN QƏTİ VƏ DÜZGÜN GİZLƏDİLMƏSİ (ID vs CLASS TOQQUŞMASININ HƏLLİ) */
+.hidden,
+#dashboard-view.hidden,
+#game-screen-container.hidden,
+#auth-view.hidden {
+    display: none !important;
+}
+
+#dashboard-view:not(.hidden) {
+    display: flex !important;
+    width: 100%;
+    max-width: 1200px;
+    height: calc(100vh - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+    margin: auto !important;
+}
+
+#game-screen-container:not(.hidden) {
+    display: flex !important;
+    width: 1140px;
+    height: 750px;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%);
+    margin: 0 !important;
+    transform-origin: center center;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    transition: none !important;
+}
+
+
+/* ========== SCROLLBAR GİZLƏDİLMƏSİ (HEÇ BİR YERDƏ GÖRÜNMƏSİN) ========== */
+.no-scrollbar::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+#game-screen-container *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+
+.no-scrollbar,
+aside,
+#game-screen-container * {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;     /* Firefox */
+}

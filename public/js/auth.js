@@ -283,9 +283,193 @@ function logoutPlayer() {
     localStorage.removeItem('floor_escape_player');
     updatePlayerHeaderUI();
     showToast('Hesabdan çıxış edildi. İstənilən vaxt ID və PIN ilə yenidən daxil ola bilərsiniz.', 'info');
+    showAuthView();
 }
 
 // Sənəd hazır olanda inisializasiya
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
 });
+
+
+// ==================== GİRİŞ PORTALI SƏHİFƏSİ MENECERİ ====================
+let portalAuthMode = 'login';
+
+function checkSavedAccountOnLoad() {
+    const savedBox = document.getElementById('auth-saved-account-box');
+    const formBox = document.getElementById('auth-form-box');
+    const avatar = document.getElementById('auth-saved-avatar');
+    const name = document.getElementById('auth-saved-name');
+    const idEl = document.getElementById('auth-saved-id');
+
+    if (currentPlayer && currentPlayer.playerId) {
+        if (savedBox) savedBox.classList.remove('hidden');
+        if (formBox) formBox.classList.add('hidden');
+        if (avatar) avatar.innerText = (currentPlayer.username || 'P').charAt(0).toUpperCase();
+        if (name) name.innerText = currentPlayer.username || 'Player';
+        if (idEl) idEl.innerText = `ID: #${currentPlayer.playerId}`;
+    } else {
+        if (savedBox) savedBox.classList.add('hidden');
+        if (formBox) formBox.classList.remove('hidden');
+    }
+}
+
+function showAuthView() {
+    const authView = document.getElementById('auth-view');
+    const dashView = document.getElementById('dashboard-view');
+    const gameScreen = document.getElementById('game-screen-container');
+
+    if (authView) {
+        authView.classList.remove('hidden');
+        if (dashView) dashView.classList.add('hidden');
+        if (gameScreen) gameScreen.classList.add('hidden');
+        checkSavedAccountOnLoad();
+    } else {
+        // auth-view yoxdursa (index.html modal rejimindədirsə), dashboard-u göstər
+        if (dashView) dashView.classList.remove('hidden');
+        if (typeof showDashboardView === 'function') showDashboardView();
+    }
+}
+
+function enterDashboard() {
+    const authView = document.getElementById('auth-view');
+    if (authView) authView.classList.add('hidden');
+
+    if (typeof showDashboardView === 'function') {
+        showDashboardView();
+    }
+}
+
+function switchToManualAuth() {
+    const savedBox = document.getElementById('auth-saved-account-box');
+    const formBox = document.getElementById('auth-form-box');
+    if (savedBox) savedBox.classList.add('hidden');
+    if (formBox) formBox.classList.remove('hidden');
+}
+
+function switchAuthPortalTab(mode) {
+    portalAuthMode = mode;
+    const btnLoginTab = document.getElementById('auth-tab-btn-login');
+    const btnRegTab = document.getElementById('auth-tab-btn-register');
+    const note = document.getElementById('auth-portal-note');
+    const submitBtn = document.getElementById('portal-submit-btn');
+    const err = document.getElementById('portal-error-msg');
+    if (err) err.textContent = '';
+
+    if (mode === 'login') {
+        if (btnLoginTab) btnLoginTab.className = 'flex-1 py-2 rounded-xl font-orbitron font-bold text-xs bg-cyan-600 text-white shadow transition';
+        if (btnRegTab) btnRegTab.className = 'flex-1 py-2 rounded-xl font-orbitron font-bold text-xs text-slate-400 hover:text-slate-200 transition';
+        if (note) note.textContent = 'Giriş üçün adınızı və ya 7 rəqəmli ID-nizi daxil edin:';
+        if (submitBtn) submitBtn.textContent = 'DAXİL OL';
+    } else {
+        if (btnLoginTab) btnLoginTab.className = 'flex-1 py-2 rounded-xl font-orbitron font-bold text-xs text-slate-400 hover:text-slate-200 transition';
+        if (btnRegTab) btnRegTab.className = 'flex-1 py-2 rounded-xl font-orbitron font-bold text-xs bg-emerald-600 text-white shadow transition';
+        if (note) note.textContent = 'Yeni hesab yaradın və avtomatik 7 rəqəmli ID əldə edin:';
+        if (submitBtn) submitBtn.textContent = 'QEYDİYYATDAN KEÇ';
+    }
+}
+
+async function handlePortalAuthSubmit() {
+    const userInput = document.getElementById('portal-input-username');
+    const pinInput = document.getElementById('portal-input-pin');
+    const err = document.getElementById('portal-error-msg');
+
+    const userVal = userInput ? userInput.value.trim() : '';
+    const pinVal = pinInput ? pinInput.value.trim() : '';
+
+    if (!userVal || !pinVal) {
+        if (err) err.textContent = 'Zəhmət olmasa bütün xanaları doldurun!';
+        return;
+    }
+
+    if (portalAuthMode === 'login') {
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login: userVal, pin: pinVal })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (err) err.textContent = data.message || 'Giriş uğursuz oldu!';
+                return;
+            }
+
+            currentPlayer = data.player;
+            localStorage.setItem('floor_escape_player', JSON.stringify(currentPlayer));
+            applyPlayerDataFromCloud(data.player);
+            updatePlayerHeaderUI();
+
+            showToast(`Xoş gəldin, ${currentPlayer.username}! (ID: #${currentPlayer.playerId})`, 'success');
+            enterDashboard();
+        } catch (e) {
+            if (err) err.textContent = 'Serverlə əlaqə xətası: ' + e.message;
+        }
+    } else {
+        // Qeydiyyat
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: userVal,
+                    pin: pinVal,
+                    gold: gameState.gold || 75,
+                    diamonds: diamonds || 0,
+                    redDiamonds: redDiamonds || 0,
+                    bestFloor: gameState.bestFloor || 1,
+                    permUpgrades: permUpgrades || {},
+                    claimedChests: claimedChests || []
+                })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (err) err.textContent = data.message || 'Qeydiyyat xətası!';
+                return;
+            }
+
+            currentPlayer = data.player;
+            localStorage.setItem('floor_escape_player', JSON.stringify(currentPlayer));
+            updatePlayerHeaderUI();
+
+            showToast(`Hesab yaradıldı! Sizin Unikal ID: #${currentPlayer.playerId}`, 'success');
+            enterDashboard();
+        } catch (e) {
+            if (err) err.textContent = 'Serverlə əlaqə xətası: ' + e.message;
+        }
+    }
+}
+
+function loginAsGuest() {
+    showToast('Qonaq rejimi ilə davam edilir', 'info');
+    enterDashboard();
+}
+
+
+// ==================== AĞILLI SESSİYA VƏ AÇILIŞ MARŞRUTU ====================
+function checkInitialAuthRoute() {
+    try {
+        const savedPlayer = localStorage.getItem('floor_escape_player');
+        if (savedPlayer) {
+            currentPlayer = JSON.parse(savedPlayer);
+            if (currentPlayer && currentPlayer.playerId) {
+                updatePlayerHeaderUI();
+                fetchLatestPlayerData();
+                // Əgər daxil olubsa, birbaşa Daşborda keçir (səhifə yenilənəndə çölə atmır!)
+                enterDashboard();
+                return;
+            }
+        }
+    } catch(e) {
+        console.error('Sessiya yoxlanarkən xəta:', e);
+    }
+
+    // Əgər hesab yoxdursa
+    const authView = document.getElementById('auth-view');
+    if (authView) {
+        showAuthView();
+    } else {
+        enterDashboard();
+    }
+}
+window.checkInitialAuthRoute = checkInitialAuthRoute;

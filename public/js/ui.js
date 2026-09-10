@@ -359,12 +359,20 @@ function setTurretInterval(seconds) {
     showToast(`⏱ Qüllə Atəş İntervalı: ${permUpgrades.turretInterval}s təyin edildi!`, 'info');
 }
 
-function toggleTurretEnabled() {
+function toggleTurretEnabled(event) {
+    if (event && event.stopPropagation) event.stopPropagation();
     permUpgrades.turretEnabled = !permUpgrades.turretEnabled;
     savePermanentData();
     updateTurretsUI();
-    showToast(`Qüllələr: ${permUpgrades.turretEnabled ? 'AKTİV' : 'SÖNDÜRÜLDÜ'}`, 'info');
+    if (typeof showToast === 'function') {
+        showToast(
+            permUpgrades.turretEnabled ? '⚡ Əkiz Qüllələr: AKTİV EDİLDİ' : '⛔ Əkiz Qüllələr: SÖNDÜRÜLDÜ',
+            permUpgrades.turretEnabled ? 'success' : 'warning'
+        );
+    }
 }
+window.toggleTurretEnabled = toggleTurretEnabled;
+window.toggleTurretActive = toggleTurretEnabled;
 
 function getTrapName(type) {
     const names = {
@@ -432,13 +440,24 @@ function updateTurretsUI() {
 
         // Aktivlik açarı
         const toggleBtn = document.getElementById('btn-turret-toggle');
+        const turretBody = document.getElementById('turret-controls-body');
+
         if (toggleBtn) {
-            toggleBtn.innerHTML = permUpgrades.turretEnabled ?
-                '<i class="fa-solid fa-power-off text-emerald-400 mr-1"></i> AKTİV' :
-                '<i class="fa-solid fa-power-off text-rose-500 mr-1"></i> SÖNDÜRÜLÜB';
+            if (permUpgrades.turretEnabled) {
+                toggleBtn.className = 'text-[10px] font-orbitron font-bold px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/70 text-emerald-300 hover:border-emerald-400 transition cursor-pointer select-none shadow-sm shadow-emerald-500/20';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-power-off text-emerald-400 mr-1.5"></i> AKTİV';
+            } else {
+                toggleBtn.className = 'text-[10px] font-orbitron font-bold px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/70 text-rose-400 hover:border-rose-400 transition cursor-pointer select-none shadow-sm shadow-rose-500/20';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-power-off text-rose-500 mr-1.5"></i> SÖNDÜRÜLÜB';
+            }
         }
 
-        // Daşbord üçün qüllə tənzimləmələri
+        if (turretBody && turretBody.style) {
+            turretBody.style.opacity = permUpgrades.turretEnabled ? '1' : '0.4';
+            turretBody.style.pointerEvents = permUpgrades.turretEnabled ? 'auto' : 'none';
+            turretBody.style.filter = permUpgrades.turretEnabled ? 'none' : 'grayscale(0.6)';
+        }
+
         const dashBadge = document.getElementById('dash-turret-ownership-badge');
         if (dashBadge) {
             dashBadge.innerHTML = `
@@ -526,3 +545,32 @@ function toggleLaboratoryModal() {
         modal.classList.add('hidden');
     }
 }
+
+
+// ==================== BÜTÜN MONİTORLAR ÜÇÜN RESPONSİV AVTO-SCALE VƏ BOŞLUQLAR ====================
+function adjustViewportFit() {
+    const gameScreen = document.getElementById('game-screen-container');
+    if (!gameScreen || gameScreen.classList.contains('hidden')) return;
+
+    // Yuxarıdan və aşağıdan dəqiq 10px, yanlardan 10px boşluq
+    const paddingY = 10;
+    const paddingX = 10;
+
+    const availW = Math.max(300, window.innerWidth - (paddingX * 2));
+    const availH = Math.max(300, window.innerHeight - (paddingY * 2));
+
+    const baseW = 1140;
+    const baseH = 750;
+
+    const scale = Math.min(availW / baseW, availH / baseH);
+
+    gameScreen.style.position = 'absolute';
+    gameScreen.style.left = '50%';
+    gameScreen.style.top = '50%';
+    gameScreen.style.margin = '0';
+    gameScreen.style.transformOrigin = 'center center';
+    gameScreen.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+window.adjustViewportFit = adjustViewportFit;
+window.addEventListener('resize', adjustViewportFit);
+window.addEventListener('load', adjustViewportFit);
