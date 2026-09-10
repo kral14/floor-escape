@@ -5,7 +5,7 @@ Bu sənəd oyunu daha dinamik, maraqlı və asılılıq yaradan (addictive) etm�
 ---
 
 ## 📌 Mərhələ 1: ⚡ Platformada Yaranan Müvəqqəti Güclər (In-Game Power-Ups)
-> **Status:** 🟡 İcrada (Hazırkı Mərhələ)
+> **Status:** 🟢 Tamamlandı (Oyunda Aktivdir)
 
 Platformalarda sikkələrlə yanaşı təsadüfi olaraq parıldayan neon enerji kürələri (orbs) yaranır:
 1. **🛡️ Enerji Qalxanı (Aegis Shield):**
@@ -23,7 +23,7 @@ Platformalarda sikkələrlə yanaşı təsadüfi olaraq parıldayan neon enerji 
 ---
 
 ## 📌 Mərhələ 2: 🧩 Dinamik Platforma Növləri (Interactive Platforms)
-> **Status:** ⚪ Gözləmədə
+> **Status:** 🟡 Növbəti Mərhələ
 
 Bütün platformaların eyni olması əvəzinə, hərəkət dinamikasına gözlənilməzlik qatılır:
 1. **💥 Çatlayan Platformalar (Crumbling):** Üzərinə basıldıqda çatlar əmələ gəlir və 0.8 saniyə sonra dağılır.

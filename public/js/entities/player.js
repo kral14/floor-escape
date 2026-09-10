@@ -10,6 +10,8 @@ class Player {
         this.trail = [];
         this.facing = Math.PI / 2;
         this.canPassBorder = false;
+        this.hasShield = false;
+        this.shieldAngle = 0;
     }
 
     reset() {
@@ -54,6 +56,47 @@ class Player {
 
         this.trail.push({ x: this.x, y: this.y, alpha: 0.6 });
         if (this.trail.length > 12) this.trail.shift();
+    }
+
+    // 🛡️ QALXANIN SINMASI VƏ OYUNÇUNUN XİLAS OLUNMASI
+    breakShield() {
+        this.hasShield = false;
+        if (typeof gameState !== 'undefined') {
+            gameState.dashInvulnerable = 75; // 1.25 saniyəlik qoruyucu toxunulmazlıq
+        }
+        this.y = Math.max(70, this.y - 160); // Təhlükəsiz zonaya fırladır
+        
+        if (typeof audio !== 'undefined' && audio.playShieldBreak) {
+            audio.playShieldBreak();
+        }
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 30; i++) {
+                particles.push(new Particle(this.x, this.y, Math.random() < 0.5 ? '#00f0ff' : '#ffffff', 4));
+            }
+        }
+        if (typeof showToast === 'function') {
+            showToast('🛡️ ENERJİ QALXANI SİZİ LAVADAN XİLAS ETDİ!', 'success');
+        }
+    }
+
+    // 🚀 KVANT SIÇRAYIŞI (REAKTİV İMPULS)
+    hyperJump() {
+        this.y = Math.max(65, this.y - 190);
+        if (typeof gameState !== 'undefined') {
+            gameState.dashInvulnerable = 50;
+        }
+        this.dashCooldown = 0;
+        if (typeof audio !== 'undefined' && audio.playDash) {
+            audio.playDash();
+        }
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 25; i++) {
+                particles.push(new Particle(this.x, this.y, Math.random() < 0.5 ? '#f59e0b' : '#fde047', 3.5));
+            }
+        }
+        if (typeof showToast === 'function') {
+            showToast('🚀 KVANT SIÇRAYIŞI AKTİVLƏŞDİ!', 'warning');
+        }
     }
 
     dash() {

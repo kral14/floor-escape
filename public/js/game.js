@@ -151,6 +151,7 @@ const player = new Player();
 const monster = new Monster();
 let bullets = [];
 let coins = [];
+let powerUps = [];
 let particles = [];
 let keys = {};
 let frameCount = 0;
@@ -230,6 +231,7 @@ function nextFloor() {
     gameState.bulletUsage = { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 };
 
     spawnCoins();
+    spawnPowerUps();
 
     // 10-cu QAT SANDIQ YOXLANIŞI
     const openedChest = checkMilestoneChest(gameState.floor);
@@ -276,6 +278,27 @@ function autoSpawnCoin() {
         coins.push(new Coin(
             Math.random() * (canvasWidth - 60) + 30,
             Math.random() * (canvasHeight - 280) + 70
+        ));
+    }
+}
+
+function spawnPowerUps() {
+    powerUps = [];
+    if (typeof PowerUp !== 'undefined') {
+        powerUps.push(new PowerUp(
+            Math.random() * (canvasWidth - 120) + 60,
+            Math.random() * (canvasHeight - 320) + 90
+        ));
+    }
+}
+
+function autoSpawnPowerUp() {
+    if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
+    if (powerUps.length >= 2) return;
+    if (typeof PowerUp !== 'undefined') {
+        powerUps.push(new PowerUp(
+            Math.random() * (canvasWidth - 100) + 50,
+            Math.random() * (canvasHeight - 300) + 80
         ));
     }
 }
@@ -421,11 +444,13 @@ function updatePhysicsStep() {
     // Sikkələrin çəkilməsi və toplanması
     coins.forEach((c, index) => {
         const dist = Math.hypot(player.x - c.x, player.y - c.y);
-        const attractDist = gameState.magnetRadius;
+        // Super-Maqnit zamanı bütün arenadakı sikkələr güclü cəzb olunur
+        const attractDist = (gameState.superMagnetTimer > 0) ? 950 : gameState.magnetRadius;
+        const magnetMultiplier = (gameState.superMagnetTimer > 0) ? 2.5 : 1;
 
         if (dist < attractDist) {
             const angle = Math.atan2(player.y - c.y, player.x - c.x);
-            const magnetForce = 4.5 * (1 - dist / attractDist) + 2.5;
+            const magnetForce = (4.5 * (1 - dist / attractDist) + 2.5) * magnetMultiplier;
             c.x += Math.cos(angle) * magnetForce;
             c.y += Math.sin(angle) * magnetForce;
         }
@@ -445,6 +470,62 @@ function updatePhysicsStep() {
             updateUI();
         }
     });
+
+    // ⚡ Gücləndiricilərin (Power-Ups) yenilənməsi və toplanması
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const p = powerUps[i];
+        if (!p.update()) {
+            powerUps.splice(i, 1);
+            continue;
+        }
+
+        const pDist = Math.hypot(player.x - p.x, player.y - p.y);
+        if (pDist < player.radius + p.radius) {
+            // Gücləndirici götürüldü!
+            if (typeof audio !== 'undefined' && audio.playPowerUp) {
+                audio.playPowerUp();
+            }
+            if (typeof particles !== 'undefined') {
+                for (let k = 0; k < 18; k++) {
+                    particles.push(new Particle(p.x, p.y, p.cfg.color, 3.5));
+                }
+            }
+
+            if (p.type === 'shield') {
+                player.hasShield = true;
+                if (typeof showToast === 'function') {
+                    showToast('🛡️ ENERJİ QALXANI AKTİVLƏŞDİ!', 'success');
+                }
+            } else if (p.type === 'chrono') {
+                gameState.chronoTimer = 240; // 4.0 saniyə (60fps)
+                if (typeof showToast === 'function') {
+                    showToast('⏱️ ZAMAN LƏNGİDİLDİ (4.0s)!', 'info');
+                }
+            } else if (p.type === 'jump') {
+                player.hyperJump();
+            } else if (p.type === 'magnet') {
+                gameState.superMagnetTimer = 300; // 5.0 saniyə (60fps)
+                if (typeof showToast === 'function') {
+                    showToast('🧲 SUPER MAQNİT FIRTINASI (5.0s)!', 'success');
+                }
+            }
+
+            powerUps.splice(i, 1);
+        }
+    }
+
+    // Taymerlərin geri sayımı
+    if (gameState.chronoTimer > 0) gameState.chronoTimer--;
+    if (gameState.superMagnetTimer > 0) gameState.superMagnetTimer--;
+
+    if (!gameState.gameOver && !gameState.paused && !gameState.transitioning) {
+        if (!gameState.powerUpCountdown) gameState.powerUpCountdown = 14;
+        gameState.powerUpCountdown -= 1 / 60;
+        if (gameState.powerUpCountdown <= 0) {
+            autoSpawnPowerUp();
+            gameState.powerUpCountdown = 15 + Math.random() * 8;
+        }
+    }
 
     // Lavanın yenilənməsi
     monster.update();
@@ -533,10 +614,14 @@ function updatePhysicsStep() {
         }
     }
 
-    // Oyunun bitməsi yoxlanışı
+    // Oyunun bitməsi yoxlanışı (Qalxan qorunması ilə)
     const playerMonsterY = monster.surface ? monster.surface(player.x, monster.y) : monster.y;
     if (!gameState.transitioning && gameState.dashInvulnerable <= 0 && playerMonsterY <= player.y + player.radius) {
-        triggerGameOver();
+        if (player.hasShield) {
+            player.breakShield();
+        } else {
+            triggerGameOver();
+        }
     }
 
     // Sərhəd açıq deyilsə passiv qızıl artımı

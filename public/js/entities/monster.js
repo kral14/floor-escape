@@ -421,6 +421,10 @@ class Monster {
         if (this.plasmaTimer > 0) {
             currentSpeed *= 0.20; // 80% ləngimə
         }
+        // ⏱️ ZAMAN LƏNGİDİCİ GÜCÜ (CHRONO SHIFT)
+        if (typeof gameState !== 'undefined' && gameState.chronoTimer > 0) {
+            currentSpeed *= 0.25; // 75% qlobal zaman ləngiməsi
+        }
 
         // 6. YÜKSƏLİŞ
         this.y -= currentSpeed;
@@ -645,6 +649,14 @@ class Monster {
                 clr: '#c084fc',
                 border: '#a855f7',
                 bg: 'rgba(38, 12, 58, 0.92)'
+            });
+        }
+        if (typeof gameState !== 'undefined' && gameState.chronoTimer > 0) {
+            activeBadges.push({
+                txt: '⏱️ ' + (gameState.chronoTimer / 60).toFixed(1) + 's',
+                clr: '#e879f9',
+                border: '#c026d3',
+                bg: 'rgba(50, 10, 50, 0.92)'
             });
         }
         if (this.plasmaTimer > 0) {

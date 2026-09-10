@@ -243,6 +243,56 @@ class AudioController {
         osc.start();
         osc.stop(this.ctx.currentTime + 0.38);
     }
+    // ⚡ GÜCLƏNDİRİCİ (POWER-UP) GÖTÜRÜLMƏ SƏSİ (Cyber Arpeggio)
+    playPowerUp() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [440, 554.37, 659.25, 880, 1108.73];
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+            gain.gain.setValueAtTime(0.18, now + idx * 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.04 + 0.12);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.04);
+            osc.stop(now + idx * 0.04 + 0.12);
+        });
+    }
+
+    // 🛡️ QALXAN SINMA VƏ XİLASETMƏ SƏSİ (Shield Shatter & Warp)
+    playShieldBreak() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        
+        // Zərbə və partlayış dalğası
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.28);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+
+        // Kristal kiber-parçalanma tonu
+        const shimmer = this.ctx.createOscillator();
+        const sGain = this.ctx.createGain();
+        shimmer.type = 'sine';
+        shimmer.frequency.setValueAtTime(1200, now);
+        shimmer.frequency.exponentialRampToValueAtTime(2200, now + 0.25);
+        sGain.gain.setValueAtTime(0.2, now);
+        sGain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        shimmer.connect(sGain);
+        sGain.connect(this.ctx.destination);
+        shimmer.start(now);
+        shimmer.stop(now + 0.25);
+    }
 }
 
 const audio = new AudioController();
