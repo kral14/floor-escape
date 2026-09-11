@@ -153,9 +153,9 @@ async function handleRedeemSubmit(isDash = false) {
     const res = await giftCodeManager.redeemCode(code);
     if (res.success) {
         let msg = `🎉 Təbriklər! `;
-        if (res.blueDiamonds > 0) msg += `+${res.blueDiamonds} 💎 Mavi Almaz `;
-        if (res.redDiamonds > 0) msg += `+${res.redDiamonds} 💎🔴 Qırmızı Almaz `;
-        resultBox.innerHTML = `<span class="text-emerald-400 font-bold">${msg}</span>`;
+        if (res.blueDiamonds > 0) msg += `+${res.blueDiamonds} [cyan] Mavi Almaz `;
+        if (res.redDiamonds > 0) msg += `+${res.redDiamonds} [ruby] Qırmızı Almaz `;
+        resultBox.innerHTML = `<span class="text-emerald-400 font-bold flex items-center justify-center gap-1.5 flex-wrap">${typeof ICONS !== 'undefined' ? ICONS.formatText(msg) : msg}</span>`;
         showToast(msg, 'diamond');
         input.value = '';
         if (!isDash) {

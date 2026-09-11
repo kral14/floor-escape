@@ -11,6 +11,9 @@ function initAuth() {
         if (savedPlayer) {
             currentPlayer = JSON.parse(savedPlayer);
             updatePlayerHeaderUI();
+            if (typeof INBOX !== 'undefined' && typeof INBOX.updateWsPlayer === 'function') {
+                INBOX.updateWsPlayer(currentPlayer.playerId);
+            }
             // Serverdən ən son məlumatları çəkməyə cəhd edirik
             fetchLatestPlayerData();
         } else {
@@ -26,18 +29,28 @@ function initAuth() {
 async function fetchLatestPlayerData() {
     if (!currentPlayer || !currentPlayer.playerId) return;
     try {
-        const res = await fetch('/api/leaderboard');
+        const res = await fetch(`/api/player/profile?playerId=${encodeURIComponent(currentPlayer.playerId)}`);
         if (!res.ok) return;
         const data = await res.json();
-        if (data.success && data.leaderboard) {
-            const me = data.leaderboard.find(p => p.player_id === currentPlayer.playerId);
-            if (me) {
-                // Əgər serverdəki rekord daha yüksəkdirsə, tətbiq edirik
-                if (me.best_floor > (gameState.bestFloor || 1)) {
-                    gameState.bestFloor = me.best_floor;
-                    localStorage.setItem('floor_escape_best_floor', me.best_floor.toString());
-                }
+        if (data.success && data.player) {
+            const p = data.player;
+            // Serverdəki real balansı qəbul edirik
+            if (p.diamonds !== undefined) {
+                diamonds = parseInt(p.diamonds) || 0;
             }
+            if (p.redDiamonds !== undefined) {
+                redDiamonds = parseInt(p.redDiamonds) || 0;
+            }
+
+            if (p.bestFloor && p.bestFloor > (gameState.bestFloor || 1)) {
+                gameState.bestFloor = p.bestFloor;
+                localStorage.setItem('floor_escape_best_floor', p.bestFloor.toString());
+            }
+
+            savePermanentData();
+            if (typeof updateUI === 'function') updateUI();
+            if (typeof updateDashboardUI === 'function') updateDashboardUI();
+            if (typeof updateStatsUI === 'function') updateStatsUI();
         }
     } catch (e) {
         console.log('Serverlə əlaqə qurulmadı (oflayn rejim):', e.message);
@@ -259,6 +272,19 @@ function syncPlayerDataCloud(immediate = false) {
             });
 
             if (res.ok) {
+                const data = await res.json();
+                if (data.success) {
+                    if (data.diamonds !== undefined) {
+                        diamonds = data.diamonds;
+                        localStorage.setItem('floor_escape_diamonds', diamonds.toString());
+                    }
+                    if (data.redDiamonds !== undefined) {
+                        redDiamonds = data.redDiamonds;
+                        localStorage.setItem('floor_escape_red_diamonds', redDiamonds.toString());
+                    }
+                    if (typeof updateUI === 'function') updateUI();
+                    if (typeof updateDashboardUI === 'function') updateDashboardUI();
+                }
                 if (ind) ind.className = 'inline-block w-2 h-2 rounded-full bg-emerald-400';
             } else {
                 if (ind) ind.className = 'inline-block w-2 h-2 rounded-full bg-rose-400';

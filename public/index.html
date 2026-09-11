@@ -74,20 +74,38 @@
 
                     <!-- Mavi Almaz -->
                     <div class="hidden sm:flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-sky-400/30" title="Mavi Almaz (Baza Laboratoriya)">
-                        <i class="fa-solid fa-gem text-sky-400 text-xs animate-bounce"></i>
+                        <i class="fa-solid fa-gem text-sky-400 text-sm animate-bounce"></i>
                         <span id="dash-stat-diamonds" class="font-orbitron text-sky-300 font-bold text-xs tabular-nums">0</span>
                     </div>
 
                     <!-- Qırmızı Almaz -->
                     <div class="hidden sm:flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-rose-500/30" title="Qırmızı Almaz (Qüllələr və Qənaət)">
-                        <i class="fa-solid fa-gem text-rose-500 text-xs animate-pulse"></i>
+                        <i class="fa-solid fa-gem text-rose-500 text-sm animate-pulse"></i>
                         <span id="dash-stat-red-diamonds" class="font-orbitron text-rose-400 font-bold text-xs tabular-nums">0</span>
                     </div>
 
-                    <!-- Bildiriş düyməsi -->
-                    <button type="button" onclick="showToast('Sistem bildirişləri aktivdir! Rekordlarını qırmağa davam et.', 'info')" class="relative w-9 h-9 rounded-lg glass-card flex items-center justify-center text-slate-400 hover:text-cyan-400 transition" title="Bildirişlər">
-                        <i class="fa-solid fa-bell text-sm"></i>
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full blink"></span>
+                    <!-- Kiber Mağaza Düyməsi (Ayrıca Mağaza Səhifəsi) -->
+                    <a href="shop.html" id="dash-header-shop-btn" class="relative px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-yellow-500/10 hover:from-amber-500/30 hover:to-yellow-500/20 border border-amber-400/40 hover:border-amber-300 text-amber-300 hover:text-white font-orbitron font-bold text-xs shadow-lg shadow-amber-500/15 flex items-center gap-2 transition transform hover:scale-105 active:scale-95 cursor-pointer group" title="Kiber Mağaza">
+                        <i class="fa-solid fa-store text-amber-400 text-sm group-hover:scale-110 transition"></i>
+                        <span class="tracking-wider">MAĞAZA</span>
+                    </a>
+
+                    <!-- Oyun Bələdçisi Düyməsi -->
+                    <a href="guide.html" id="dash-header-guide-btn" class="relative px-3 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-500/20 to-blue-500/10 hover:from-sky-500/30 hover:to-blue-500/20 border border-sky-400/40 hover:border-sky-300 text-sky-300 hover:text-white font-orbitron font-bold text-xs shadow-lg shadow-sky-500/15 flex items-center gap-1.5 transition transform hover:scale-105 active:scale-95 cursor-pointer group" title="Oyun Məlumatları və Bələdçi">
+                        <i class="fa-solid fa-circle-question text-sky-400 text-sm group-hover:scale-110 transition"></i>
+                        <span class="tracking-wider hidden sm:inline">BƏLƏDÇİ</span>
+                    </a>
+
+                    <!-- 📬 Poçt Qutusu (Gələn Məktublar & Hədiyyələr) -->
+                    <button type="button" onclick="INBOX.open()" class="relative w-9 h-9 rounded-lg glass-card flex items-center justify-center text-slate-400 hover:text-cyan-400 transition cursor-pointer group" title="Poçt Qutusu (Məktublar və Hədiyyələr)">
+                        <i class="fa-solid fa-envelope text-sm group-hover:scale-110 transition text-sky-400"></i>
+                        <span class="inbox-badge hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white font-orbitron font-black text-[10px] rounded-full flex items-center justify-center border border-slate-900 shadow-md shadow-rose-500/50 animate-bounce">0</span>
+                    </button>
+
+                    <!-- Bildiriş düyməsi (Poçt və Bildirişlər) -->
+                    <button type="button" onclick="INBOX.open()" class="relative w-9 h-9 rounded-lg glass-card flex items-center justify-center text-slate-400 hover:text-cyan-400 transition cursor-pointer group" title="Bildirişlər və Poçt Qutusu">
+                        <i class="fa-solid fa-bell text-sm group-hover:scale-110 transition"></i>
+                        <span class="inbox-badge hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white font-orbitron font-black text-[10px] rounded-full flex items-center justify-center border border-slate-900 shadow-md shadow-rose-500/50 animate-bounce">0</span>
                     </button>
 
                     <!-- Oyuna Başla Düyməsi -->
@@ -362,101 +380,296 @@
                     </div>
 
                     <!-- Sub-tab keçidləri -->
-                    <div class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-800 gap-1">
-                        <button type="button" id="lab-tab-btn-base" onclick="switchLabTab('base')" class="px-3 py-1.5 text-xs font-orbitron font-bold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-400/30 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-flask text-sky-400"></i> Baza Xassələr (💎)
+                    <div class="flex flex-wrap bg-slate-900/90 p-1 rounded-xl border border-slate-800 gap-1">
+                        <button type="button" id="lab-tab-btn-skins" onclick="switchLabTab('skins')" class="px-3 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-cyan-400 text-cyan-300 flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-shirt text-cyan-400"></i> Dərilər (Skinlər)
                         </button>
-                        <button type="button" id="lab-tab-btn-econ" onclick="switchLabTab('econ')" class="px-3 py-1.5 text-xs font-orbitron font-bold rounded-lg text-slate-400 hover:text-rose-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-tags text-rose-400"></i> Mərmi Qənaəti (💎🔴)
+                        <button type="button" id="lab-tab-btn-market" onclick="switchLabTab('market')" class="px-3 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-amber-300 flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-boxes-stacked text-amber-400"></i> Sandıq & Birja
                         </button>
-                        <button type="button" id="lab-tab-btn-turrets" onclick="switchLabTab('turrets')" class="px-3 py-1.5 text-xs font-orbitron font-bold rounded-lg text-slate-400 hover:text-cyan-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-crosshairs text-cyan-400"></i> Əkiz Qüllələr (50 💎🔴)
+                        <button type="button" id="lab-tab-btn-base" onclick="switchLabTab('base')" class="px-3.5 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-sky-300 flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-flask text-sky-400"></i> Baza Xassələr (<span data-icon="cyanDiamond" data-size="13"></span>)
+                        </button>
+                        <button type="button" id="lab-tab-btn-econ" onclick="switchLabTab('econ')" class="px-3.5 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-rose-300 flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-tags text-rose-400"></i> Mərmi Qənaəti (<span data-icon="rubyDiamond" data-size="13"></span>)
+                        </button>
+                        <button type="button" id="lab-tab-btn-turrets" onclick="switchLabTab('turrets')" class="px-3.5 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-transparent text-slate-400 hover:text-purple-300 flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-crosshairs text-purple-400"></i> Əkiz Qüllələr (50 <span data-icon="rubyDiamond" data-size="13"></span>)
                         </button>
                     </div>
                 </div>
 
+                <!-- TAB 0: KİBER DƏRİLƏR (SKINS) -->
+                <div id="lab-tab-content-skins" class="flex flex-col gap-4">
+                    
+                    <!-- CANLI BALON ÖNBAXIŞ PODİUMU -->
+                    <div class="glass p-4 sm:p-5 rounded-2xl border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden bg-slate-950/70 shadow-xl">
+                        <div class="flex-1 text-center md:text-left z-10">
+                            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-orbitron font-bold text-cyan-400 mb-1.5">
+                                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                                CANLI BALON HOLOQRAMI
+                            </div>
+                            <h3 id="preview-skin-name" class="font-orbitron font-bold text-base sm:text-lg text-white tracking-wider">
+                                Kiber Qaçışçı
+                            </h3>
+                            <p id="preview-skin-title" class="text-[11px] font-mono text-cyan-400 mb-1.5">Cyber Runner</p>
+                            <div id="preview-skin-badge" class="mb-2">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-orbitron font-bold border bg-cyan-500/15 text-cyan-300 border-cyan-500/40">
+                                    ⚖️ Standart Forma
+                                </span>
+                            </div>
+                            <p id="preview-skin-desc" class="text-[11px] text-slate-300 max-w-md">
+                                Dərini seçərək oyundakı balonun canlı rəngini, aurasını və quyruq izlərini buradan izləyə bilərsiniz.
+                            </p>
+                        </div>
+
+                        <!-- Canlı Canvas -->
+                        <div class="relative w-full md:w-72 h-40 rounded-xl overflow-hidden bg-slate-950 border border-cyan-500/30 flex items-center justify-center shadow-inner">
+                            <canvas id="skin-stage-canvas" width="300" height="160" class="w-full h-full block"></canvas>
+                            <div class="absolute bottom-1.5 right-2.5 text-[8px] font-mono text-cyan-500/60 uppercase tracking-widest pointer-events-none">
+                                LIVE SIM
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between px-1">
+                        <div>
+                            <h3 class="font-orbitron font-bold text-xs text-white flex items-center gap-2">
+                                <span>KİBERNETİK KOSTYUMLAR VƏ AVATARLAR</span>
+                                <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[9px] uppercase font-mono">Dinamik İşıqlanma</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-400">Dərini klikləyərək önbaxışda seyr et və oyunda təchiz et</p>
+                        </div>
+                    </div>
+                    <div id="skins-cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        <!-- JS ilə dinamik doldurulur -->
+                    </div>
+                </div>
+
+                <!-- TAB 0.5: SANDIQLAR VƏ BİRJA (MARKET) -->
+                <div id="lab-tab-content-market" class="hidden flex-col gap-4">
+                    <!-- Üst Sandıqlar Qrupu -->
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-gift text-amber-400"></i> Kiber Mükafat Sandıqları
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- 1. Kiber Sandıq -->
+                            <div class="glass-card p-4 rounded-2xl border border-sky-400/30 flex flex-col justify-between gap-3 relative overflow-hidden" style="box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-12 h-12 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400 text-2xl shrink-0">
+                                        <i class="fa-solid fa-box-open animate-bounce"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-orbitron font-bold text-xs text-white">KİBER SIRR SANDIĞI</h4>
+                                        <p class="text-[11px] text-slate-300 mt-0.5">250 - 650 Qızıl, 1-3 Qırmızı Almaz və ya 15% şansla eksklüziv Kiber Dəri qazandırır!</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                                    <span class="text-xs font-orbitron font-bold text-sky-300">Qiymət: 8 💎</span>
+                                    <button onclick="openCyberCrate();" class="px-4 py-2 rounded-xl font-orbitron font-bold text-xs bg-gradient-to-r from-sky-400 to-blue-600 text-slate-950 shadow-md shadow-sky-400/30 hover:scale-105 active:scale-95 transition cursor-pointer">
+                                        SANDIĞI AÇ
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2. Qızıl Sandıq -->
+                            <div class="glass-card p-4 rounded-2xl border border-amber-400/30 flex flex-col justify-between gap-3 relative overflow-hidden" style="box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 text-2xl shrink-0">
+                                        <i class="fa-solid fa-trophy animate-pulse"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-orbitron font-bold text-xs text-white">MEQA QIZIL SANDIĞI</h4>
+                                        <p class="text-[11px] text-slate-300 mt-0.5">Arenada topladığın qızıllarla 6 - 15 Mavi Almaz və 1 - 3 Qırmızı Almaz əldə et!</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                                    <span class="text-xs font-orbitron font-bold text-amber-300">Qiymət: 1,000 🪙</span>
+                                    <button onclick="openGoldCrate();" class="px-4 py-2 rounded-xl font-orbitron font-bold text-xs bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 shadow-md shadow-amber-400/30 hover:scale-105 active:scale-95 transition cursor-pointer">
+                                        QIZILLA AÇ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alt Valyuta Birjası Qrupu -->
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs text-cyan-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-arrow-right-arrow-left text-cyan-400"></i> Resurs Valyuta Birjası
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                            <!-- Paket 1 -->
+                            <div class="glass-card p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between gap-2">
+                                <div>
+                                    <h4 class="font-orbitron font-bold text-xs text-amber-300">+450 Qızıl Paketi</h4>
+                                    <p class="text-[10px] text-slate-400">Mərmi və tələlər üçün təcili qızıl ehtiyatı</p>
+                                </div>
+                                <button onclick="exchangeCurrency('buy_gold');" class="w-full py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/30 font-orbitron font-bold text-xs transition cursor-pointer">
+                                    6 💎 Ver ➔ 450 🪙 Al
+                                </button>
+                            </div>
+
+                            <!-- Paket 2 -->
+                            <div class="glass-card p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between gap-2">
+                                <div>
+                                    <h4 class="font-orbitron font-bold text-xs text-sky-300">+12 Mavi Almaz Paketi</h4>
+                                    <p class="text-[10px] text-slate-400">Laboratoriya yüksəltmələri üçün almaz fondu</p>
+                                </div>
+                                <button onclick="exchangeCurrency('buy_diamonds');" class="w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/30 font-orbitron font-bold text-xs transition cursor-pointer">
+                                    800 🪙 Ver ➔ 12 💎 Al
+                                </button>
+                            </div>
+
+                            <!-- Paket 3 -->
+                            <div class="glass-card p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between gap-2">
+                                <div>
+                                    <h4 class="font-orbitron font-bold text-xs text-rose-400">+5 Qırmızı Almaz Konvertasiyası</h4>
+                                    <p class="text-[10px] text-slate-400">Qüllələr və silah qənaəti üçün xüsusi kristal</p>
+                                </div>
+                                <button onclick="exchangeCurrency('buy_red_diamonds');" class="w-full py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-400/30 font-orbitron font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
+                                    25 <span data-icon="102" data-size="13"></span> Ver ➔ 5 <span data-icon="103" data-size="13"></span> Al
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- TAB 1: BAZA XASSƏLƏR -->
-                <div id="lab-tab-content-base" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div id="lab-tab-content-base" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     <!-- 1. Baza Sürət -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Baza Hərəkət Sürəti</h3>
-                            <p class="text-[11px] text-slate-400">+0.35 hər səviyyədə daimi əlavə</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center p-1 shrink-0" data-icon="speed" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Baza Hərəkət Sürəti</h3>
+                                <p class="text-[11px] text-slate-400">+0.35 hər səviyyədə daimi əlavə</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-speed" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-speed" onclick="buyPermUpgrade('speed')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-speed">1 💎</span>
+                                <span id="lab-cost-speed">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- 2. Baza Maqnit -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Baza Maqnit Sahəsi</h3>
-                            <p class="text-[11px] text-slate-400">+15px daha uzaqdan sikkələri çəkir</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center p-1 shrink-0" data-icon="magnet" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Baza Maqnit Sahəsi</h3>
+                                <p class="text-[11px] text-slate-400">+15px daha uzaqdan sikkələri çəkir</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-magnet" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-magnet" onclick="buyPermUpgrade('magnet')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-magnet">1 💎</span>
+                                <span id="lab-cost-magnet">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- 3. Sikkə Dəyəri -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Sikkə Dəyəri Artımı</h3>
-                            <p class="text-[11px] text-slate-400">Hər sikkədən +3 əlavə qızıl</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center p-1 shrink-0" data-icon="coinVal" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Sikkə Dəyəri Artımı</h3>
+                                <p class="text-[11px] text-slate-400">Hər sikkədən +3 əlavə qızıl</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-coinVal" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-coinVal" onclick="buyPermUpgrade('coinVal')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-coinVal">1 💎</span>
+                                <span id="lab-cost-coinVal">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- 4. Sikkə Çıxış Vaxtı -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Sikkə Çıxış Tezliyi</h3>
-                            <p class="text-[11px] text-slate-400">Sikkələr 0.15s daha tez yaranır</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center p-1 shrink-0" data-icon="coinSpawn" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Sikkə Çıxış Tezliyi</h3>
+                                <p class="text-[11px] text-slate-400">Sikkələr 0.15s daha tez yaranır</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-coinSpawn" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-coinSpawn" onclick="buyPermUpgrade('coinSpawn')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-coinSpawn">1 💎</span>
+                                <span id="lab-cost-coinSpawn">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- 5. Dash Bərpa Vaxtı -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Dash Tez Bərpası</h3>
-                            <p class="text-[11px] text-slate-400">Dash soyuma müddəti -0.2s azalır</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center p-1 shrink-0" data-icon="dashCD" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Dash Tez Bərpası</h3>
+                                <p class="text-[11px] text-slate-400">Dash soyuma müddəti -0.2s azalır</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-dashCD" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-dashCD" onclick="buyPermUpgrade('dashCD')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-dashCD">1 💎</span>
+                                <span id="lab-cost-dashCD">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- 6. Başlanğıc Qızıl -->
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
-                        <div>
-                            <h3 class="font-orbitron font-bold text-xs text-slate-200">Başlanğıc Ehtiyat Qızıl</h3>
-                            <p class="text-[11px] text-slate-400">Hər yeni oyuna +30 qızıl ilə başla</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center p-1 shrink-0" data-icon="startGold" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-slate-200">Başlanğıc Ehtiyat Qızıl</h3>
+                                <p class="text-[11px] text-slate-400">Hər yeni oyuna +30 qızıl ilə başla</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span id="lab-lvl-startGold" class="font-orbitron text-xs text-sky-400 font-bold">Lv.1</span>
                             <button tabindex="-1" id="lab-btn-startGold" onclick="buyPermUpgrade('startGold')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
-                                <span id="lab-cost-startGold">1 💎</span>
+                                <span id="lab-cost-startGold">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 7. Baza Qalxan Şansı -->
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center p-1 shrink-0" data-icon="shield" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-cyan-300">Qata Qalxanla Başlama</h3>
+                                <p class="text-[11px] text-slate-400">Hər qata qalxanla başlama şansı +10% artır</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="lab-lvl-shield" class="font-orbitron text-xs text-sky-400 font-bold">Lv.0</span>
+                            <button tabindex="-1" id="lab-btn-shield" onclick="buyPermUpgrade('shield')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
+                                <span id="lab-cost-shield">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 8. Gücləndirici Tezliyi -->
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center p-1 shrink-0" data-icon="powerUp" data-size="22"></div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-xs text-amber-300">Gücləndirici Tezliyi</h3>
+                                <p class="text-[11px] text-slate-400">Təsadüfi orbların yaranma intervalı -1.0s qısalır</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="lab-lvl-powerUp" class="font-orbitron text-xs text-sky-400 font-bold">Lv.0</span>
+                            <button tabindex="-1" id="lab-btn-powerUp" onclick="buyPermUpgrade('powerUp')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer">
+                                <span id="lab-cost-powerUp">1 <span data-icon="cyanDiamond" data-size="14"></span></span>
                             </button>
                         </div>
                     </div>
@@ -472,12 +685,12 @@
                                 <h3 class="font-orbitron font-bold text-xs text-amber-300">Barrikada Qənaəti</h3>
                             </div>
                             <p id="lab-pct-econ-wall" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                            <p class="text-[9px] text-slate-400">Baza: 30 🪙 (Hər Lv: -20% artım)</p>
+                            <p class="text-[9px] text-slate-400">Baza: 30 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span id="lab-lvl-econ-wall" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                             <button tabindex="-1" id="lab-btn-econ-wall" onclick="buyBulletEconUpgrade('wall')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1 cursor-pointer">
-                                <span id="lab-cost-econ-wall">2 💎🔴</span>
+                                <span id="lab-cost-econ-wall" class="flex items-center gap-1">2 <span data-icon="103" data-size="13"></span></span>
                             </button>
                         </div>
                     </div>
@@ -490,12 +703,12 @@
                                 <h3 class="font-orbitron font-bold text-xs text-sky-300">Buz Mərmisi Qənaəti</h3>
                             </div>
                             <p id="lab-pct-econ-ice" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                            <p class="text-[9px] text-slate-400">Baza: 50 🪙 (Hər Lv: -20% artım)</p>
+                            <p class="text-[9px] text-slate-400">Baza: 50 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span id="lab-lvl-econ-ice" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                             <button tabindex="-1" id="lab-btn-econ-ice" onclick="buyBulletEconUpgrade('ice')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1 cursor-pointer">
-                                <span id="lab-cost-econ-ice">3 💎🔴</span>
+                                <span id="lab-cost-econ-ice" class="flex items-center gap-1">3 <span data-icon="103" data-size="13"></span></span>
                             </button>
                         </div>
                     </div>
@@ -508,12 +721,12 @@
                                 <h3 class="font-orbitron font-bold text-xs text-yellow-300">Şok Şüası Qənaəti</h3>
                             </div>
                             <p id="lab-pct-econ-shock" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                            <p class="text-[9px] text-slate-400">Baza: 90 🪙 (Hər Lv: -20% artım)</p>
+                            <p class="text-[9px] text-slate-400">Baza: 90 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span id="lab-lvl-econ-shock" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                             <button tabindex="-1" id="lab-btn-econ-shock" onclick="buyBulletEconUpgrade('shock')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1 cursor-pointer">
-                                <span id="lab-cost-econ-shock">4 💎🔴</span>
+                                <span id="lab-cost-econ-shock" class="flex items-center gap-1">4 <span data-icon="103" data-size="13"></span></span>
                             </button>
                         </div>
                     </div>
@@ -526,12 +739,12 @@
                                 <h3 class="font-orbitron font-bold text-xs text-purple-300">Mina Tələsi Qənaəti</h3>
                             </div>
                             <p id="lab-pct-econ-mine" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                            <p class="text-[9px] text-slate-400">Baza: 140 🪙 (Hər Lv: -20% artım)</p>
+                            <p class="text-[9px] text-slate-400">Baza: 140 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span id="lab-lvl-econ-mine" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                             <button tabindex="-1" id="lab-btn-econ-mine" onclick="buyBulletEconUpgrade('mine')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1 cursor-pointer">
-                                <span id="lab-cost-econ-mine">6 💎🔴</span>
+                                <span id="lab-cost-econ-mine" class="flex items-center gap-1">6 <span data-icon="103" data-size="13"></span></span>
                             </button>
                         </div>
                     </div>
@@ -544,12 +757,12 @@
                                 <h3 class="font-orbitron font-bold text-xs text-emerald-300">Plazma Əridici Qənaəti</h3>
                             </div>
                             <p id="lab-pct-econ-plasma" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                            <p class="text-[9px] text-slate-400">Baza: 190 🪙 (Hər Lv: -20% artım)</p>
+                            <p class="text-[9px] text-slate-400">Baza: 190 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span id="lab-lvl-econ-plasma" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                             <button tabindex="-1" id="lab-btn-econ-plasma" onclick="buyBulletEconUpgrade('plasma')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1 cursor-pointer">
-                                <span id="lab-cost-econ-plasma">8 💎🔴</span>
+                                <span id="lab-cost-econ-plasma" class="flex items-center gap-1">8 <span data-icon="103" data-size="13"></span></span>
                             </button>
                         </div>
                     </div>
@@ -740,7 +953,7 @@
                         <i class="fa-solid fa-gem text-sky-400"></i> <span id="lab-diamonds-count">0</span>
                     </div>
                     <div class="stat-panel px-2.5 py-1 rounded-xl border border-rose-500/30 text-rose-400 font-orbitron text-xs font-bold flex items-center gap-1.5" title="Qırmızı / Qızıl Almaz">
-                        <span>💎🔴</span> <span id="lab-red-diamonds-count">0</span>
+                        <span data-icon="103" data-size="16"></span> <span id="lab-red-diamonds-count">0</span>
                     </div>
                     <button tabindex="-1" onclick="toggleLaboratoryModal(); this.blur();" class="w-8 h-8 rounded-xl glass-card flex items-center justify-center text-slate-400 hover:text-white transition ml-1">
                         <i class="fa-solid fa-xmark"></i>
@@ -751,10 +964,10 @@
             <!-- TAB DÜYMƏLƏRİ -->
             <div class="flex border-b border-slate-800 mb-3 gap-1 shrink-0">
                 <button id="lab-tab-btn-base" onclick="switchLabTab('base')" class="px-4 py-2 text-xs font-orbitron font-bold border-b-2 border-sky-400 text-sky-300 flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-flask text-sky-400"></i> BAZA XASSƏLƏR (💎)
+                    <i class="fa-solid fa-flask text-sky-400"></i> BAZA XASSƏLƏR (<span data-icon="102" data-size="13"></span>)
                 </button>
                 <button id="lab-tab-btn-econ" onclick="switchLabTab('econ')" class="px-4 py-2 text-xs font-orbitron font-bold border-b-2 border-transparent text-slate-400 hover:text-rose-300 flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-tags text-rose-400"></i> MƏRMİ QƏNAƏTİ (💎🔴)
+                    <i class="fa-solid fa-tags text-rose-400"></i> MƏRMİ QƏNAƏTİ (<span data-icon="103" data-size="13"></span>)
                 </button>
             </div>
 
@@ -815,6 +1028,38 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- 5. ENERJİ QALXANI AKTİVLƏŞMƏ ŞANSI -->
+                <div class="glass-card p-3 rounded-2xl flex items-center justify-between border border-slate-800">
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs text-cyan-300 flex items-center gap-1.5">
+                            <span>🛡️</span> Enerji Qalxanı Şansı
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Qata qalxanla başlama və orbların çıxma şansı (+10%/lvl)</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="lab-lvl-shield" class="font-orbitron text-xs text-cyan-400 font-bold">Lv.0</span>
+                        <button tabindex="-1" id="lab-btn-shield" onclick="buyPermUpgrade('shield')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5">
+                            <span id="lab-cost-shield">1 💎</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 6. KVANT GÜCLƏRİ / ORB TEZLİYİ -->
+                <div class="glass-card p-3 rounded-2xl flex items-center justify-between border border-slate-800">
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs text-purple-300 flex items-center gap-1.5">
+                            <span>⚡</span> Kvant Gücləri Tezliyi
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Meydanda gücləndiricilərin təsadüfi çıxma tezliyi (-1.0s/lvl)</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="lab-lvl-powerUp" class="font-orbitron text-xs text-purple-400 font-bold">Lv.0</span>
+                        <button tabindex="-1" id="lab-btn-powerUp" onclick="buyPermUpgrade('powerUp')" class="btn-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5">
+                            <span id="lab-cost-powerUp">1 💎</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 2: MƏRMİ QƏNAƏTİ / İNFİYASİYA AZALTMASI (QIRMIZI ALMAZLA) -->
@@ -827,12 +1072,12 @@
                             <h3 class="font-orbitron font-bold text-xs text-amber-300">Barrikada Qənaəti</h3>
                         </div>
                         <p id="lab-pct-econ-wall" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                        <p class="text-[9px] text-slate-400">Baza: 30 🪙 (Hər Lv: -20% artım)</p>
+                        <p class="text-[9px] text-slate-400">Baza: 30 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
                         <span id="lab-lvl-econ-wall" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                         <button tabindex="-1" id="lab-btn-econ-wall" onclick="buyBulletEconUpgrade('wall')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
-                            <span id="lab-cost-econ-wall">3 💎🔴</span>
+                            <span id="lab-cost-econ-wall" class="flex items-center gap-1">3 <span data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
                 </div>
@@ -845,12 +1090,12 @@
                             <h3 class="font-orbitron font-bold text-xs text-cyan-300">Buz Mərmisi Qənaəti</h3>
                         </div>
                         <p id="lab-pct-econ-ice" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                        <p class="text-[9px] text-slate-400">Baza: 50 🪙 (Hər Lv: -20% artım)</p>
+                        <p class="text-[9px] text-slate-400">Baza: 50 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
                         <span id="lab-lvl-econ-ice" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                         <button tabindex="-1" id="lab-btn-econ-ice" onclick="buyBulletEconUpgrade('ice')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
-                            <span id="lab-cost-econ-ice">4 💎🔴</span>
+                            <span id="lab-cost-econ-ice" class="flex items-center gap-1">4 <span data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
                 </div>
@@ -863,12 +1108,12 @@
                             <h3 class="font-orbitron font-bold text-xs text-purple-300">Şok İldırımı Qənaəti</h3>
                         </div>
                         <p id="lab-pct-econ-shock" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                        <p class="text-[9px] text-slate-400">Baza: 90 🪙 (Hər Lv: -20% artım)</p>
+                        <p class="text-[9px] text-slate-400">Baza: 90 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
                         <span id="lab-lvl-econ-shock" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                         <button tabindex="-1" id="lab-btn-econ-shock" onclick="buyBulletEconUpgrade('shock')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
-                            <span id="lab-cost-econ-shock">5 💎🔴</span>
+                            <span id="lab-cost-econ-shock" class="flex items-center gap-1">5 <span data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
                 </div>
@@ -881,12 +1126,12 @@
                             <h3 class="font-orbitron font-bold text-xs text-rose-300">Partlayıcı Mina Qənaəti</h3>
                         </div>
                         <p id="lab-pct-econ-mine" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                        <p class="text-[9px] text-slate-400">Baza: 140 🪙 (Hər Lv: -20% artım)</p>
+                        <p class="text-[9px] text-slate-400">Baza: 140 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
                         <span id="lab-lvl-econ-mine" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                         <button tabindex="-1" id="lab-btn-econ-mine" onclick="buyBulletEconUpgrade('mine')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
-                            <span id="lab-cost-econ-mine">6 💎🔴</span>
+                            <span id="lab-cost-econ-mine" class="flex items-center gap-1">6 <span data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
                 </div>
@@ -899,12 +1144,12 @@
                             <h3 class="font-orbitron font-bold text-xs text-emerald-300">Plazma Əridici Qənaəti</h3>
                         </div>
                         <p id="lab-pct-econ-plasma" class="text-[11px] text-slate-300">-0% Qiymət Artımı</p>
-                        <p class="text-[9px] text-slate-400">Baza: 190 🪙 (Hər Lv: -20% artım)</p>
+                        <p class="text-[9px] text-slate-400">Baza: 190 🪙 (Hər Lv: -14% artım, Maks 70%)</p>
                     </div>
                     <div class="flex items-center gap-2.5">
                         <span id="lab-lvl-econ-plasma" class="font-orbitron text-xs text-rose-400 font-bold">Lv.0/5</span>
                         <button tabindex="-1" id="lab-btn-econ-plasma" onclick="buyBulletEconUpgrade('plasma')" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
-                            <span id="lab-cost-econ-plasma">8 💎🔴</span>
+                            <span id="lab-cost-econ-plasma" class="flex items-center gap-1">8 <span data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
                 </div>
@@ -1084,15 +1329,60 @@
     
 
 
+    <!-- ==================== 📬 İNBOX / POÇT QUTUSU MODALİ ==================== -->
+    <div id="inbox-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md transition-all">
+        <div class="relative w-full max-w-lg glass-card border border-cyan-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden bg-slate-950/95" style="box-shadow: 0 0 35px rgba(6, 182, 212, 0.2);">
+            <!-- Modal Başlığı -->
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">📬</span>
+                    <div>
+                        <h3 class="font-orbitron font-bold text-sm sm:text-base text-cyan-300">KİBER POÇT QUTUSU</h3>
+                        <p class="text-[10px] text-slate-400">Admin bildirişləri, fərdi və qlobal hədiyyələr</p>
+                    </div>
+                </div>
+                <button type="button" onclick="INBOX.close()" class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center transition cursor-pointer" title="Bağla">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Məktublar Siyahısı (Scrollable) -->
+            <div id="inbox-messages-list" class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+                <!-- JS tərəfindən dinamik doldurulur -->
+            </div>
+
+            <!-- Modal Altı -->
+            <div class="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between">
+                <button type="button" onclick="INBOX.fetch()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-rotate text-[11px] text-cyan-400"></i> Yenilə
+                </button>
+                <button type="button" onclick="INBOX.close()" class="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-orbitron text-xs font-bold transition cursor-pointer">
+                    Bağla
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- DAŞBORD SKRİPTLƏRİ -->
-    <script src="js/audio.js"></script>
-    <script src="js/state.js"></script>
-    <script src="js/giftcodes.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/icons/registry.js?v=3.5"></script>
+    <script src="js/icons/render.js?v=3.5"></script>
+    <script src="js/icons.js?v=3.5"></script>
+    <script src="js/audio/engine.js?v=3.2"></script>
+    <script src="js/audio/sfx.js?v=3.2"></script>
+    <script src="js/audio/beats.js?v=3.2"></script>
+    <script src="js/audio/ambient.js?v=3.2"></script>
+    <script src="js/audio/panel.js?v=3.2"></script>
+    <script src="js/audio.js?v=3.2"></script>
+    <script src="js/state.js?v=2.6"></script>
+    <script src="js/ui.js?v=2.6"></script>
+    <script src="js/giftcodes.js?v=2.6"></script>
+    <script src="js/auth.js?v=3.3"></script>
+    <script src="js/inbox.js?v=3.3"></script>
+    <script src="js/dashboard.js?v=2.6"></script>
     <script>
         // Səhifə yüklənəndə avtomatik marşrut yoxlanması
         document.addEventListener('DOMContentLoaded', () => {
+            if (typeof ICONS !== 'undefined' && ICONS.renderDOM) ICONS.renderDOM();
             if (typeof initAuth === 'function') initAuth();
             if (typeof checkInitialAuthRoute === 'function') {
                 checkInitialAuthRoute();

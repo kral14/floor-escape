@@ -511,3 +511,50 @@ aside,
     -ms-overflow-style: none !important;  /* IE and Edge */
     scrollbar-width: none !important;     /* Firefox */
 }
+
+/* ========== MƏRKƏZİ 3D VƏ KİBER İKON ANİMASİYALARI ========== */
+@keyframes coinSpin3D {
+    0% { transform: perspective(300px) rotateY(0deg); }
+    50% { transform: perspective(300px) rotateY(180deg) scale(1.08); }
+    100% { transform: perspective(300px) rotateY(360deg); }
+}
+@keyframes gemFloatPulse {
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.7)); }
+    50% { transform: translateY(-3px) scale(1.06); filter: drop-shadow(0 0 16px rgba(244, 63, 94, 1)); }
+}
+@keyframes blueGemFloatPulse {
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.7)); }
+    50% { transform: translateY(-3px) scale(1.06); filter: drop-shadow(0 0 16px rgba(56, 189, 248, 1)); }
+}
+@keyframes radarOrbital {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@keyframes pulseGlowSlow {
+    0%, 100% { opacity: 0.85; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+@keyframes rocketThrust {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px) scale(1.04); }
+}
+
+.coin-spin-3d {
+    animation: coinSpin3D 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transform-style: preserve-3d;
+}
+.ruby-anim {
+    animation: gemFloatPulse 2.8s ease-in-out infinite;
+}
+.cyan-gem-anim {
+    animation: blueGemFloatPulse 2.8s ease-in-out infinite;
+}
+.orbital-spin {
+    animation: radarOrbital 6s linear infinite;
+}
+.rocket-anim {
+    animation: rocketThrust 1.8s ease-in-out infinite;
+}
+.pulse-slow {
+    animation: pulseGlowSlow 2.5s ease-in-out infinite;
+}

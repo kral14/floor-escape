@@ -19,6 +19,16 @@ class Monster {
         this.gazeX = 0;
         this.gazeY = 0;
         this.flash = 0;
+
+        // ☄️ CANAVARIN BOSS HÜCUM BACARIQLARI
+        this.meteors = [];
+        this.shockwaves = [];
+        this.meteorCooldown = 320;
+        this.roarCooldown = 540;
+        this.surgeCooldown = 420;
+        this.surgeSide = null;
+        this.surgeTimer = 0;
+        this.surgeHeight = 0;
     }
 
     reset() {
@@ -37,6 +47,19 @@ class Monster {
         this.gazeX = 0;
         this.gazeY = 0;
         this.flash = 0;
+
+        // Boss hücumlarını sıfırla
+        this.meteors = [];
+        this.shockwaves = [];
+        this.meteorCooldown = 280;
+        this.roarCooldown = 500;
+        this.surgeCooldown = 400;
+        this.surgeSide = null;
+        this.surgeTimer = 0;
+        this.surgeHeight = 0;
+        if (typeof audio !== 'undefined') {
+            audio.nextMonsterBeatTime = 0;
+        }
     }
 
     // Köməkçi elips çəkmə
@@ -60,10 +83,20 @@ class Monster {
         return 1 - smooth((p - 0.70) / 0.30);
     }
 
-    // Bütün eni tutan dinamik lava səthi
+    // Bütün eni tutan dinamik lava səthi (Lava Surge / Wave təsiri ilə)
     surface(x, top) {
         const w = canvasWidth;
-        return top + Math.sin(x * 0.019 + this.t * 1.5) * 5 + Math.sin(x * 0.037 - this.t * 1.1) * 2 - Math.exp(-Math.pow((x - this.face * w) / (w * 0.16), 2)) * this.attackPose() * 24;
+        let s = top + Math.sin(x * 0.019 + this.t * 1.5) * 5 + Math.sin(x * 0.037 - this.t * 1.1) * 2 - Math.exp(-Math.pow((x - this.face * w) / (w * 0.16), 2)) * this.attackPose() * 24;
+
+        // 🔥 LAVA QABARMASI (LAVA SURGE)
+        if (this.surgeTimer > 0) {
+            const sideFactor = this.surgeSide === 'left' 
+                ? Math.max(0, 1 - x / (w * 0.6)) 
+                : Math.max(0, (x - w * 0.4) / (w * 0.6));
+            s -= sideFactor * this.surgeHeight;
+        }
+
+        return s;
     }
 
     // Başın anker nöqtəsi (lava sərhədinin altında sabit durması üçün)
@@ -408,6 +441,62 @@ class Monster {
             this.y = Math.min(canvasHeight + 50, this.y + 0.22);
         }
 
+        // 🔥 LAVA QABARMASI (SURGE) TAYMERİ
+        if (this.surgeTimer > 0) {
+            this.surgeTimer--;
+            if (this.surgeTimer <= 0) {
+                this.surgeHeight = 0;
+                this.surgeSide = null;
+            }
+        }
+
+        // ☄️ CANAVARIN BOSS HÜCUM DÖVRÜ (Sərhəd hələ açılmamışkən)
+        if (typeof gameState !== 'undefined' && !gameState.gameOver && !gameState.paused && !gameState.borderOpen) {
+            // 1. Lava Meteor Yağışı
+            this.meteorCooldown--;
+            if (this.meteorCooldown <= 0) {
+                this.meteorCooldown = Math.max(220, 380 - (gameState.floor || 1) * 15);
+                const meteorCount = Math.min(3, 1 + Math.floor((gameState.floor || 1) / 3));
+                for (let m = 0; m < meteorCount; m++) {
+                    const tx = Math.random() * (canvasWidth - 140) + 70;
+                    const ty = Math.random() * (canvasHeight - 320) + 100;
+                    this.spawnMeteor(tx, ty);
+                }
+                if (typeof audio !== 'undefined' && audio.playMeteorWarning) {
+                    audio.playMeteorWarning();
+                }
+                if (typeof showToast === 'function') {
+                    showToast('☄️ CANAVAR LAVA METEORLARI YAĞDIRIR!', 'warning');
+                }
+            }
+
+            // 2. Zərbə Qışqırığı (Shockwave Roar)
+            this.roarCooldown--;
+            if (this.roarCooldown <= 0) {
+                this.roarCooldown = Math.max(360, 520 - (gameState.floor || 1) * 12);
+                this.triggerRoar();
+            }
+
+            // 3. Lava Qabarması (Lava Surge)
+            this.surgeCooldown--;
+            if (this.surgeCooldown <= 0) {
+                this.surgeCooldown = Math.max(280, 440 - (gameState.floor || 1) * 10);
+                this.surgeSide = Math.random() < 0.5 ? 'left' : 'right';
+                this.surgeTimer = 160;
+                this.surgeHeight = 50;
+                if (typeof audio !== 'undefined' && audio.playRoar) {
+                    audio.playRoar();
+                }
+                if (typeof showToast === 'function') {
+                    showToast(`🔥 DİQQƏT: LAVA DALĞASI QABARIR (${this.surgeSide === 'left' ? 'SOL' : 'SAĞ'})!`, 'error');
+                }
+            }
+        }
+
+        // Meteorların və Şok dalğalarının yenilənməsi
+        this.updateMeteors();
+        this.updateShockwaves();
+
         // 4. TAM DAYANMA ŞƏRTLƏRİ
         if (this.wallTimer > 0 || this.shockTimer > 0 || this.mineStunTimer > 0) {
             return;
@@ -428,6 +517,15 @@ class Monster {
 
         // 6. YÜKSƏLİŞ
         this.y -= currentSpeed;
+
+        // 💓 CANAVARIN YÜKSƏLİŞ HƏYƏCANI VƏ QATLARLA DƏYİŞƏN DİNAMİK RİTM
+        if (typeof audio !== 'undefined' && typeof audio.updateMonsterBeat === 'function') {
+            const ch = typeof canvasHeight !== 'undefined' ? canvasHeight : 680;
+            const isPaused = typeof gameState !== 'undefined' ? (gameState.paused || gameState.transitioning) : false;
+            const isOver = typeof gameState !== 'undefined' ? gameState.gameOver : false;
+            const fl = typeof gameState !== 'undefined' ? (gameState.floor || 1) : 1;
+            audio.updateMonsterBeat(this.y, ch, isPaused, isOver, fl);
+        }
     }
 
     draw(context) {
@@ -719,8 +817,225 @@ class Monster {
             c.restore();
         }
     
+        // ☄️ METEORLAR VƏ ŞOK DALĞALARININ ÇƏKİLMƏSİ
+        this.drawMeteors(c);
+        this.drawShockwaves(c);
+
         c.restore(); // Monster draw() state izolyasiyasının sonu
         c.globalAlpha = 1;
         c.shadowBlur = 0;
-}
+    }
+
+    // ☄️ METEOR YARATMAQ
+    spawnMeteor(tx, ty) {
+        this.meteors.push({
+            targetX: tx,
+            targetY: ty,
+            x: tx + (Math.random() - 0.5) * 60,
+            y: -60,
+            speed: 13,
+            radius: 16,
+            warningTimer: 55, // 55 kadr xəbərdarlıq qırpınması
+            landed: false
+        });
+    }
+
+    // ☄️ METEORLARIN YENİLƏNMƏSİ VƏ ZƏRBƏ TOXUNUŞU
+    updateMeteors() {
+        for (let i = this.meteors.length - 1; i >= 0; i--) {
+            const m = this.meteors[i];
+            if (m.warningTimer > 0) {
+                m.warningTimer--;
+                continue;
+            }
+
+            // Düşmə hərəkəti
+            m.y += m.speed;
+
+            // Hədəfə çatdıqda partlayış
+            if (m.y >= m.targetY) {
+                m.landed = true;
+                if (typeof audio !== 'undefined' && audio.playMeteorExplode) {
+                    audio.playMeteorExplode();
+                }
+
+                // Ekran silkələnməsi
+                const mainView = document.getElementById('main-view');
+                if (mainView) {
+                    mainView.classList.add('shake');
+                    setTimeout(() => mainView.classList.remove('shake'), 250);
+                }
+
+                // Partlayış qığılcımları və alov tüstüsü
+                if (typeof particles !== 'undefined') {
+                    for (let p = 0; p < 28; p++) {
+                        particles.push(new Particle(
+                            m.targetX,
+                            m.targetY,
+                            Math.random() < 0.6 ? '#f97316' : '#ef4444',
+                            4.5
+                        ));
+                    }
+                }
+
+                // Oyunçu yaxınlıqdadırsa zədələnmə
+                if (typeof player !== 'undefined' && player) {
+                    const dist = Math.hypot(player.x - m.targetX, player.y - m.targetY);
+                    if (dist < 48 && gameState.dashInvulnerable <= 0) {
+                        if (player.hasShield) {
+                            player.breakShield();
+                        } else {
+                            player.y = Math.min(canvasHeight - 50, player.y + 60);
+                            gameState.dashInvulnerable = 45;
+                            if (typeof showToast === 'function') {
+                                showToast('💥 METEOR SİZİ ZƏDƏLƏDİ!', 'error');
+                            }
+                        }
+                    }
+                }
+
+                this.meteors.splice(i, 1);
+            }
+        }
+    }
+
+    // ☄️ METEORLARIN ÇƏKİLMƏSİ (İNDİKATOR VƏ ALOVLU DAŞ)
+    drawMeteors(c) {
+        // 1. Hədəf nöqtələrində xəbərdarlıq indikatoru
+        this.meteors.forEach(m => {
+            if (m.warningTimer > 0) {
+                c.save();
+                const blink = Math.floor(m.warningTimer / 6) % 2 === 0;
+                c.strokeStyle = blink ? '#ef4444' : '#f59e0b';
+                c.lineWidth = 2.5;
+                c.shadowColor = '#ef4444';
+                c.shadowBlur = 15;
+                c.setLineDash([6, 6]);
+
+                // Hədəf halqası
+                c.beginPath();
+                c.arc(m.targetX, m.targetY, 26, 0, Math.PI * 2);
+                c.stroke();
+                c.setLineDash([]);
+
+                // Nişangah mərkəzi
+                c.beginPath();
+                c.arc(m.targetX, m.targetY, 4, 0, Math.PI * 2);
+                c.fillStyle = '#ef4444';
+                c.fill();
+
+                // Xəbərdarlıq mətni
+                c.font = 'bold 10px Orbitron, sans-serif';
+                c.fillStyle = '#f87171';
+                c.textAlign = 'center';
+                c.fillText('⚠️ METEOR', m.targetX, m.targetY - 32);
+
+                c.restore();
+            } else {
+                // Göydən enən alovlu meteor
+                c.save();
+                c.fillStyle = '#f97316';
+                c.shadowColor = '#ef4444';
+                c.shadowBlur = 25;
+
+                // Alov quyruğu
+                c.beginPath();
+                c.moveTo(m.x - m.radius * 0.8, m.y);
+                c.lineTo(m.x + m.radius * 0.8, m.y);
+                c.lineTo(m.x, m.y - 45);
+                c.fillStyle = 'rgba(239, 68, 68, 0.7)';
+                c.fill();
+
+                // Əsas obsidian-lava nüvəsi
+                c.beginPath();
+                c.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+                const grad = c.createRadialGradient(m.x, m.y, 2, m.x, m.y, m.radius);
+                grad.addColorStop(0, '#fef08a');
+                grad.addColorStop(0.4, '#f97316');
+                grad.addColorStop(1, '#7f1d1d');
+                c.fillStyle = grad;
+                c.fill();
+                c.restore();
+            }
+        });
+    }
+
+    // 📢 ZƏRBƏ QİŞQIRIĞINI TETİKLƏMƏK (SHOCKWAVE ROAR)
+    triggerRoar() {
+        if (typeof audio !== 'undefined' && audio.playRoar) {
+            audio.playRoar();
+        }
+        const w = canvasWidth;
+        const h = canvasHeight;
+        this.shockwaves.push({
+            x: this.face * w,
+            y: this.headAnchor(this.y, 0.85) - 20,
+            radius: 20,
+            maxRadius: 520,
+            alpha: 1.0,
+            speed: 8.5
+        });
+
+        // Ekran silkələnməsi
+        const mainView = document.getElementById('main-view');
+        if (mainView) {
+            mainView.classList.add('shake');
+            setTimeout(() => mainView.classList.remove('shake'), 350);
+        }
+
+        if (typeof showToast === 'function') {
+            showToast('📢 CANAVARIN ZƏRBƏ QİŞQIRIĞI! (DURUXMA)', 'error');
+        }
+    }
+
+    // 📢 ŞOK DALĞASININ YENİLƏNMƏSİ
+    updateShockwaves() {
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+            const sw = this.shockwaves[i];
+            sw.radius += sw.speed;
+            sw.alpha -= 0.016;
+
+            // Oyunçuya çatan zərbə dalğası
+            if (typeof player !== 'undefined' && player) {
+                const pDist = Math.hypot(player.x - sw.x, player.y - sw.y);
+                if (Math.abs(pDist - sw.radius) < 22 && !sw.hitPlayer) {
+                    sw.hitPlayer = true;
+                    player.stunTimer = 50; // ~0.85s ləngimə və duruxma
+                    if (typeof particles !== 'undefined') {
+                        for (let k = 0; k < 12; k++) {
+                            particles.push(new Particle(player.x, player.y, '#c084fc', 3));
+                        }
+                    }
+                }
+            }
+
+            if (sw.alpha <= 0 || sw.radius >= sw.maxRadius) {
+                this.shockwaves.splice(i, 1);
+            }
+        }
+    }
+
+    // 📢 ŞOK DALĞASININ ÇƏKİLMƏSİ
+    drawShockwaves(c) {
+        this.shockwaves.forEach(sw => {
+            c.save();
+            c.strokeStyle = `rgba(234, 88, 12, ${sw.alpha * 0.9})`;
+            c.lineWidth = 4;
+            c.shadowColor = '#f97316';
+            c.shadowBlur = 20;
+
+            c.beginPath();
+            c.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            c.stroke();
+
+            // Daxili ikinci nazik neon dalğa
+            c.strokeStyle = `rgba(254, 240, 138, ${sw.alpha * 0.7})`;
+            c.lineWidth = 2;
+            c.beginPath();
+            c.arc(sw.x, sw.y, Math.max(0, sw.radius - 12), 0, Math.PI * 2);
+            c.stroke();
+
+            c.restore();
+        });
+    }
 }

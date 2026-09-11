@@ -7,14 +7,16 @@ class PowerUp {
         this.y = y;
         this.radius = 14;
         
-        // Əgər növ verilməyibsə, təsadüfi seç
+        // Əgər növ verilməyibsə, təsadüfi seç (Qalxan laboratoriya səviyyəsinə görə şans artır)
         const types = ['shield', 'chrono', 'jump', 'magnet'];
-        const weights = [0.30, 0.25, 0.25, 0.20]; // Qalxan 30%, Zaman 25%, Sıçrayış 25%, Maqnit 20%
+        const extraShield = (typeof permUpgrades !== 'undefined' && permUpgrades.shieldLvl) ? permUpgrades.shieldLvl * 0.05 : 0;
+        const weights = [0.30 + extraShield, 0.25, 0.25, 0.20]; // Qalxan çıxma şansı artır
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
         
         if (type && types.includes(type)) {
             this.type = type;
         } else {
-            const rand = Math.random();
+            const rand = Math.random() * totalWeight;
             let sum = 0;
             this.type = 'shield';
             for (let i = 0; i < types.length; i++) {

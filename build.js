@@ -21,4 +21,20 @@ if (fs.existsSync(publicGame)) {
     console.log('✓ Root game.html sinxronlaşdırıldı.');
 }
 
+// 3. Root shop.html
+const publicShop = path.join(publicDir, 'shop.html');
+if (fs.existsSync(publicShop)) {
+    let shopHtml = fs.readFileSync(publicShop, 'utf-8');
+    fs.writeFileSync(path.join(__dirname, 'shop.html'), shopHtml, 'utf-8');
+    console.log('✓ Root shop.html sinxronlaşdırıldı.');
+}
+
+// 4. Root guide.html
+const publicGuide = path.join(publicDir, 'guide.html');
+if (fs.existsSync(publicGuide)) {
+    let guideHtml = fs.readFileSync(publicGuide, 'utf-8');
+    fs.writeFileSync(path.join(__dirname, 'guide.html'), guideHtml, 'utf-8');
+    console.log('✓ Root guide.html sinxronlaşdırıldı.');
+}
+
 console.log('✓ Build prosesi uğurla tamamlandı!');

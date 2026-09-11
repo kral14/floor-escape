@@ -96,8 +96,10 @@ function switchNavPage(pageId) {
         updateHomeDashboardData();
         startDashboardPreviewAnimation();
     } else if (pageId === 'shop') {
-        updatePermUpgradesUI();
-        updateTurretsUI();
+        if (typeof renderSkinsShop === 'function') renderSkinsShop();
+        if (typeof updatePermUpgradesUI === 'function') updatePermUpgradesUI();
+        if (typeof updateTurretsUI === 'function') updateTurretsUI();
+        if (typeof switchLabTab === 'function') switchLabTab(typeof currentLabTab !== 'undefined' && currentLabTab ? currentLabTab : 'skins');
     } else if (pageId === 'leaderboard') {
         loadLeaderboardData();
     } else if (pageId === 'chat') {
@@ -355,8 +357,8 @@ async function loadLeaderboardData() {
                         </td>
                         <td class="py-3 px-4 text-center">
                             <div class="flex items-center justify-center gap-3 text-xs font-orbitron">
-                                <span class="text-sky-400 font-bold">${p.diamonds || 0} 💎</span>
-                                <span class="text-rose-400 font-bold">${p.red_diamonds || 0} 💎🔴</span>
+                                <span class="text-sky-400 font-bold flex items-center gap-1">${p.diamonds || 0} ${(typeof ICONS !== 'undefined') ? ICONS.cyanDiamond({ size: 13 }) : '💎'}</span>
+                                <span class="text-rose-400 font-bold flex items-center gap-1">${p.red_diamonds || 0} ${(typeof ICONS !== 'undefined') ? ICONS.rubyDiamond({ size: 13 }) : '💎'}</span>
                             </div>
                         </td>
                         <td class="py-3 px-4 text-right">

@@ -22,40 +22,35 @@ Platformalarda sikkələrlə yanaşı təsadüfi olaraq parıldayan neon enerji 
 
 ---
 
-## 📌 Mərhələ 2: 🧩 Dinamik Platforma Növləri (Interactive Platforms)
-> **Status:** 🟡 Növbəti Mərhələ
-
-Bütün platformaların eyni olması əvəzinə, hərəkət dinamikasına gözlənilməzlik qatılır:
-1. **💥 Çatlayan Platformalar (Crumbling):** Üzərinə basıldıqda çatlar əmələ gəlir və 0.8 saniyə sonra dağılır.
-2. **⏫ Tramplin Platformalar (Bouncy / Launch Pads):** Oyunçu üzərinə tullandıqda onu 2x hündürlüyə fırladır.
-3. **🧊 Kiber-Buz Platformalar (Slick Ice):** Sürüşkən zəmin; əyləc məsafəsi artır.
-4. **⚡ Lazer Tikanlı Platformalar:** Bəlli aralıqlarla aktivləşən və zərər vuran elektrik zolaqları.
+## 📌 Mərhələ 2: 🧩 Platformalar (Ləğv Edildi / Yığışdırıldı)
+> **Status:** ⚪ İstifadəçi tələbi ilə ləğv edildi (Arena təmiz və sərbəst saxlanıldı).
 
 ---
 
 ## 📌 Mərhələ 3: ☄️ Canavarın Hücum Bacarıqları (Monster Boss Mechanics)
-> **Status:** ⚪ Gözləmədə
+> **Status:** 🟢 Tamamlandı (Oyunda Aktivdir)
 
 Canavarın sadəcə passiv yüksəlməsi deyil, oyunçuya aktiv təhlükə yaratması:
-1. **☄️ Lava Meteor Yağışı:** Canavar nərə çəkəndə yuxarıdan təsadüfi nöqtələrə alovlu daşlar düşür (indikator xəbərdarlığı ilə).
-2. **📢 Zərbə Qışqırığı (Shockwave Roar):** Ekran titrəyir, oyunçu 1 saniyəlik ləngiyir və qravitasiya müvəqqəti dəyişir.
-3. **🔥 Lava Dalğası:** Canavar bir tərəfə əl ataraq lavanı qabardır.
+1. **☄️ Lava Meteor Yağışı:** Canavar nərə çəkəndə yuxarıdan təsadüfi nöqtələrə alovlu daşlar düşür (yerüstü qırmızı indikator və partlayış dalğası ilə).
+2. **📢 Zərbə Qışqırığı (Shockwave Roar):** Ekran titrəyir, neon şok dalğası yayılır və oyunçu 0.8 saniyəlik duruxur (stun).
+3. **🔥 Lava Dalğası / Qabarması:** Canavar bir tərəfə əl ataraq lavanı qəfil +50px qabardır.
 
 ---
 
 ## 📌 Mərhələ 4: 🌀 Mərtəbə Anomaliyaları (Floor Modifiers)
-> **Status:** ⚪ Gözləmədə
+> **Status:** 🟢 Tamamlandı (Oyunda Aktivdir)
 
-Hər 5 və ya 10 qatdan bir təsadüfi xüsusi hadisə rejimi:
+Hər 3 və ya 5 qatdan bir təsadüfi xüsusi hadisə rejimi:
 1. **🌑 "Qaranlıq Qat" (Night Raid):** Bütün arena qaranlıqlaşır; yalnız oyunçunun ətrafında və lavanın üzərində dinamik fənər işığı qalır.
-2. **🪐 "Ay Qravitasiyası" (Low Gravity):** Tullanışlar çox yüksək və havada qalma müddəti uzun olur.
-3. **💰 "Qızıl Qızdırması" (Golden Rush):** Canavar 15% sürətlənir, amma platformalarda böyük qızıl və almaz yığınları çıxır.
+2. **🪐 "Ay Qravitasiyası" (Low Gravity):** Süzülən və elastik hərəkət.
+3. **💰 "Qızıl Qızdırması" (Golden Rush):** Canavar 20% sürətlənir, amma arenada böyük qızıl yığınları çıxır.
+4. **Kiber-Banner:** Arenanın yuxarısında aktiv anomaliyanın parlaq neon göstəricisi.
 
 ---
 
 ## 📌 Mərhələ 5: 🔥 Cyberpunk Kombo və Qiymətləndirmə Sistemi (Arcade Feedback)
-> **Status:** ⚪ Gözləmədə
+> **Status:** 🟢 Tamamlandı (Oyunda Aktivdir)
 
-1. **Neon Kombo Bildirişləri:** PERFECT JUMP!, COMBO x3, MONSTER CRUSH!, UNSTOPPABLE!.
-2. **Dinamik Xal Çarpanı:** Kombo yüksək olduqda qazanılan sikkələr və xallar 2x, 3x çoxalır.
-3. **Audio-Vizual Zərbə Reaksiyası:** Uğurlu atışlarda qığılcımlar, ekran kənarında neon parıltılar.
+1. **Neon Floating Bildirişləri:** *COMBO x3!*, *PERFECT ESCAPE!*, *MONSTER CRUSH!*, *UNSTOPPABLE!* animasiyaları.
+2. **Dinamik Xal və Qızıl Çarpanı:** Kombo yüksək olduqda qazanılan sikkələr və xallar **1.5x, 2.0x, 3.0x** çoxalır (HUD-da alovlu animasiya ilə).
+3. **Audio-Vizual Zərbə Reaksiyası:** Meteor partlayışları, kükrəmə və kombo melodiyaları, təhlükə anında qırmızı və kombo anında kiber-mavi neon vinyet işıqlanması.

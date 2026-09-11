@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Floor Escape - Oyun Bələdçisi və Məlumat Mərkəzi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .guide-section-active {
+            display: block !important;
+        }
+        .guide-tab-btn.active {
+            background: rgba(6, 182, 212, 0.2) !important;
+            border-color: rgba(6, 182, 212, 0.6) !important;
+            color: #38bdf8 !important;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+
+        /* Animasiyalar */
+        @keyframes coinSpin3D {
+            0% { transform: perspective(300px) rotateY(0deg); }
+            50% { transform: perspective(300px) rotateY(180deg) scale(1.08); }
+            100% { transform: perspective(300px) rotateY(360deg); }
+        }
+        @keyframes gemFloatPulse {
+            0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.7)); }
+            50% { transform: translateY(-4px) scale(1.06); filter: drop-shadow(0 0 20px rgba(244, 63, 94, 1)); }
+        }
+        @keyframes blueGemFloatPulse {
+            0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.7)); }
+            50% { transform: translateY(-4px) scale(1.06); filter: drop-shadow(0 0 20px rgba(56, 189, 248, 1)); }
+        }
+        @keyframes radarOrbital {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes pulseGlowSlow {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        @keyframes rocketThrust {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px) scale(1.04); }
+        }
+
+        .coin-spin-3d {
+            animation: coinSpin3D 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            transform-style: preserve-3d;
+        }
+        .ruby-anim {
+            animation: gemFloatPulse 2.8s ease-in-out infinite;
+        }
+        .cyan-gem-anim {
+            animation: blueGemFloatPulse 2.8s ease-in-out infinite;
+        }
+        .orbital-spin {
+            animation: radarOrbital 6s linear infinite;
+        }
+        .rocket-anim {
+            animation: rocketThrust 1.8s ease-in-out infinite;
+        }
+        .pulse-slow {
+            animation: pulseGlowSlow 2.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 font-sans select-none relative overflow-x-hidden p-3 sm:p-6">
+    <!-- Dynamic Background Layer -->
+    <div class="bg-layer fixed inset-0 pointer-events-none"></div>
+    <div class="bg-grid fixed inset-0 pointer-events-none"></div>
+
+    <div class="max-w-6xl mx-auto flex flex-col gap-6 relative z-10">
+
+        <!-- ========== HEADER ========== -->
+        <header class="glass p-4 sm:p-5 rounded-3xl border border-sky-500/25 flex items-center justify-between flex-wrap gap-4 shadow-2xl">
+            <div class="flex items-center gap-3.5">
+                <a href="index.html" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-500/30 hover:scale-105 transition cursor-pointer" title="Daşborda Qayıt">
+                    <i class="fa-solid fa-arrow-left text-slate-950 text-base"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-orbitron font-extrabold text-base sm:text-lg text-white tracking-wider">OYUN BƏLƏDÇİSİ</h1>
+                        <span class="px-2.5 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/30 text-[10px] font-orbitron font-bold text-sky-300 uppercase tracking-widest">Ensiklopedik Məlumat</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Arenadakı gücləndiricilər, silahlar, kostyumlar və iqtisadiyyat</p>
+                </div>
+            </div>
+
+            <!-- Sağ Keçid Düymələri -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a href="shop.html" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-amber-300 font-orbitron font-bold text-xs flex items-center gap-1.5 transition shadow" title="Kiber Mağaza">
+                    <i class="fa-solid fa-store text-amber-400"></i>
+                    <span class="hidden sm:inline">MAĞAZA</span>
+                </a>
+                <a href="game.html" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-orbitron font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/25 transition transform hover:scale-105" title="Oyuna Başla">
+                    <i class="fa-solid fa-play"></i>
+                    <span>OYUNA BAŞLA</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- ========== KATEQORİYA TABLARI ========== -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+            <button onclick="switchGuideTab('powerups')" id="tab-btn-powerups" class="guide-tab-btn active px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-orbitron font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                <i class="fa-solid fa-bolt-lightning text-amber-400"></i>
+                <span>Gücləndiricilər (Power-Ups)</span>
+            </button>
+            <button onclick="switchGuideTab('weapons')" id="tab-btn-weapons" class="guide-tab-btn px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-orbitron font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                <i class="fa-solid fa-crosshairs text-cyan-400"></i>
+                <span>Silahlar & Tələlər</span>
+            </button>
+            <button onclick="switchGuideTab('skins')" id="tab-btn-skins" class="guide-tab-btn px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-orbitron font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                <i class="fa-solid fa-shield-halved text-purple-400"></i>
+                <span>Kiber Kostyumlar & Gücləri</span>
+            </button>
+            <button onclick="switchGuideTab('economy')" id="tab-btn-economy" class="guide-tab-btn px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-orbitron font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                <i class="fa-solid fa-gem text-rose-400"></i>
+                <span>Almazlar & İqtisadiyyat</span>
+            </button>
+            <button onclick="switchGuideTab('tips')" id="tab-btn-tips" class="guide-tab-btn px-4 py-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-orbitron font-bold text-slate-300 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                <i class="fa-solid fa-lightbulb text-yellow-400"></i>
+                <span>Taktikalar & Məsləhətlər</span>
+            </button>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 1: GÜCLƏNDİRİCİLƏR (POWER-UPS) -->
+        <!-- ============================================================== -->
+        <div id="section-powerups" class="guide-section guide-section-active flex flex-col gap-4">
+            <div class="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2">
+                <i class="fa-solid fa-info-circle text-base text-cyan-400 shrink-0"></i>
+                <span>Arenada dövri olaraq peyda olan xüsusi kiber-sferalar. Onların hər biri sizi lavadan xilas edən və ya xüsusi üstünlük verən unikal gücə malikdir.</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- 1. CHRONO SHIFT -->
+                <div class="glass p-5 rounded-3xl border border-fuchsia-500/30 flex flex-col justify-between gap-3 relative overflow-hidden bg-slate-950/70 shadow-lg hover:border-fuchsia-400/60 transition group">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-16 h-16 rounded-2xl bg-fuchsia-500/15 border border-fuchsia-400/50 flex items-center justify-center p-2 shadow-inner shadow-fuchsia-500/30 relative">
+                                <svg class="w-11 h-11 pulse-slow" viewBox="0 0 64 64">
+                                    <circle cx="32" cy="32" r="26" fill="none" stroke="#e879f9" stroke-width="2" stroke-dasharray="6,3" opacity="0.8"/>
+                                    <circle cx="32" cy="32" r="21" fill="rgba(217, 70, 239, 0.15)" stroke="#d946ef" stroke-width="2.5"/>
+                                    <!-- Clock Hands -->
+                                    <line x1="32" y1="32" x2="32" y2="18" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+                                    <line x1="32" y1="32" x2="42" y2="32" stroke="#f0abfc" stroke-width="2.5" stroke-linecap="round"/>
+                                    <circle cx="32" cy="32" r="3.5" fill="#ffffff"/>
+                                    <!-- Neon Ring -->
+                                    <circle cx="32" cy="32" r="14" fill="none" stroke="#f5d0fe" stroke-width="1" opacity="0.6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-base text-white flex items-center gap-2">
+                                    Chrono Shift
+                                </h3>
+                                <span class="text-xs font-mono text-fuchsia-400 font-semibold">Zamanın Ləngidilməsi (Matrix)</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-fuchsia-500/15 text-fuchsia-300 text-[10px] font-orbitron font-bold border border-fuchsia-500/40">4.0 Saniyə</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Götürdüyünüz an bütün arenada <strong>4.0 saniyəlik Slow-Motion</strong> aktivləşir. Qaynar lava və düşən bütün təhlükələr kəskin ləngiyir, siz isə öz tam sürətinizlə hərəkət edərək rahatlıqla sikkələri yığa və çıxışa qaça bilirsiniz.
+                    </p>
+                    <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Status: <strong class="text-emerald-400 font-orbitron">Ani Aktivləşir</strong></span>
+                        <span>Effekt: <strong class="text-fuchsia-300 font-orbitron">Lava -80% Sürət</strong></span>
+                    </div>
+                </div>
+
+                <!-- 2. QUANTUM HYPER JUMP -->
+                <div class="glass p-5 rounded-3xl border border-amber-500/30 flex flex-col justify-between gap-3 relative overflow-hidden bg-slate-950/70 shadow-lg hover:border-amber-400/60 transition group">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-400/50 flex items-center justify-center p-2 shadow-inner shadow-amber-500/30 relative">
+                                <svg class="w-11 h-11 rocket-anim" viewBox="0 0 64 64">
+                                    <defs>
+                                        <linearGradient id="rocketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#fef08a"/>
+                                            <stop offset="50%" stop-color="#f59e0b"/>
+                                            <stop offset="100%" stop-color="#b45309"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Wings -->
+                                    <polygon points="16,42 24,34 24,46" fill="#f97316"/>
+                                    <polygon points="48,42 40,34 40,46" fill="#f97316"/>
+                                    <!-- Body -->
+                                    <path d="M32,12 Q40,24 38,44 L26,44 Q24,24 32,12 Z" fill="url(#rocketGrad)" stroke="#fef08a" stroke-width="1.5"/>
+                                    <!-- Cockpit Porch -->
+                                    <circle cx="32" cy="25" r="4.5" fill="#0284c7" stroke="#bae6fd" stroke-width="1.5"/>
+                                    <!-- Flame Thrust -->
+                                    <polygon points="28,46 32,58 36,46" fill="#ef4444"/>
+                                    <polygon points="30,46 32,54 34,46" fill="#fef08a"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-base text-white flex items-center gap-2">
+                                    Kvant Sıçrayışı
+                                </h3>
+                                <span class="text-xs font-mono text-amber-400 font-semibold">Emergency Quantum Thruster</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-orbitron font-bold border border-amber-500/40">Ehtiyatda Saxlanılır</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Götürdükdə dərhal tullanmır, üzərinizdə <strong>qızmar reaktiv mühərrik kimi aktiv hazır qalır</strong>. Lavaya toxunmağa <strong>2px qalmış</strong> avtomatik işə düşərək sizi dərhal 190px yuxarı fırladır. <em>Ən əsası: Qalxanınız varsa onu xərcləmir, ilk növbədə sıçrayış sizi xilas edir!</em>
+                    </p>
+                    <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Tətiklənmə: <strong class="text-amber-400 font-orbitron">Lavaya 2px Qalmış</strong></span>
+                        <span>Məsafə: <strong class="text-amber-300 font-orbitron">+190px Yuxarı</strong></span>
+                    </div>
+                </div>
+
+                <!-- 3. AEGIS SHIELD -->
+                <div class="glass p-5 rounded-3xl border border-cyan-500/30 flex flex-col justify-between gap-3 relative overflow-hidden bg-slate-950/70 shadow-lg hover:border-cyan-400/60 transition group">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-16 h-16 rounded-2xl bg-cyan-500/15 border border-cyan-400/50 flex items-center justify-center p-2 shadow-inner shadow-cyan-500/30 relative">
+                                <svg class="w-11 h-11" viewBox="0 0 64 64">
+                                    <defs>
+                                        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="#67e8f9"/>
+                                            <stop offset="50%" stop-color="#06b6d4"/>
+                                            <stop offset="100%" stop-color="#0e7490"/>
+                                        </linearGradient>
+                                    </defs>
+                                    <!-- Rotating orbital ring -->
+                                    <circle class="orbital-spin" cx="32" cy="32" r="26" fill="none" stroke="#22d3ee" stroke-width="1.8" stroke-dasharray="10,6" opacity="0.85" style="transform-origin: 32px 32px;"/>
+                                    <!-- Shield Crest -->
+                                    <path d="M32,15 L46,21 C46,36 32,48 32,48 C32,48 18,36 18,21 Z" fill="url(#shieldGrad)" stroke="#a5f3fc" stroke-width="2"/>
+                                    <path d="M32,20 L40,24 C40,34 32,42 32,42 C32,42 24,34 24,24 Z" fill="none" stroke="#cffafe" stroke-width="1.2" opacity="0.75"/>
+                                    <circle cx="32" cy="30" r="3" fill="#ffffff"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-base text-white flex items-center gap-2">
+                                    Aegis Qalxanı
+                                </h3>
+                                <span class="text-xs font-mono text-cyan-400 font-semibold">Orbital Deflector Barrier</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-300 text-[10px] font-orbitron font-bold border border-cyan-500/40">1 Dəfəlik Xilasetmə</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Oyunçunun ətrafında dönən parlaq kiber-orbital mühafizə sipəri yaradır. Lavanın qızmar ölümcül zərbəsini <strong>100% zərərsizləşdirir</strong>, qırıldığı an sizi təhlükəsiz zonaya atır və 1.5 saniyəlik tam toxunulmazlıq aurası verir.
+                    </p>
+                    <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Müdafiə: <strong class="text-cyan-400 font-orbitron">100% Xilasedici</strong></span>
+                        <span>Aura: <strong class="text-cyan-300 font-orbitron">+1.5s Toxunulmazlıq</strong></span>
+                    </div>
+                </div>
+
+                <!-- 4. MAGNET STORM -->
+                <div class="glass p-5 rounded-3xl border border-purple-500/30 flex flex-col justify-between gap-3 relative overflow-hidden bg-slate-950/70 shadow-lg hover:border-purple-400/60 transition group">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-16 h-16 rounded-2xl bg-purple-500/15 border border-purple-400/50 flex items-center justify-center p-2 shadow-inner shadow-purple-500/30 relative">
+                                <svg class="w-11 h-11 pulse-slow" viewBox="0 0 64 64">
+                                    <!-- Magnet Horseshoe -->
+                                    <path d="M16,22 L16,36 C16,45 23,52 32,52 C41,52 48,45 48,36 L48,22 L38,22 L38,36 C38,39 35,42 32,42 C29,42 26,39 26,36 L26,22 Z" fill="#c084fc" stroke="#f3e8ff" stroke-width="2"/>
+                                    <!-- Red/Blue Magnetic Poles -->
+                                    <rect x="15" y="16" width="12" height="8" rx="2" fill="#ef4444" stroke="#fca5a5" stroke-width="1.5"/>
+                                    <rect x="37" y="16" width="12" height="8" rx="2" fill="#3b82f6" stroke="#93c5fd" stroke-width="1.5"/>
+                                    <!-- Magnetic Sparks -->
+                                    <line x1="21" y1="12" x2="21" y2="7" stroke="#f87171" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="43" y1="12" x2="43" y2="7" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="28" y1="28" x2="36" y2="28" stroke="#e9d5ff" stroke-width="1.5" stroke-dasharray="2,2"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-orbitron font-bold text-base text-white flex items-center gap-2">
+                                    Super Maqnit Fırtınası
+                                </h3>
+                                <span class="text-xs font-mono text-purple-400 font-semibold">Magnet Storm Singularity</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 text-[10px] font-orbitron font-bold border border-purple-500/40">5.0 Saniyə</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Aktivləşdiyi anda oyunçunun qravitasiya sahəsini qat-qat gücləndirir. Arenanın harasında yerləşməsindən asılı olmayaraq <strong>bütün qızıl sikkələr güclü axınla birbaşa sizə tərəf uçur</strong> və saniyələr içində böyük sərvət yığmağınızı təmin edir.
+                    </p>
+                    <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Radius: <strong class="text-purple-400 font-orbitron">Bütün Arena</strong></span>
+                        <span>Müddət: <strong class="text-purple-300 font-orbitron">5.0 Saniyə</strong></span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: SİLAHLAR VƏ TƏLƏLƏR -->
+        <!-- ============================================================== -->
+        <div id="section-weapons" class="guide-section hidden flex flex-col gap-4">
+            <div class="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2">
+                <i class="fa-solid fa-crosshairs text-base text-cyan-400 shrink-0"></i>
+                <span>Qalan qızıllarınızla yerə yerləşdirə və ya Əkiz Qüllələrdən avtomatik atəş aça biləcəyiniz kiber-tələlər.</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                <!-- 1. Barrikada -->
+                <div class="glass p-4 rounded-2xl border border-slate-800 bg-slate-950/60 flex flex-col justify-between hover:border-cyan-500/40 transition">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center p-1.5 shrink-0">
+                            <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                <rect x="8" y="14" width="32" height="8" rx="2" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5"/>
+                                <rect x="12" y="24" width="24" height="8" rx="2" fill="#0369a1" stroke="#38bdf8" stroke-width="1.5"/>
+                                <rect x="6" y="34" width="36" height="8" rx="2" fill="#075985" stroke="#38bdf8" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-orbitron font-bold text-sm text-white">Barrikada Divarı</h4>
+                            <span class="text-[11px] font-mono text-cyan-400">Qiymət: 30 🪙</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">Lavanın qarşısını fiziki divar kimi kəsir, onun yüksəlişini dayandırır və soyudur.</p>
+                    <span class="text-[10px] font-orbitron text-emerald-400">🛡️ Lavanı 4s dayandırır</span>
+                </div>
+
+                <!-- 2. Buz -->
+                <div class="glass p-4 rounded-2xl border border-slate-800 bg-slate-950/60 flex flex-col justify-between hover:border-sky-500/40 transition">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center p-1.5 shrink-0">
+                            <svg class="w-8 h-8 pulse-slow" viewBox="0 0 48 48">
+                                <line x1="24" y1="8" x2="24" y2="40" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+                                <line x1="8" y1="24" x2="40" y2="24" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+                                <line x1="12" y1="12" x2="36" y2="36" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="36" y1="12" x2="12" y2="36" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+                                <circle cx="24" cy="24" r="4" fill="#ffffff"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-orbitron font-bold text-sm text-white">Kvant Buzu</h4>
+                            <span class="text-[11px] font-mono text-sky-400">Qiymət: 50 🪙</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">Lavanı dərin dondurma qatına bürüyür və onun hərəkət sürətini kəskin azaldır.</p>
+                    <span class="text-[10px] font-orbitron text-sky-300">🧊 -50% Sürət Zəiflətməsi</span>
+                </div>
+
+                <!-- 3. Şok -->
+                <div class="glass p-4 rounded-2xl border border-slate-800 bg-slate-950/60 flex flex-col justify-between hover:border-yellow-500/40 transition">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center p-1.5 shrink-0">
+                            <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                <polygon points="26,6 12,26 23,26 20,42 34,22 23,22" fill="#eab308" stroke="#fef08a" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-orbitron font-bold text-sm text-white">Elektrik Şok</h4>
+                            <span class="text-[11px] font-mono text-yellow-400">Qiymət: 90 🪙</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">Yüksək gərginlikli plazma qövsü yaradır, lavanı tamamilə iflic edərək dondurur.</p>
+                    <span class="text-[10px] font-orbitron text-yellow-300">⚡ 3.5s Tam İflic</span>
+                </div>
+
+                <!-- 4. Mina -->
+                <div class="glass p-4 rounded-2xl border border-slate-800 bg-slate-950/60 flex flex-col justify-between hover:border-rose-500/40 transition">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center p-1.5 shrink-0">
+                            <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                <circle cx="24" cy="27" r="14" fill="#881337" stroke="#f43f5e" stroke-width="2"/>
+                                <line x1="24" y1="13" x2="24" y2="8" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round"/>
+                                <circle cx="24" cy="7" r="2.5" fill="#f43f5e"/>
+                                <circle cx="24" cy="27" r="4" fill="#fb7185"/>
+                                <circle cx="24" cy="27" r="8" fill="none" stroke="#fb7185" stroke-dasharray="2,3"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-orbitron font-bold text-sm text-white">Partlayıcı Mina</h4>
+                            <span class="text-[11px] font-mono text-rose-400">Qiymət: 140 🪙</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">Lava toxunduğu an dərin zərbə partlayışı törədir və lavanı xeyli aşağı itələyir.</p>
+                    <span class="text-[10px] font-orbitron text-rose-300">💥 Güclü Aşağı İtələmə</span>
+                </div>
+
+                <!-- 5. Plazma -->
+                <div class="glass p-4 rounded-2xl border border-slate-800 bg-slate-950/60 flex flex-col justify-between hover:border-purple-500/40 transition">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center p-1.5 shrink-0">
+                            <svg class="w-8 h-8 orbital-spin" viewBox="0 0 48 48" style="transform-origin: 24px 24px;">
+                                <ellipse cx="24" cy="24" rx="16" ry="6" fill="none" stroke="#a855f7" stroke-width="1.8" transform="rotate(0 24 24)"/>
+                                <ellipse cx="24" cy="24" rx="16" ry="6" fill="none" stroke="#c084fc" stroke-width="1.8" transform="rotate(60 24 24)"/>
+                                <ellipse cx="24" cy="24" rx="16" ry="6" fill="none" stroke="#d8b4fe" stroke-width="1.8" transform="rotate(120 24 24)"/>
+                                <circle cx="24" cy="24" r="5" fill="#f3e8ff"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-orbitron font-bold text-sm text-white">Plazma Nüvəsi</h4>
+                            <span class="text-[11px] font-mono text-purple-400">Qiymət: 190 🪙</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-3">Kosmik yüksək enerjili nüvə partlayışı! Lavanın kütləsini əridərək ən dibə salır.</p>
+                    <span class="text-[10px] font-orbitron text-purple-300">🌟 Maksimal Ərimə Zərəri</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 3: KİBER KOSTYUKLAR VƏ GÜCLƏRİ -->
+        <!-- ============================================================== -->
+        <div id="section-skins" class="guide-section hidden flex flex-col gap-4">
+            <div class="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 text-xs text-cyan-300 flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-base text-cyan-400 shrink-0"></i>
+                <span>Hər bir kostyum təkcə vizual formanı deyil, həm də oyun tərzinizi və güc xüsusiyyətlərinizi dəyişir.</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- 1. Kiber Qaçışçı -->
+                <div class="glass p-5 rounded-3xl border border-emerald-500/30 bg-slate-950/70 flex flex-col justify-between hover:border-emerald-400/60 transition group">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 flex items-center justify-center p-2 shadow-inner shadow-emerald-500/20">
+                                    <!-- Real Cyber Runner Mask SVG -->
+                                    <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                        <circle cx="24" cy="24" r="18" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+                                        <!-- Ninja Visor Band -->
+                                        <rect x="10" y="20" width="28" height="8" rx="4" fill="#022c22" stroke="#34d399" stroke-width="1.5"/>
+                                        <!-- Cyan Glowing Eye Visor -->
+                                        <line x1="14" y1="24" x2="34" y2="24" stroke="#06b6d4" stroke-width="3" stroke-linecap="round"/>
+                                        <!-- Ribbons -->
+                                        <path d="M12,25 L4,32 L7,36 L13,29" fill="#10b981"/>
+                                        <path d="M10,26 L2,38 L5,41 L12,30" fill="#34d399"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-orbitron font-bold text-base text-white">Kiber Qaçışçı</h3>
+                                    <span class="text-xs font-mono text-emerald-400">Cyber Runner</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-orbitron font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 mb-3">⚖️ Baza Standart Forma</span>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Neon vizorlu kiber-ninja dəbilqəsi və küləkdə dalğalanan ikili kiber lentlər. Arenada standart balanslaşdırılmış çeviklik və hərəkət bəxş edir.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 2. Kvant Qığılcımı -->
+                <div class="glass p-5 rounded-3xl border border-yellow-500/30 bg-slate-950/70 flex flex-col justify-between hover:border-yellow-400/60 transition group">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-yellow-500/15 border border-yellow-400/40 flex items-center justify-center p-2 shadow-inner shadow-yellow-500/20">
+                                    <!-- Real Quantum Spark SVG -->
+                                    <svg class="w-8 h-8 pulse-slow" viewBox="0 0 48 48">
+                                        <!-- 4 Quantum Lightning Blades -->
+                                        <polygon points="24,4 27,18 41,21 28,26 31,41 23,29 9,33 19,23" fill="#eab308" stroke="#fef08a" stroke-width="1.5"/>
+                                        <circle cx="24" cy="24" r="5" fill="#ffffff"/>
+                                        <!-- Arc Sparks -->
+                                        <circle cx="24" cy="24" r="16" fill="none" stroke="#fde047" stroke-width="1" stroke-dasharray="3,3" opacity="0.75"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-orbitron font-bold text-base text-white">Kvant Qığılcımı</h3>
+                                    <span class="text-xs font-mono text-yellow-400">Quantum Spark</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-orbitron font-bold bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 mb-3">⚡ +10% Hərəkət Sürəti</span>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            4 iti elektrik qanadına və canlı şimşək qövslərinə malik plazma ulduzu forması. Bütün qatlarda oyunçunun baza qaçış sürətini <strong>+10% artırır</strong>.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 3. Titan Zirehli -->
+                <div class="glass p-5 rounded-3xl border border-sky-500/30 bg-slate-950/70 flex flex-col justify-between hover:border-sky-400/60 transition group">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-400/40 flex items-center justify-center p-2 shadow-inner shadow-sky-500/20">
+                                    <!-- Real Titan Aegis SVG -->
+                                    <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                        <!-- Hexagon Mecha Shield -->
+                                        <polygon points="24,6 40,15 40,33 24,42 8,33 8,15" fill="#0369a1" stroke="#38bdf8" stroke-width="2"/>
+                                        <polygon points="24,12 34,18 34,30 24,36 14,30 14,18" fill="#0284c7" stroke="#bae6fd" stroke-width="1.2"/>
+                                        <circle cx="24" cy="24" r="3.5" fill="#ffffff"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-orbitron font-bold text-base text-white">Titan Zirehli</h3>
+                                    <span class="text-xs font-mono text-sky-400">Titan Aegis</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-orbitron font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 mb-3">🛡️ +1.5s Əlavə Qorunma</span>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Altıbucaqlı möhkəm titan mecha zirehi və ətrafında dönən deflektor sipərləri. Qalxan qırıldıqda və ya Dash zamanı toxunulmazlıq vaxtını <strong>1.5 saniyə uzadır</strong>.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 4. Lava Cəlladı -->
+                <div class="glass p-5 rounded-3xl border border-red-500/30 bg-slate-950/70 flex flex-col justify-between hover:border-red-400/60 transition group">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-red-500/15 border border-red-400/40 flex items-center justify-center p-2 shadow-inner shadow-red-500/20">
+                                    <!-- Real Inferno Slayer SVG -->
+                                    <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                        <!-- Lava Horns -->
+                                        <path d="M14,18 Q8,6 18,12 Z" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+                                        <path d="M34,18 Q40,6 30,12 Z" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+                                        <!-- Obsidian Skull Head -->
+                                        <polygon points="24,14 36,24 32,38 16,38 12,24" fill="#450a0a" stroke="#dc2626" stroke-width="2"/>
+                                        <!-- Fiery Eyes -->
+                                        <polygon points="18,24 22,26 19,28" fill="#facc15"/>
+                                        <polygon points="30,24 26,26 29,28" fill="#facc15"/>
+                                        <!-- Lava Core -->
+                                        <polygon points="24,30 26,34 22,34" fill="#f97316"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-orbitron font-bold text-base text-white">Lava Cəlladı</h3>
+                                    <span class="text-xs font-mono text-red-400">Inferno Slayer</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-orbitron font-bold bg-red-500/15 text-red-300 border border-red-500/30 mb-3">💰 +25% Qızıl Qazancı</span>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Obsidian magma gövdəsi, odlu buynuzlar və qəzəbli lava gözləri. Yığılan bütün qızıl sikkələrin dəyərini <strong>+25% (hər sikkədən +5 əlavə qızıl)</strong> artırır.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 5. Void Hökmdarı -->
+                <div class="glass p-5 rounded-3xl border border-purple-500/30 bg-slate-950/70 flex flex-col justify-between md:col-span-2 hover:border-purple-400/60 transition group">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-400/40 flex items-center justify-center p-2 shadow-inner shadow-purple-500/20">
+                                    <!-- Real Void Sovereign Crown SVG -->
+                                    <svg class="w-8 h-8" viewBox="0 0 48 48">
+                                        <!-- Vertical Gold Void Crown -->
+                                        <polygon points="12,32 12,20 18,25 24,14 30,25 36,20 36,32" fill="#eab308" stroke="#fef08a" stroke-width="1.8"/>
+                                        <!-- Crown Jewels -->
+                                        <circle cx="12" cy="19" r="1.8" fill="#a855f7"/>
+                                        <circle cx="24" cy="13" r="2.2" fill="#c084fc"/>
+                                        <circle cx="36" cy="19" r="1.8" fill="#a855f7"/>
+                                        <!-- Void Singularity Ring -->
+                                        <circle class="orbital-spin" cx="24" cy="38" r="7" fill="#1e1b4b" stroke="#9333ea" stroke-width="1.5" stroke-dasharray="4,3" style="transform-origin: 24px 38px;"/>
+                                        <circle cx="24" cy="38" r="2.5" fill="#f3e8ff"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-orbitron font-bold text-base text-white">Void Hökmdarı</h3>
+                                    <span class="text-xs font-mono text-purple-400">Void Sovereign</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-orbitron font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 mb-3">👑 -20% Dash CD & +35px Super-Maqnit</span>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Başında həmişə dik və əzəmətli duran qızıl kiber tac, qaranlıq materiya girdabı və 3 orbital qara kürə. Dash soyuma müddətini <strong>20% azaldır</strong> və sikkə çəkmə radiusunu <strong>+35px genişləndirir</strong>.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 4: ALMAZLAR VƏ İQTİSADİYYAT -->
+        <!-- ============================================================== -->
+        <div id="section-economy" class="guide-section hidden flex flex-col gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <!-- 1. Qızıl Sikkələr -->
+                <div class="glass p-6 rounded-3xl border border-amber-500/30 bg-slate-950/70 hover:border-amber-400/60 transition group flex flex-col justify-between">
+                    <div>
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-400/40 flex items-center justify-center mb-4 shadow-lg shadow-amber-500/10">
+                            <!-- 3D Real Spinning Gold Coin SVG -->
+                            <svg class="w-12 h-12 coin-spin-3d" viewBox="0 0 64 64">
+                                <defs>
+                                    <linearGradient id="goldGradGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#fffbeb"/>
+                                        <stop offset="25%" stop-color="#f59e0b"/>
+                                        <stop offset="65%" stop-color="#d97706"/>
+                                        <stop offset="100%" stop-color="#78350f"/>
+                                    </linearGradient>
+                                    <linearGradient id="goldRimGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#fef08a"/>
+                                        <stop offset="100%" stop-color="#b45309"/>
+                                    </linearGradient>
+                                    <filter id="goldGlowGuide">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.8"/>
+                                    </filter>
+                                </defs>
+                                <!-- Outer Gold Body -->
+                                <circle cx="32" cy="32" r="28" fill="url(#goldGradGuide)" stroke="url(#goldRimGuide)" stroke-width="2.5" filter="url(#goldGlowGuide)"/>
+                                <!-- Inner Dashed Ridge -->
+                                <circle cx="32" cy="32" r="22" fill="none" stroke="#fef08a" stroke-dasharray="3,2" stroke-width="1.5" opacity="0.85"/>
+                                <!-- Cyber Floor Escape Emblem -->
+                                <path d="M26 21 H38 V25 H30 V29 H36 V33 H30 V43 H26 Z" fill="#ffffff" opacity="0.95"/>
+                                <polygon points="32,15 34,18 37,18 35,20 36,23 32,21 28,23 29,20 27,18 30,18" fill="#fef08a"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-orbitron font-bold text-base text-amber-300 mb-1.5 flex items-center gap-2">
+                            Qızıl Sikkələr
+                        </h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                            Arenada qaçarkən toplanır. Oyundaxili anlıq sürət, maqnit yüksəltmələri və barrikada/mərmi atmaq üçün əsas döyüş vəsaitidir.
+                        </p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-[10px] font-orbitron text-slate-400">Mənbə:</span>
+                        <span class="text-[11px] font-orbitron text-amber-300 font-semibold">Arenadakı sikkələr</span>
+                    </div>
+                </div>
+
+                <!-- 2. Mavi Almazlar -->
+                <div class="glass p-6 rounded-3xl border border-sky-500/30 bg-slate-950/70 hover:border-sky-400/60 transition group flex flex-col justify-between">
+                    <div>
+                        <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-400/40 flex items-center justify-center mb-4 shadow-lg shadow-sky-500/10">
+                            <!-- Real Cyan Diamond Gem SVG -->
+                            <svg class="w-12 h-12 cyan-gem-anim" viewBox="0 0 64 64">
+                                <defs>
+                                    <linearGradient id="cyanGemTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#cffafe"/>
+                                        <stop offset="100%" stop-color="#06b6d4"/>
+                                    </linearGradient>
+                                    <linearGradient id="cyanGemLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#0891b2"/>
+                                        <stop offset="100%" stop-color="#164e63"/>
+                                    </linearGradient>
+                                    <linearGradient id="cyanGemRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#22d3ee"/>
+                                        <stop offset="100%" stop-color="#0e7490"/>
+                                    </linearGradient>
+                                    <linearGradient id="cyanGemCenter" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#ffffff"/>
+                                        <stop offset="100%" stop-color="#06b6d4"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Top Crown -->
+                                <polygon points="20,16 44,16 54,27 10,27" fill="url(#cyanGemTop)" stroke="#a5f3fc" stroke-width="1"/>
+                                <polygon points="20,16 32,27 10,27" fill="#38bdf8" opacity="0.9"/>
+                                <polygon points="44,16 32,27 54,27" fill="#0891b2" opacity="0.95"/>
+                                <polygon points="20,16 32,16 32,27" fill="#ffffff" opacity="0.6"/>
+                                <!-- Bottom Facets -->
+                                <polygon points="10,27 32,27 32,54" fill="url(#cyanGemLeft)" stroke="#06b6d4" stroke-width="0.5"/>
+                                <polygon points="54,27 32,27 32,54" fill="url(#cyanGemRight)" stroke="#22d3ee" stroke-width="0.5"/>
+                                <polygon points="22,27 42,27 32,54" fill="url(#cyanGemCenter)" opacity="0.85"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-orbitron font-bold text-base text-sky-300 mb-1.5 flex items-center gap-2">
+                            Mavi Almazlar
+                        </h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                            Hər dəfə yeni qata keçdikdə qazanılır. Qalıcı laboratoriyada baza sürəti, baza maqniti və oyuna qalxanla başlama şansını daimi artırır.
+                        </p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-[10px] font-orbitron text-slate-400">Mənbə:</span>
+                        <span class="text-[11px] font-orbitron text-sky-300 font-semibold">Hər qat keçidi (+1 💎)</span>
+                    </div>
+                </div>
+
+                <!-- 3. Qırmızı Almazlar (REAL GLOWING RUBY GEM SVG) -->
+                <div class="glass p-6 rounded-3xl border border-rose-500/30 bg-slate-950/70 hover:border-rose-400/60 transition group flex flex-col justify-between">
+                    <div>
+                        <div class="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-400/40 flex items-center justify-center mb-4 shadow-lg shadow-rose-500/15">
+                            <!-- Real Glowing 3D Ruby Gem SVG -->
+                            <svg class="w-12 h-12 ruby-anim" viewBox="0 0 64 64">
+                                <defs>
+                                    <linearGradient id="rubyTopGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#fda4af"/>
+                                        <stop offset="100%" stop-color="#e11d48"/>
+                                    </linearGradient>
+                                    <linearGradient id="rubyLeftGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#e11d48"/>
+                                        <stop offset="100%" stop-color="#881337"/>
+                                    </linearGradient>
+                                    <linearGradient id="rubyRightGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#f43f5e"/>
+                                        <stop offset="100%" stop-color="#9f1239"/>
+                                    </linearGradient>
+                                    <linearGradient id="rubyCenterGuide" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#ffe4e6"/>
+                                        <stop offset="100%" stop-color="#be123c"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Top Crown -->
+                                <polygon points="20,16 44,16 54,27 10,27" fill="url(#rubyTopGuide)" stroke="#fecdd3" stroke-width="1"/>
+                                <polygon points="20,16 32,27 10,27" fill="#fb7185" opacity="0.9"/>
+                                <polygon points="44,16 32,27 54,27" fill="#be123c" opacity="0.95"/>
+                                <polygon points="20,16 32,16 32,27" fill="#ffffff" opacity="0.6"/>
+                                <!-- Bottom Facets -->
+                                <polygon points="10,27 32,27 32,54" fill="url(#rubyLeftGuide)" stroke="#e11d48" stroke-width="0.5"/>
+                                <polygon points="54,27 32,27 32,54" fill="url(#rubyRightGuide)" stroke="#f43f5e" stroke-width="0.5"/>
+                                <polygon points="22,27 42,27 32,54" fill="url(#rubyCenterGuide)" opacity="0.85"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-orbitron font-bold text-base text-rose-300 mb-1.5 flex items-center gap-2">
+                            Qırmızı Almazlar
+                        </h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                            Ən nadir və qiymətli xüsusi kristaldır. Əkiz Qüllələri (Twin Turrets) almaq və hər silahın mərmi qiymətini qalıcı endirmək üçün istifadə olunur.
+                        </p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-[10px] font-orbitron text-slate-400">Mənbə:</span>
+                        <span class="text-[11px] font-orbitron text-rose-300 font-semibold">10-cu qat sandıqları & Kiber Sandıq</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 5: TAKTİKALAR VƏ MƏSLƏHƏTLƏR -->
+        <!-- ============================================================== -->
+        <div id="section-tips" class="guide-section hidden flex flex-col gap-4">
+            <div class="glass p-5 rounded-3xl border border-cyan-500/30 bg-slate-950/70 flex flex-col gap-3">
+                <h3 class="font-orbitron font-bold text-sm text-cyan-300 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Peşəkar Qaçış Taktikaları:</span>
+                </h3>
+                <ul class="text-xs text-slate-300 space-y-2 leading-relaxed list-disc list-inside">
+                    <li><strong class="text-white">Qalxan və Sıçrayış Kombinasiyası:</strong> Hər iki gücləndiricini eyni anda götürün! Lava yaxınlaşdıqda ilk növbədə Kvant Sıçrayışı işə düşəcək və Qalxanınızı sonrakı xilas üçün qoruyub saxlayacaq.</li>
+                    <li><strong class="text-white">Dash İdarəetməsi:</strong> [SPACE] və ya siçanın Sağ klikini kritik anlarda lavanın üstündən yuxarı tullanmaq üçün saxlayın. Dash zamanı 0.3 saniyəlik toxunulmazlıq aurası qazanırsınız.</li>
+                    <li><strong class="text-white">Kombo Çarpanı:</strong> Sikkələri fasiləsiz ardıcıl yığın! 3x, 5x və 10x kombo çatdıqda hər sikkədən 1.5x, 2.0x və 3.0x dəfə çox qızıl qazanacaqsınız.</li>
+                    <li><strong class="text-white">Əkiz Qüllələr Strategiyası:</strong> Qüllələri aktiv etdikdən sonra Sol tərəfə Buz (yavaşlatma), Sağ tərəfə Barrikada və ya Şok qoymaq lavanı daimi iflic vəziyyətində saxlayır.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SKRİPTLƏR -->
+    <script src="js/icons/registry.js?v=3.5"></script>
+    <script src="js/icons/render.js?v=3.5"></script>
+    <script src="js/icons.js?v=3.5"></script>
+    <script>
+        function switchGuideTab(tabId) {
+            // Bütün bölmələri gizlət
+            const sections = document.querySelectorAll('.guide-section');
+            sections.forEach(s => s.classList.add('hidden'));
+            sections.forEach(s => s.classList.remove('guide-section-active'));
+
+            // Aktiv bölməni göstər
+            const activeSection = document.getElementById(`section-${tabId}`);
+            if (activeSection) {
+                activeSection.classList.remove('hidden');
+                activeSection.classList.add('guide-section-active');
+            }
+
+            // Tab düymələrini yenilə
+            const tabBtns = document.querySelectorAll('.guide-tab-btn');
+            tabBtns.forEach(b => b.classList.remove('active'));
+
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

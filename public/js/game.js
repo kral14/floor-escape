@@ -152,6 +152,8 @@ const monster = new Monster();
 let bullets = [];
 let coins = [];
 let powerUps = [];
+let floatingTexts = [];
+let screenPulse = { color: '#00f0ff', alpha: 0 };
 let particles = [];
 let keys = {};
 let frameCount = 0;
@@ -202,6 +204,13 @@ function checkBorderUnlock() {
 
 function nextFloor() {
     gameState.floor++;
+    if (window.audio) {
+        audio.setFloor(gameState.floor, true);
+    }
+    const trackNames = ['Neon Retrowave (80s Synthwave)', 'Chiptune Arcade (8-Bit NES)', 'Acid Cyber Techno (TB-303)', 'Magma Doom Slayer (Darksynth)', 'Hyperion Trance (Euro-Trance)'];
+    const trackName = trackNames[(gameState.floor - 1) % trackNames.length];
+    showToast(`🎵 Qat ${gameState.floor}: ${trackName}`, 'info');
+
     gameState.transitioning = true;
     keys = {};
 
@@ -228,17 +237,29 @@ function nextFloor() {
     player.reset();
     monster.reset();
     twinTurrets.reset();
-    gameState.bulletUsage = { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 };
+
+    // 🌀 MƏRHƏLƏ 4: ANOMALİYA TƏYİNİ (PLATFORMASIZ)
+    applyFloorModifier();
 
     spawnCoins();
     spawnPowerUps();
+
+    // 🛡️ LABORATORİYA: QATA QALXANLA BAŞLAMA ŞANSI (ALMAZ YÜKSƏLTMƏSİ)
+    if (typeof getShieldStartChance === 'function' && Math.random() < getShieldStartChance()) {
+        player.hasShield = true;
+        showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
+    }
 
     // 10-cu QAT SANDIQ YOXLANIŞI
     const openedChest = checkMilestoneChest(gameState.floor);
 
     const overlay = document.getElementById('floor-clear-overlay');
     const desc = document.getElementById('floor-clear-desc');
-    desc.innerText = `${gameState.floor}-ci Qata keçdiniz! Tələb olunan xal: ${gameState.scoreReq}`;
+    let modTxt = '';
+    if (gameState.activeModifier === 'gravity') modTxt = ' [🪐 AY QRAVİTASİYASI]';
+    else if (gameState.activeModifier === 'goldrush') modTxt = ' [💰 QIZIL QIZDIRMASI]';
+
+    desc.innerText = `${gameState.floor}-ci Qata keçdiniz!${modTxt} Tələb olunan xal: ${gameState.scoreReq}`;
     overlay.classList.remove('hidden');
 
     document.getElementById('main-view').classList.add('shake');
@@ -247,7 +268,7 @@ function nextFloor() {
         overlay.classList.add('hidden');
         gameState.transitioning = false;
         keys = {};
-        showToast(`🚀 ${gameState.floor}-ci Qat Başladı!`, 'info');
+        showToast(`🚀 ${gameState.floor}-ci Qat Başladı!${modTxt}`, 'info');
         saveActiveRun();
     }, 1600);
 
@@ -256,9 +277,47 @@ function nextFloor() {
     saveActiveRun();
 }
 
+// 🌀 MƏRHƏLƏ 4: ANOMALİYA TƏTBİQİ (Qaranlıq qatı ləğv edildi)
+function applyFloorModifier() {
+    if (gameState.floor < 3) {
+        gameState.activeModifier = 'normal';
+        return;
+    }
+    const roll = Math.random();
+    if (roll < 0.35) {
+        gameState.activeModifier = 'gravity';
+    } else if (roll < 0.70) {
+        gameState.activeModifier = 'goldrush';
+    } else {
+        gameState.activeModifier = 'normal';
+    }
+}
+
+function addFloatingText(x, y, text, color = '#00f0ff', size = 15) {
+    floatingTexts.push({
+        x: x,
+        y: y,
+        text: text,
+        color: color,
+        size: size,
+        alpha: 1.0,
+        vy: -1.3,
+        life: 55
+    });
+}
+
+// ⚡ ANİ VƏ KEÇİCİ İMPULS PARILTISI (QALICI DEYİL, ANİ OLUB İTİR)
+function triggerScreenPulse(color = '#00f0ff', maxAlpha = 0.35) {
+    screenPulse.color = color;
+    screenPulse.alpha = maxAlpha;
+}
+
 function spawnCoins() {
     coins = [];
-    const coinCount = 6 + gameState.floor * 2;
+    let coinCount = 6 + gameState.floor * 2;
+    if (gameState.activeModifier === 'goldrush') {
+        coinCount = Math.floor(coinCount * 1.8);
+    }
     for (let i = 0; i < coinCount; i++) {
         coins.push(new Coin(
             Math.random() * (canvasWidth - 80) + 40,
@@ -330,26 +389,23 @@ function drawBorderLine() {
 
     if (isOpen) {
         ctx.strokeStyle = '#00ff88';
-        ctx.lineWidth = 3.5;
-        ctx.shadowBlur = 25;
+        ctx.lineWidth = 3.2;
+        ctx.shadowBlur = 22;
         ctx.shadowColor = '#00ff88';
-        ctx.setLineDash([12, 6]);
+        ctx.lineDashOffset = -performance.now() * 0.025;
+        ctx.setLineDash([14, 8]);
     } else {
         ctx.strokeStyle = '#ff0055';
         ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 16;
         ctx.shadowColor = '#ff0055';
+        ctx.lineDashOffset = 0;
         ctx.setLineDash([8, 8]);
     }
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
     ctx.shadowBlur = 0;
-
-    const label = isOpen ? '🌟 SƏRHƏD AÇIQDIR - QATDAN ÇIXIŞ ÜÇÜN KEÇİN' : `🔒 SƏRHƏD BAĞLIDIR (${gameState.scoreProgress}/${gameState.scoreReq})`;
-    ctx.font = 'bold 11px Orbitron';
-    ctx.fillStyle = isOpen ? '#00ff88' : '#ff4466';
-    ctx.textAlign = 'center';
-    ctx.fillText(label, canvasWidth / 2, borderY - 8);
 
     ctx.restore();
 }
@@ -441,6 +497,15 @@ function updatePhysicsStep() {
 
     player.update(keys);
 
+    // 🔥 MƏRHƏLƏ 5: UÇAN NEON MƏTNLƏRİN YENİLƏNMƏSİ
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y += ft.vy;
+        ft.life--;
+        ft.alpha = Math.max(0, ft.life / 55);
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+
     // Sikkələrin çəkilməsi və toplanması
     coins.forEach((c, index) => {
         const dist = Math.hypot(player.x - c.x, player.y - c.y);
@@ -456,18 +521,42 @@ function updatePhysicsStep() {
         }
 
         if (dist < player.radius + c.radius) {
-            gameState.gold += c.value;
             gameState.combo++;
             if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
 
+            // 🔥 MƏRHƏLƏ 5: DİNAMİK KOMBO ÇARPANI (1.5x, 2.0x, 3.0x)
+            const comboMult = gameState.combo >= 10 ? 3.0 : (gameState.combo >= 5 ? 2.0 : (gameState.combo >= 3 ? 1.5 : 1.0));
+            const gainedGold = Math.round(c.value * comboMult);
+            gameState.gold += gainedGold;
+
             audio.playCoin();
+            if (gameState.combo >= 3 && typeof audio.playCombo === 'function') {
+                audio.playCombo(gameState.combo);
+            }
+
+            // Neon Arcade Kombo Bildirişləri
+            if (gameState.combo === 3) {
+                addFloatingText(c.x, c.y - 18, '🔥 COMBO x3! (1.5x)', '#f59e0b', 14);
+                triggerScreenPulse('#f59e0b', 0.22);
+            } else if (gameState.combo === 5) {
+                addFloatingText(c.x, c.y - 20, '⚡ PERFECT ESCAPE! (2.0x)', '#00f0ff', 16);
+                triggerScreenPulse('#00f0ff', 0.25);
+            } else if (gameState.combo === 8) {
+                addFloatingText(c.x, c.y - 22, '💥 UNSTOPPABLE! (2.0x)', '#ec4899', 17);
+                triggerScreenPulse('#ec4899', 0.28);
+            } else if (gameState.combo >= 10 && gameState.combo % 3 === 0) {
+                addFloatingText(c.x, c.y - 24, `👑 ULTRA COMBO x${gameState.combo}! (3.0x)`, '#ffd700', 19);
+                triggerScreenPulse('#ffd700', 0.32);
+            }
+
             for (let i = 0; i < 8; i++) {
                 particles.push(new Particle(c.x, c.y, '#ffd700', 3));
             }
 
             coins.splice(index, 1);
-            showGoldToast(c.value);
+            showGoldToast(gainedGold);
             updateUI();
+            if (typeof saveActiveRun === 'function') saveActiveRun();
         }
     });
 
@@ -476,6 +565,7 @@ function updatePhysicsStep() {
         const p = powerUps[i];
         if (!p.update()) {
             powerUps.splice(i, 1);
+            if (typeof saveActiveRun === 'function') saveActiveRun();
             continue;
         }
 
@@ -493,24 +583,32 @@ function updatePhysicsStep() {
 
             if (p.type === 'shield') {
                 player.hasShield = true;
+                addFloatingText(player.x, player.y - 20, '🛡️ AEGIS SHIELD!', '#00f0ff', 15);
                 if (typeof showToast === 'function') {
                     showToast('🛡️ ENERJİ QALXANI AKTİVLƏŞDİ!', 'success');
                 }
             } else if (p.type === 'chrono') {
                 gameState.chronoTimer = 240; // 4.0 saniyə (60fps)
+                addFloatingText(player.x, player.y - 20, '⏱️ MATRIX SHIFT (4.0s)!', '#e879f9', 15);
                 if (typeof showToast === 'function') {
                     showToast('⏱️ ZAMAN LƏNGİDİLDİ (4.0s)!', 'info');
                 }
             } else if (p.type === 'jump') {
-                player.hyperJump();
+                player.hasHyperJump = true;
+                addFloatingText(player.x, player.y - 20, '🚀 QUANTUM THRUSTER READY!', '#f59e0b', 16);
+                if (typeof showToast === 'function') {
+                    showToast('🚀 KVANT SIÇRAYIŞI HAZIRDIR! (Lavaya 2px qalmış avtomatik xilas edəcək)', 'warning');
+                }
             } else if (p.type === 'magnet') {
                 gameState.superMagnetTimer = 300; // 5.0 saniyə (60fps)
+                addFloatingText(player.x, player.y - 20, '🧲 MAGNET STORM!', '#a855f7', 15);
                 if (typeof showToast === 'function') {
                     showToast('🧲 SUPER MAQNİT FIRTINASI (5.0s)!', 'success');
                 }
             }
 
             powerUps.splice(i, 1);
+            if (typeof saveActiveRun === 'function') saveActiveRun();
         }
     }
 
@@ -519,15 +617,19 @@ function updatePhysicsStep() {
     if (gameState.superMagnetTimer > 0) gameState.superMagnetTimer--;
 
     if (!gameState.gameOver && !gameState.paused && !gameState.transitioning) {
-        if (!gameState.powerUpCountdown) gameState.powerUpCountdown = 14;
+        const baseInterval = (typeof getPowerUpSpawnInterval === 'function') ? getPowerUpSpawnInterval() : 15;
+        if (!gameState.powerUpCountdown) gameState.powerUpCountdown = baseInterval;
         gameState.powerUpCountdown -= 1 / 60;
         if (gameState.powerUpCountdown <= 0) {
             autoSpawnPowerUp();
-            gameState.powerUpCountdown = 15 + Math.random() * 8;
+            gameState.powerUpCountdown = baseInterval + Math.random() * 4;
         }
     }
 
-    // Lavanın yenilənməsi
+    // Lavanın yenilənməsi (Qızıl Qızdırması zamanı 20% sürətlənmə)
+    if (gameState.activeModifier === 'goldrush') {
+        monster.speed = monster.baseSpeed * 1.20;
+    }
     monster.update();
 
     // Mərmilərin yenilənməsi və lavaya dəyməsi
@@ -542,14 +644,22 @@ function updatePhysicsStep() {
             gameState.totalTrapsDestroyed++;
 
             const scores = { wall: 1, ice: 2, shock: 3, mine: 4, plasma: 5 };
-            const trapScore = scores[b.type] || 1;
+            const baseTrapScore = scores[b.type] || 1;
+            const trapMult = gameState.combo >= 5 ? 2.0 : (gameState.combo >= 3 ? 1.5 : 1.0);
+            const trapScore = Math.round(baseTrapScore * trapMult);
             gameState.scoreProgress += trapScore;
             checkBorderUnlock();
 
             const rewards = { wall: 6, ice: 10, shock: 14, mine: 22, plasma: 32 };
-            const reward = rewards[b.type] || 6;
+            const reward = Math.round((rewards[b.type] || 6) * trapMult);
             gameState.gold += reward;
             showGoldToast(reward);
+
+            if (b.type === 'mine') {
+                addFloatingText(b.x, monster.y - 25, '💥 MONSTER CRUSH!', '#f43f5e', 16);
+            } else if (b.type === 'shock') {
+                addFloatingText(b.x, monster.y - 25, '⚡ SHOCK PARALYSIS!', '#c084fc', 15);
+            }
 
             if (b.type === 'wall') {
                 audio.playBarricade();
@@ -614,13 +724,24 @@ function updatePhysicsStep() {
         }
     }
 
-    // Oyunun bitməsi yoxlanışı (Qalxan qorunması ilə)
+    // 🛡️ / 🚀 Lavanın Təhlükəsi, Kvant Sıçrayışı və Qalxan İerarxiyası
     const playerMonsterY = monster.surface ? monster.surface(player.x, monster.y) : monster.y;
-    if (!gameState.transitioning && gameState.dashInvulnerable <= 0 && playerMonsterY <= player.y + player.radius) {
-        if (player.hasShield) {
-            player.breakShield();
-        } else {
-            triggerGameOver();
+    const distToLava = playerMonsterY - (player.y + player.radius);
+
+    if (!gameState.transitioning && gameState.dashInvulnerable <= 0) {
+        // 1. İLK ÖNCƏ: Lavaya toxunmağa az qalmış (<= 2px) Kvant Sıçrayışı dərhal aktivləşir və bizi yuxarı atır!
+        if (distToLava <= 2 && player.hasHyperJump) {
+            player.hyperJump();
+            // Qalxan toxunulmaz qalır və sonrakı təhlükə üçün saxlanılır!
+            if (typeof saveActiveRun === 'function') saveActiveRun();
+        } else if (distToLava <= 0) {
+            // 2. Əgər sıçrayış yoxdursa və lavaya toxunsaq, bu dəfə bizi QALXAN qoruyur!
+            if (player.hasShield) {
+                player.breakShield();
+                if (typeof saveActiveRun === 'function') saveActiveRun();
+            } else {
+                triggerGameOver();
+            }
         }
     }
 
@@ -673,12 +794,84 @@ function renderGame() {
 
     drawBorderLine();
 
+    // ⚡ GÜCLƏNDİRİCİLƏR (POWER-UPS)
+    powerUps.forEach(p => p.draw(ctx));
+
     player.draw();
     twinTurrets.draw();
     coins.forEach(c => c.draw());
     monster.draw();
     bullets.forEach(b => b.draw());
     particles.forEach(p => p.draw());
+
+    // 🔥 MƏRHƏLƏ 5: UÇAN NEON MƏTNLƏR (FLOATING NEON TEXTS)
+    floatingTexts.forEach(ft => {
+        ctx.save();
+        ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
+        ctx.fillStyle = ft.color;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = ft.color;
+        ctx.shadowBlur = 14;
+        ctx.globalAlpha = ft.alpha;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+    });
+
+
+
+    // ⚡ MƏRHƏLƏ 5: ANİ VƏ İTMƏSİ SÜRƏTLİ OLAN İMPULS PARILTISI (QALICI DEYİL, ANİ OLUB İTİR)
+    if (screenPulse.alpha > 0.01) {
+        ctx.save();
+        const pGrad = ctx.createRadialGradient(canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.35, canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.65);
+        pGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        pGrad.addColorStop(1, screenPulse.color);
+        ctx.globalAlpha = screenPulse.alpha;
+        ctx.fillStyle = pGrad;
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.restore();
+        screenPulse.alpha *= 0.85; // Bir neçə kadrda (0.2s) sürətlə sönür və tamamilə yox olur!
+    }
+
+    // 🌀 MƏRHƏLƏ 4: AKTİV ANOMALİYA BANNERİ
+    if (gameState.activeModifier && gameState.activeModifier !== 'normal') {
+        ctx.save();
+        let badgeTxt = '';
+        let badgeColor = '#00f0ff';
+        if (gameState.activeModifier === 'gravity') {
+            badgeTxt = '🪐 ANOMALİYA: AY QRAVİTASİYASI (SÜZÜLƏN HƏRƏKƏT)';
+            badgeColor = '#c084fc';
+        } else if (gameState.activeModifier === 'goldrush') {
+            badgeTxt = '💰 ANOMALİYA: QIZIL QIZDIRMASI (SÜRƏTLİ LAVA & 2X QIZIL)';
+            badgeColor = '#fbbf24';
+        }
+
+        ctx.font = 'bold 10px Orbitron, sans-serif';
+        const tw = ctx.measureText(badgeTxt).width;
+        const bw = tw + 24;
+        const bx = (canvasWidth - bw) / 2;
+        const by = 18;
+
+        ctx.fillStyle = 'rgba(10, 15, 25, 0.88)';
+        ctx.strokeStyle = badgeColor;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = badgeColor;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(bx, by, bw, 20, 5);
+        } else {
+            ctx.rect(bx, by, bw, 20);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = badgeColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeTxt, canvasWidth / 2, by + 10);
+        ctx.restore();
+    }
 }
 
 // 3. ƏSAS OYUN DÖVRÜ (FIXED TIMESTEP & THROTTLED GAME LOOP)
@@ -813,11 +1006,45 @@ function togglePause() {
     }
 }
 
+function pauseGame() {
+    if (gameState.gameOver || gameState.paused) return;
+    lastFrameTime = performance.now();
+    physicsAccumulator = 0;
+    gameState.paused = true;
+    const pauseOverlay = document.getElementById('pause-overlay');
+    if (pauseOverlay) {
+        pauseOverlay.classList.remove('hidden');
+    }
+}
+
+// ⏸️ BRAUZERDƏ TAB DƏYİŞDİKDƏ VƏ YA PƏNCƏRƏ AŞAĞI SALINDIQDA (BLUR) AVTOMATİK FASİLƏ
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pauseGame();
+    } else {
+        lastFrameTime = performance.now();
+        physicsAccumulator = 0;
+    }
+});
+
+window.addEventListener('blur', () => {
+    pauseGame();
+});
+
+window.addEventListener('focus', () => {
+    lastFrameTime = performance.now();
+    physicsAccumulator = 0;
+});
+
 function toggleAudio() {
-    audio.init();
-    audio.muted = !audio.muted;
-    const btn = document.getElementById('btn-sound');
-    btn.innerHTML = audio.muted ? `<i class="fa-solid fa-volume-xmark text-sm text-rose-400"></i>` : `<i class="fa-solid fa-volume-high text-sm"></i>`;
+    if (typeof audio !== 'undefined' && typeof audio.openSettings === 'function') {
+        audio.openSettings();
+    } else if (typeof audio !== 'undefined') {
+        audio.init();
+        audio.muted = !audio.muted;
+        const btn = document.getElementById('btn-sound');
+        if (btn) btn.innerHTML = audio.muted ? `<i class="fa-solid fa-volume-xmark text-sm text-rose-400"></i>` : `<i class="fa-solid fa-volume-high text-sm"></i>`;
+    }
 }
 
 // KLAVİATURA İDARƏETMƏSİ
@@ -930,7 +1157,7 @@ adjustViewportFit();
 player.reset();
 monster.reset();
 twinTurrets.reset();
-spawnCoins();
+applyFloorModifier();
 
 const hasLoadedRun = loadActiveRun();
 
@@ -941,12 +1168,28 @@ updatePermUpgradesUI();
 updateTurretsUI();
 updateUI();
 
+if (gameState.activeModifier === 'darkness') {
+    gameState.activeModifier = 'normal';
+}
+
 if (hasLoadedRun) {
-    showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Lavanın yeri saxlanıldı)`, 'success');
+    showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Vəziyyət tam saxlanıldı)`, 'success');
+} else {
+    // Yalnız YENİ OYUNDA sikkələr və gücləndiricilər sıfırdan yaradılır
+    spawnCoins();
+    spawnPowerUps();
+    if (typeof getShieldStartChance === 'function' && Math.random() < getShieldStartChance()) {
+        player.hasShield = true;
+        showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
+    }
 }
 
 // Oyun birbaşa başlayır
 gameState.paused = false;
+if (window.audio) {
+    audio.init();
+    audio.setFloor(gameState.floor, true);
+}
 const gameScreenContainer = document.getElementById('game-screen-container');
 if (gameScreenContainer) {
     gameScreenContainer.classList.remove('hidden');
