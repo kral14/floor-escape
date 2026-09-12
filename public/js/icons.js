@@ -39,8 +39,15 @@
 
         // Səhifədəki [data-icon] elementlərini yeniləmək
         renderDOM: function (root) {
-            if (renderer.renderDOM) {
-                renderer.renderDOM(root);
+            const rend = global.FLOOR_ESCAPE_ICONS_RENDER || renderer;
+            if (rend && rend.renderDOM) {
+                rend.renderDOM(root);
+            }
+        },
+        renderAll: function (root) {
+            const rend = global.FLOOR_ESCAPE_ICONS_RENDER || renderer;
+            if (rend && rend.renderDOM) {
+                rend.renderDOM(root);
             }
         },
 
@@ -126,7 +133,14 @@
 
         // 15. Sandıq [ID: 115]
         chest: function (opts = {}) {
-            return (registry[115] && registry[115].render) ? registry[115].render(opts) : '';
+            const reg = global.FLOOR_ESCAPE_ICONS_REGISTRY || registry;
+            return (reg[115] && reg[115].render) ? reg[115].render(opts) : '';
+        },
+
+        // 16. Gücləndirici Tezliyi [ID: 116]
+        powerUp: function (opts = {}) {
+            const reg = global.FLOOR_ESCAPE_ICONS_REGISTRY || registry;
+            return (reg[116] && reg[116].render) ? reg[116].render(opts) : '';
         },
 
         // Mərmi İkonları

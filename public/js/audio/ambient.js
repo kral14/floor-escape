@@ -15,11 +15,69 @@ class AudioAmbient {
         this.isSwitching = false;
         this.currentFloor = 1;
         this.schedulerTimer = null;
+        this.switchTimer = null;
         this.currentStep = 0;
         this.nextNoteTime = 0;
 
         // Bütün cari notları anında kəsmək üçün sub-gain
         this.trackGain = null;
+
+        this.isGameOverMode = false;
+        this.isPauseMode = false;
+
+        // 💀 GAME OVER XÜSUSİ ARXA FON SOUNDTRACK (Melancholic Cyber Requiem • 82 BPM)
+        this.gameOverTrack = {
+            id: 'gameover',
+            name: 'Cyber Requiem',
+            bpm: 82,
+            bassWave: 'triangle',
+            leadWave: 'sine',
+            filterFreq: 520,
+            filterQ: 1.5,
+            bassNotes: [
+                73.42, 0, 73.42, 0,   58.27, 0, 58.27, 0, // D2, Bb1
+                87.31, 0, 87.31, 0,   55.00, 0, 55.00, 0  // F2, A1
+            ],
+            leadNotes: [
+                587.33, 0, 523.25, 440.00,  392.00, 440.00, 349.23, 0,
+                466.16, 0, 440.00, 392.00,  349.23, 329.63, 293.66, 0,
+                349.23, 392.00, 440.00, 523.25,  587.33, 0, 523.25, 440.00,
+                392.00, 349.23, 329.63, 0,       293.66, 0, 0, 0
+            ],
+            padFreqs: [
+                [220.00, 293.66], // Dm (A3, D4)
+                [185.00, 293.66], // Bb (F#3/Bb, D4)
+                [174.61, 261.63], // F (F3, C4)
+                [220.00, 329.63]  // Am (A3, E4)
+            ]
+        };
+
+        // ⏸️ OYUN DAYANDIQDA XÜSUSİ ARXA FON SOUNDTRACK (Dreamy Stasis Chillout • 74 BPM)
+        this.pauseTrack = {
+            id: 'pause',
+            name: 'Stasis Chillout',
+            bpm: 74,
+            bassWave: 'sine',
+            leadWave: 'sine',
+            filterFreq: 450,
+            filterQ: 1.2,
+            bassNotes: [
+                87.31, 0, 87.31, 0,   65.41, 0, 65.41, 0, // F2, C2
+                73.42, 0, 73.42, 0,   58.27, 0, 58.27, 0  // D2, Bb1
+            ],
+            leadNotes: [
+                440.00, 0, 523.25, 0,  659.25, 587.33, 523.25, 0,
+                392.00, 0, 440.00, 0,  523.25, 440.00, 392.00, 349.23,
+                349.23, 0, 440.00, 523.25,  587.33, 0, 523.25, 0,
+                440.00, 392.00, 349.23, 0,  329.63, 0, 0, 0
+            ],
+            padFreqs: [
+                [349.23, 523.25], // Fmaj (F4, C5)
+                [261.63, 392.00], // Cmaj (C4, G4)
+                [293.66, 440.00], // Dm (D4, A4)
+                [233.08, 349.23]  // Bb (Bb3, F4)
+            ]
+        };
 
         // 🎹 5 TAMAMİLƏ FƏRQLİ JANRDA SOUNDTRACK
         this.tracks = [
@@ -177,6 +235,30 @@ class AudioAmbient {
         return this.trackGain;
     }
 
+    onContextResumed() {
+        if (!this.ctx || this.muted || this.engine.volumes.ambient === 0) return;
+
+        // Əgər musiqi artıq normal çalırsa və zaman gələcəkdədirsə, ritmi sıfırlama
+        if (this.isPlaying && this.nextNoteTime >= this.ctx.currentTime - 0.05) {
+            return;
+        }
+
+        const tg = this.ensureTrackGain();
+        if (tg) {
+            try {
+                tg.gain.cancelScheduledValues(this.ctx.currentTime);
+                tg.gain.setValueAtTime(1, this.ctx.currentTime);
+            } catch (e) {}
+        }
+
+        // Cari zamana dərhal sinxronlaşırıq (keçmişdə qalan vaxt sıfırlanır)
+        this.nextNoteTime = this.ctx.currentTime + 0.04;
+
+        if (!this.isPlaying && !this.isSwitching) {
+            this.start();
+        }
+    }
+
     start() {
         if (this.isPlaying || !this.ctx || this.muted || this.isSwitching) return;
         this.isPlaying = true;
@@ -185,8 +267,10 @@ class AudioAmbient {
 
         const tg = this.ensureTrackGain();
         if (tg) {
-            tg.gain.cancelScheduledValues(this.ctx.currentTime);
-            tg.gain.setValueAtTime(1, this.ctx.currentTime);
+            try {
+                tg.gain.cancelScheduledValues(this.ctx.currentTime);
+                tg.gain.setValueAtTime(1, this.ctx.currentTime);
+            } catch (e) {}
         }
 
         if (this.schedulerTimer) clearInterval(this.schedulerTimer);
@@ -194,6 +278,10 @@ class AudioAmbient {
     }
 
     stop() {
+        if (this.switchTimer) {
+            clearTimeout(this.switchTimer);
+            this.switchTimer = null;
+        }
         if (!this.isPlaying) return;
         this.isPlaying = false;
         if (this.schedulerTimer) {
@@ -211,20 +299,88 @@ class AudioAmbient {
         this.currentStep = 0;
     }
 
+    // 💀 GAME OVER ARXA FON SOUNDTRACK-İNİ BAŞLAT
+    startGameOverTheme() {
+        this.isGameOverMode = true;
+        this.stop();
+        if (!this.ctx || this.muted || this.engine.volumes.ambient === 0) return;
+        this.isPlaying = true;
+        this.currentStep = 0;
+        this.nextNoteTime = this.ctx.currentTime + 0.05;
+
+        const tg = this.ensureTrackGain();
+        if (tg) {
+            try {
+                tg.gain.cancelScheduledValues(this.ctx.currentTime);
+                tg.gain.setValueAtTime(1, this.ctx.currentTime);
+            } catch (e) {}
+        }
+
+        if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+        this.schedulerTimer = setInterval(() => this.schedule(), 25);
+    }
+
+    // 🛑 GAME OVER SOUNDTRACK-İNİ DAYANDIR
+    stopGameOverTheme() {
+        if (!this.isGameOverMode) return;
+        this.isGameOverMode = false;
+        this.stop();
+    }
+
+    // ⏸️ OYUN DAYANDIQDA (PAUSE) FON MUSİQİSİNİ BAŞLAT
+    startPauseTheme() {
+        if (this.isGameOverMode) return;
+        this.isPauseMode = true;
+        this.stop();
+        if (!this.ctx || this.muted || this.engine.volumes.ambient === 0) return;
+        this.isPlaying = true;
+        this.currentStep = 0;
+        this.nextNoteTime = this.ctx.currentTime + 0.05;
+
+        const tg = this.ensureTrackGain();
+        if (tg) {
+            try {
+                tg.gain.cancelScheduledValues(this.ctx.currentTime);
+                tg.gain.setValueAtTime(1, this.ctx.currentTime);
+            } catch (e) {}
+        }
+
+        if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+        this.schedulerTimer = setInterval(() => this.schedule(), 25);
+    }
+
+    // ▶️ OYUN DAVAM ETDİKDƏ (RESUME) PAUSE FON MUSİQİSİNİ DAYANDIR
+    stopPauseTheme() {
+        if (!this.isPauseMode) return;
+        this.isPauseMode = false;
+        this.stop();
+    }
+
     // 🔄 HƏR QATDA MUSİQİ TAM BAŞDAN (STEP 0) VƏ FƏRQLİ MÖVZU İLƏ BAŞLAYIR
     setFloor(floor, restart = true) {
+        if (this.isGameOverMode) {
+            this.isGameOverMode = false;
+        }
+        if (this.isPauseMode) {
+            this.isPauseMode = false;
+        }
         const targetFloor = Math.max(1, parseInt(floor) || 1);
         const floorChanged = (this.currentFloor !== targetFloor);
         this.currentFloor = targetFloor;
 
         if (floorChanged || restart) {
+            if (this.switchTimer) {
+                clearTimeout(this.switchTimer);
+                this.switchTimer = null;
+            }
             // Əvvəlki musiqini dərhal kəsirik
             this.stop();
             this.isSwitching = true;
             this.currentStep = 0;
 
             // 120ms təmiz pauza: istifadəçi musiqinin kəsilib YENİDƏN başladığını dəqiq hiss edir
-            setTimeout(() => {
+            this.switchTimer = setTimeout(() => {
+                this.switchTimer = null;
                 this.isSwitching = false;
                 if (!this.muted && this.engine.volumes.ambient > 0) {
                     this.start();
@@ -235,21 +391,43 @@ class AudioAmbient {
 
     schedule() {
         if (!this.isPlaying || !this.ctx || this.muted || this.isSwitching) return;
+        
+        // 🛡️ 1. AudioContext suspended vəziyyətindədirsə, not cədvəli qurulmur və heç nə itmir
+        if (this.ctx.state !== 'running') return;
 
-        const trackIdx = ((Math.max(1, this.currentFloor) - 1) % this.tracks.length);
-        const track = this.tracks[trackIdx];
+        // 🛡️ 2. Desinxronizasiya və ya tab ləngiməsi qorunması (səhifə yenilənməsi / fon rejimi):
+        if (this.nextNoteTime < this.ctx.currentTime - 0.10) {
+            this.nextNoteTime = this.ctx.currentTime + 0.04;
+        }
+
+        const track = this.isGameOverMode
+            ? this.gameOverTrack
+            : (this.isPauseMode
+                ? this.pauseTrack
+                : this.tracks[((Math.max(1, this.currentFloor) - 1) % this.tracks.length)]);
         const stepTime = (60 / track.bpm) / 4; // 16-lıq not intervalı (saniyə ilə)
 
-        while (this.nextNoteTime < this.ctx.currentTime + 0.10) {
+        // 🛡️ 3. Bir kadrda maksimum 4 addım cədvələ salınır (runaway loop qorunması)
+        let scheduledCount = 0;
+        while (this.nextNoteTime < this.ctx.currentTime + 0.10 && scheduledCount < 4) {
             this.playStep(track, this.currentStep, this.nextNoteTime, stepTime);
             this.nextNoteTime += stepTime;
             this.currentStep = (this.currentStep + 1) % 32;
+            scheduledCount++;
+        }
+
+        // 🛡️ 4. Növbəti not heç vaxt keçmişdə qala bilməz
+        if (this.nextNoteTime < this.ctx.currentTime) {
+            this.nextNoteTime = this.ctx.currentTime + 0.04;
         }
     }
 
-    playStep(track, step, time, stepTime) {
+    playStep(track, step, rawTime, stepTime) {
         const dest = this.ensureTrackGain();
-        if (!dest || !this.ctx) return;
+        if (!dest || !this.ctx || this.ctx.state !== 'running') return;
+
+        // 🛡️ Keçmişdə qalan vaxtların qarşısını almaq üçün cari zaman təhlükəsizliyi
+        const time = Math.max(rawTime, this.ctx.currentTime + 0.005);
 
         // ====================================================================
         // 1. 🎛️ QATA MƏXSUS KİBER BAS
@@ -271,14 +449,17 @@ class AudioAmbient {
                 bFilter.Q.setValueAtTime(track.filterQ || 2, time);
 
                 // Filter envelopu
-                if (track.id === 'acid') {
+                if (track.id === 'gameover' || track.id === 'pause') {
+                    bFilter.frequency.setValueAtTime(track.id === 'pause' ? 280 : 350, time);
+                    bFilter.frequency.exponentialRampToValueAtTime(track.id === 'pause' ? 100 : 120, time + stepTime * 1.5);
+                } else if (track.id === 'acid') {
                     // Acid sweep
                     bFilter.frequency.exponentialRampToValueAtTime(140, time + stepTime * 1.5);
                 } else {
                     bFilter.frequency.exponentialRampToValueAtTime(track.filterFreq * 0.4, time + stepTime * 1.5);
                 }
 
-                const bVol = (track.id === 'chiptune') ? 0.14 : 0.22;
+                const bVol = (track.id === 'gameover' || track.id === 'pause') ? 0.20 : ((track.id === 'chiptune') ? 0.14 : 0.22);
                 bGain.gain.setValueAtTime(bVol, time);
                 bGain.gain.exponentialRampToValueAtTime(0.002, time + stepTime * 1.6);
 
@@ -304,13 +485,16 @@ class AudioAmbient {
             mOsc.frequency.setValueAtTime(leadFreq, time);
 
             mFilter.type = (track.id === 'chiptune') ? 'allpass' : 'lowpass';
-            if (track.id !== 'chiptune') {
+            if (track.id === 'gameover' || track.id === 'pause') {
+                mFilter.frequency.setValueAtTime(track.id === 'pause' ? 750 : 900, time);
+                mFilter.frequency.exponentialRampToValueAtTime(track.id === 'pause' ? 220 : 280, time + stepTime * 1.5);
+            } else if (track.id !== 'chiptune') {
                 mFilter.frequency.setValueAtTime(1800, time);
                 mFilter.frequency.exponentialRampToValueAtTime(500, time + stepTime * 1.2);
             }
 
             const isBeat = (step % 4 === 0);
-            const mVol = (track.id === 'chiptune') ? (isBeat ? 0.12 : 0.08) : (isBeat ? 0.16 : 0.10);
+            const mVol = (track.id === 'gameover' || track.id === 'pause') ? (isBeat ? 0.12 : 0.08) : ((track.id === 'chiptune') ? (isBeat ? 0.12 : 0.08) : (isBeat ? 0.16 : 0.10));
 
             mGain.gain.setValueAtTime(mVol, time);
             mGain.gain.exponentialRampToValueAtTime(0.002, time + stepTime * 1.2);
@@ -358,6 +542,11 @@ class AudioAmbient {
         // ====================================================================
         // 4. 🥁 QATA GÖRƏ PERKUSSİYA / HI-HAT
         // ====================================================================
+        if (track.id === 'gameover' || track.id === 'pause') {
+            // Game Over və Pause soundtrack-lərində kəskin zərb alətləri olmur - axıcı atmosfer qorunur
+            return;
+        }
+
         if (step % 2 === 1) {
             const hOsc = this.ctx.createOscillator();
             const hGain = this.ctx.createGain();

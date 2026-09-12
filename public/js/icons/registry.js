@@ -90,7 +90,7 @@
             }
         },
 
-        // [ID: 103] Qırmızı Almaz (Real Ruby Gem - QƏTİYYƏN 💎🔴 EMOJİ DEYİL, XALİS RUBİN!)
+        // [ID: 103] Qırmızı Almaz (Real Ruby Gem - Parlaq, Yüksək Kontrastlı Neon Yaqut)
         103: {
             id: 103,
             key: 'ruby_diamond',
@@ -102,45 +102,46 @@
                 const anim = opts.animated !== false ? 'ruby-anim' : '';
                 const extraClass = opts.className || '';
                 return `
-                <svg class="inline-block align-middle ${anim} ${extraClass}" width="${size}" height="${size}" viewBox="0 0 64 64" style="overflow:visible;" data-icon-id="103">
+                <svg class="inline-block align-middle ${anim} ${extraClass}" width="${size}" height="${size}" viewBox="0 0 64 64" style="overflow:visible; vertical-align:middle;" data-icon-id="103">
                     <defs>
                         <linearGradient id="icRubyTop" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#fff1f2"/>
-                            <stop offset="40%" stop-color="#fda4af"/>
-                            <stop offset="100%" stop-color="#e11d48"/>
+                            <stop offset="0%" stop-color="#ffffff"/>
+                            <stop offset="40%" stop-color="#ffb3c1"/>
+                            <stop offset="100%" stop-color="#ff0055"/>
                         </linearGradient>
                         <linearGradient id="icRubyLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#f43f5e"/>
-                            <stop offset="100%" stop-color="#881337"/>
+                            <stop offset="0%" stop-color="#ff2a5f"/>
+                            <stop offset="100%" stop-color="#b51740"/>
                         </linearGradient>
                         <linearGradient id="icRubyRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#fb7185"/>
-                            <stop offset="100%" stop-color="#9f1239"/>
+                            <stop offset="0%" stop-color="#ff597b"/>
+                            <stop offset="100%" stop-color="#d90429"/>
                         </linearGradient>
                         <linearGradient id="icRubyCenter" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stop-color="#ffffff"/>
-                            <stop offset="60%" stop-color="#f43f5e"/>
-                            <stop offset="100%" stop-color="#be123c"/>
+                            <stop offset="50%" stop-color="#ff4d6d"/>
+                            <stop offset="100%" stop-color="#c9184a"/>
                         </linearGradient>
-                        <filter id="icRubyGlow">
-                            <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#f43f5e" flood-opacity="0.9"/>
+                        <filter id="icRubyGlow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#ff0055" flood-opacity="0.95"/>
                         </filter>
                     </defs>
                     <g filter="url(#icRubyGlow)">
                         <!-- Tac Hissəsi (Üst Fasetlər) -->
-                        <polygon points="20,15 44,15 55,27 9,27" fill="url(#icRubyTop)" stroke="#fecdd3" stroke-width="1.2"/>
-                        <polygon points="20,15 32,27 9,27" fill="#fb7185" opacity="0.95"/>
-                        <polygon points="44,15 32,27 55,27" fill="#be123c" opacity="0.95"/>
-                        <polygon points="20,15 32,15 32,27" fill="#ffffff" opacity="0.75"/>
-                        <polygon points="32,15 44,15 32,27" fill="#ffe4e6" opacity="0.6"/>
+                        <polygon points="20,15 44,15 55,27 9,27" fill="url(#icRubyTop)" stroke="#ffe4e6" stroke-width="1.2"/>
+                        <polygon points="20,15 32,27 9,27" fill="#ff4d6d" opacity="0.95"/>
+                        <polygon points="44,15 32,27 55,27" fill="#d90429" opacity="0.95"/>
+                        <polygon points="20,15 32,15 32,27" fill="#ffffff" opacity="0.85"/>
+                        <polygon points="32,15 44,15 32,27" fill="#ffe4e6" opacity="0.75"/>
 
                         <!-- Pavilyon Hissəsi (Alt Korpus) -->
-                        <polygon points="9,27 32,27 32,55" fill="url(#icRubyLeft)" stroke="#e11d48" stroke-width="0.8"/>
-                        <polygon points="55,27 32,27 32,55" fill="url(#icRubyRight)" stroke="#f43f5e" stroke-width="0.8"/>
-                        <polygon points="20,27 44,27 32,55" fill="url(#icRubyCenter)" opacity="0.9"/>
+                        <polygon points="9,27 32,27 32,55" fill="url(#icRubyLeft)" stroke="#ff4d6d" stroke-width="0.8"/>
+                        <polygon points="55,27 32,27 32,55" fill="url(#icRubyRight)" stroke="#ff758f" stroke-width="0.8"/>
+                        <polygon points="20,27 44,27 32,55" fill="url(#icRubyCenter)" opacity="0.95"/>
                         
-                        <!-- Parıltı Nöqtəsi (Sparkle) -->
-                        <circle cx="23" cy="20" r="2" fill="#ffffff" opacity="0.95"/>
+                        <!-- Parıltı Nöqtəsi (Sparkle Flare) -->
+                        <circle cx="23" cy="20" r="2.5" fill="#ffffff" opacity="1"/>
+                        <circle cx="41" cy="32" r="1.5" fill="#ffffff" opacity="0.85"/>
                     </g>
                 </svg>`.trim();
             }
@@ -373,6 +374,32 @@
                     <path d="M6,18 C6,13 14,10 24,10 C34,10 42,13 42,18 Z" fill="#d97706" stroke="#fde047" stroke-width="2"/>
                     <rect x="21" y="16" width="6" height="8" rx="1.5" fill="#fef08a" stroke="#78350f" stroke-width="1.5"/>
                     <line x1="8" y1="28" x2="40" y2="28" stroke="#fde047" stroke-width="1.5"/>
+                </svg>`.trim();
+            }
+        },
+
+        // [ID: 116] Kiber Gücləndirici / Orblar (PowerUp Frequency)
+        116: {
+            id: 116,
+            key: 'power_up',
+            alias: ['powerup', 'power_up', 'powerUp', 'orb', 'guclendirici', 'power_ups'],
+            name: 'Gücləndirici Tezliyi',
+            defaultSize: 22,
+            render: function (opts = {}) {
+                const size = opts.size || 22;
+                const extraClass = opts.className || '';
+                return `
+                <svg class="inline-block align-middle ${extraClass}" width="${size}" height="${size}" viewBox="0 0 48 48" data-icon-id="116">
+                    <defs>
+                        <linearGradient id="icPowerUpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#fef08a"/>
+                            <stop offset="50%" stop-color="#f59e0b"/>
+                            <stop offset="100%" stop-color="#d97706"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="24" cy="24" r="18" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="14,6"/>
+                    <circle cx="24" cy="24" r="10" fill="url(#icPowerUpGrad)" stroke="#fef08a" stroke-width="1.5"/>
+                    <polygon points="24,16 26.5,21 32,22 28,26 29,31.5 24,28.5 19,31.5 20,26 16,22 21.5,21" fill="#ffffff"/>
                 </svg>`.trim();
             }
         }

@@ -69,10 +69,8 @@ const SKINS = {
         badge: '⚡ +10% Qaçış Sürəti',
         perk: 'Hərəkət sürətini +10% artırır.',
         desc: 'Yüksək gərginlikli cəldlik və ildırım parıltısı.',
-        costType: 'diamonds',
-        cost: 15,
-        altCost: 600,
-        altType: 'gold'
+        costType: 'redDiamonds',
+        cost: 10
     },
     aegis: {
         id: 'aegis',
@@ -85,10 +83,8 @@ const SKINS = {
         badge: '🛡️ +1.5s Zireh Qoruması',
         perk: 'Qalxan qırıldıqda və dash zamanı toxunulmazlıq vaxtını 1.5 saniyə uzadır.',
         desc: 'Polad-mavi enerji aurası və dayanıqlı kiber-qoruyucu.',
-        costType: 'diamonds',
-        cost: 25,
-        altCost: 1200,
-        altType: 'gold'
+        costType: 'redDiamonds',
+        cost: 15
     },
     inferno: {
         id: 'inferno',
@@ -102,9 +98,7 @@ const SKINS = {
         perk: 'Yığılan bütün sikkələrdən qızıl qazancını +25% artırır.',
         desc: 'Lava qorxusunu məhv edən qəzəbli alovlu döyüşçü.',
         costType: 'redDiamonds',
-        cost: 20,
-        altCost: 2500,
-        altType: 'gold'
+        cost: 20
     },
     void: {
         id: 'void',
@@ -118,13 +112,81 @@ const SKINS = {
         perk: 'Dash soyuma müddətini 20% azaldır və sikkə çəkmə sahəsini +35px genişləndirir.',
         desc: 'Qaranlıq anomaliyaları ram edən ali kibernetik forma.',
         costType: 'redDiamonds',
-        cost: 35,
-        altCost: 4000,
-        altType: 'gold'
+        cost: 30
     }
 };
 if (typeof window !== 'undefined') {
     window.SKINS = SKINS;
+}
+
+// 🌀 GİRİŞ VƏ DOĞULUŞ ANİMASİYALARI KATALOQU (SPAWN ANIMATIONS / INTRO FX)
+// İstifadəçinin verdiyi 3 xüsusi doğuluş animasiyası
+const SPAWN_ANIMS = {
+    portal: {
+        id: 'portal',
+        name: 'Holoqramdan Doğuluş',
+        title: 'Holo-Portal',
+        icon: 'fa-atom',
+        color: '#65dfff',
+        glowColor: '#72ddff',
+        badge: '🌀 Holoqram Portalı',
+        desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.',
+        costType: 'free',
+        cost: 0
+    },
+    crystal: {
+        id: 'crystal',
+        name: 'Kristal Yarığı',
+        title: 'Crystal Rift',
+        icon: 'fa-gem',
+        color: '#b899ff',
+        glowColor: '#d9c5ff',
+        badge: '💎 Kristal Yarığı',
+        desc: 'İşıq çatı açılır, 3D perspektiv kristallar ayrılır, şimşək çaxır və Mons meydana çıxır.',
+        costType: 'redDiamonds',
+        cost: 15
+    },
+    stellar: {
+        id: 'stellar',
+        name: 'Ulduz Nüvəsi',
+        title: 'Stellar Bloom',
+        icon: 'fa-sun',
+        color: '#54d8cf',
+        glowColor: '#f8d49a',
+        badge: '🌟 Ulduz Nüvəsi',
+        desc: 'Enerji toplanır, 3D axın lentləri fəzanı yarır, ulduz nüvəsi açılır və Mons doğulur.',
+        costType: 'redDiamonds',
+        cost: 25
+    },
+    dracula: {
+        id: 'dracula',
+        name: 'Drakula',
+        title: 'Dracula',
+        icon: 'fa-bat',
+        fallbackIcon: 'fa-feather',
+        color: '#ba7886',
+        glowColor: '#9774be',
+        badge: '🦇 Yarasa Qanadları (+1 Sürət)',
+        desc: 'Qaranlıq oyanır, nəhəng yarasa qanadları açılır və Monsa oyunda +1 hərəkət sürəti bəxş edir.',
+        costType: 'redDiamonds',
+        cost: 35
+    },
+    seed: {
+        id: 'seed',
+        name: 'Yaşam Çiçəyi',
+        title: 'Time Seed',
+        icon: 'fa-seedling',
+        fallbackIcon: 'fa-leaf',
+        color: '#62e6a0',
+        glowColor: '#ffe3a0',
+        badge: '🌸 Yaşam Çiçəyi (+1-3 Can)',
+        desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq 1-3 can qorunması bəxş edir. Arenada çiçək yığaraq canları bərpa etmək olar.',
+        costType: 'redDiamonds',
+        cost: 45
+    }
+};
+if (typeof window !== 'undefined') {
+    window.SPAWN_ANIMS = SPAWN_ANIMS;
 }
 
 const DEFAULT_PERM_UPGRADES = {
@@ -138,13 +200,19 @@ const DEFAULT_PERM_UPGRADES = {
     startGoldLvl: 1,      // Başlanğıc qızıl
     equippedSkin: 'default', // Aktiv dəri (skin)
     ownedSkins: ['default'], // Sahib olunan dərilər
+    equippedSpawnAnim: 'portal', // Aktiv doğuluş animasiyası (portal, lightning, meteor, void, matrix)
+    ownedSpawnAnims: ['portal'], // Sahib olunan animasiyalar
+    seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
     hasTwinTurrets: false,
     turretLeftType: 'wall',   // 'wall', 'ice', 'shock', 'mine', 'plasma', 'none'
     turretRightType: 'wall',  // 'wall', 'ice', 'shock', 'mine', 'plasma', 'none'
-    turretInterval: 5,        // saniyə: 3, 5, 7, 10
+    turretInterval: 7.0,      // Dinamik interval (baza 7.0s)
+    turretIntervalLvl: 0,     // 0 - 15 səviyyə (hər səviyyə -0.2s, maks 4.0s)
+    hasAwakeningKey: false,   // 1000 Fancy Elmas ilə alınan Oyanış Açarı
+    turretAwakened: false,    // Maksimum 4.0s-də açarla aktivləşdirilən Oyanış
     turretEnabled: true,
-    // Mərmi Qiymət Artımı Qənaəti (Tab 2: Qırmızı Almazla)
+    // Mərmi Qiymət Artımı Qənaəti (Tab 2: Fancy Elmasla)
     bulletWallEconLvl: 0,
     bulletIceEconLvl: 0,
     bulletShockEconLvl: 0,
@@ -152,13 +220,45 @@ const DEFAULT_PERM_UPGRADES = {
     bulletPlasmaEconLvl: 0
 };
 
+function getMaxLifeFlowers() {
+    if (typeof permUpgrades === 'undefined') return 1;
+    return Math.max(1, Math.min(3, permUpgrades.seedLifeLvl || 1));
+}
+window.getMaxLifeFlowers = getMaxLifeFlowers;
+
+function getTurretInterval() {
+    const lvl = Math.min(15, Math.max(0, (typeof permUpgrades !== 'undefined' && permUpgrades.turretIntervalLvl) || 0));
+    return Math.max(4.0, +(7.0 - lvl * 0.2).toFixed(1));
+}
+
+function getTurretIntervalCost() {
+    const lvl = (typeof permUpgrades !== 'undefined' && permUpgrades.turretIntervalLvl) || 0;
+    if (lvl >= 15) return null;
+    return 10 + lvl * 5;
+}
+
+if (typeof window !== 'undefined') {
+    window.getTurretInterval = getTurretInterval;
+    window.getTurretIntervalCost = getTurretIntervalCost;
+}
+
 let permUpgrades = { ...DEFAULT_PERM_UPGRADES };
 let diamonds = 0;          // Mavi Almaz (Normal laboratoriya üçün)
-let redDiamonds = 0;       // Qırmızı Almaz (Xüsusi silahlar və sandıqlar üçün)
+let redDiamonds = 0;       // Fancy Elmas (Xüsusi silahlar, açarlar və sandıqlar üçün)
 let claimedChests = [];    // Açılmış 10-cu qat sandıqları [10, 20, 30...]
 
 function loadPermanentData() {
     try {
+        const savedPlayer = localStorage.getItem('floor_escape_player');
+        // Əgər aktiv hesab yoxdursa (çıxış edilibsə), köhnə məlumatlar tamamilə rədd edilir
+        if (!savedPlayer) {
+            permUpgrades = { ...DEFAULT_PERM_UPGRADES };
+            diamonds = 0;
+            redDiamonds = 0;
+            claimedChests = [];
+            return;
+        }
+
         const savedUpgrades = localStorage.getItem('floor_escape_perm_upgrades');
         if (savedUpgrades) {
             permUpgrades = { ...DEFAULT_PERM_UPGRADES, ...JSON.parse(savedUpgrades) };
@@ -167,6 +267,12 @@ function loadPermanentData() {
             }
             if (!permUpgrades.equippedSkin || !SKINS[permUpgrades.equippedSkin]) {
                 permUpgrades.equippedSkin = 'default';
+            }
+            if (!Array.isArray(permUpgrades.ownedSpawnAnims) || permUpgrades.ownedSpawnAnims.length === 0) {
+                permUpgrades.ownedSpawnAnims = ['portal'];
+            }
+            if (!permUpgrades.equippedSpawnAnim || !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim]) {
+                permUpgrades.equippedSpawnAnim = 'portal';
             }
             if (permUpgrades.turretBulletType && !permUpgrades.turretLeftType) {
                 permUpgrades.turretLeftType = permUpgrades.turretBulletType;
@@ -192,13 +298,18 @@ function loadPermanentData() {
 
 function savePermanentData() {
     try {
-        localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
-        localStorage.setItem('floor_escape_diamonds', diamonds.toString());
-        localStorage.setItem('floor_escape_red_diamonds', redDiamonds.toString());
-        localStorage.setItem('floor_escape_claimed_chests', JSON.stringify(claimedChests));
-
+        if (typeof permUpgrades !== 'undefined') {
+            localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
+        }
+        const p = window.currentPlayer || (typeof currentPlayer !== 'undefined' ? currentPlayer : null);
+        if (p) {
+            p.permUpgrades = permUpgrades;
+            if (typeof diamonds !== 'undefined') p.diamonds = diamonds;
+            if (typeof redDiamonds !== 'undefined') p.redDiamonds = redDiamonds;
+            localStorage.setItem('floor_escape_player', JSON.stringify(p));
+        }
         if (typeof syncPlayerDataCloud === 'function') {
-            syncPlayerDataCloud(false);
+            syncPlayerDataCloud(true);
         }
     } catch (e) {
         console.error('Daimi məlumatlar saxlanılarkən xəta:', e);
@@ -206,7 +317,16 @@ function savePermanentData() {
 }
 
 function getBaseSpeed() {
-    return 3.5 + (permUpgrades.speedLvl - 1) * 0.35;
+    let speed = 3.5 + (permUpgrades.speedLvl - 1) * 0.35;
+    if (typeof permUpgrades !== 'undefined') {
+        if (permUpgrades.equippedSkin === 'spark') {
+            speed *= 1.10; // ⚡ Kvant Qığılcımı: +10% Qaçış Sürəti
+        }
+        if (permUpgrades.equippedSpawnAnim === 'dracula') {
+            speed += 1.0; // 🦇 Drakula Qanadları: +1.0 Sürət!
+        }
+    }
+    return speed;
 }
 
 function getBaseMagnetRadius() {
@@ -236,482 +356,9 @@ function getShieldStartChance() {
 
 // ==================== KİBER DƏRİ FORMASI VƏ XÜSUSİ VİZUAL MODEL RƏSMİ ====================
 function drawSkinModel(c, x, y, r, skinId, facing = 0, time = 0, isInvuln = false) {
-    c.save();
-    c.translate(x, y);
-
-    const skin = (typeof SKINS !== 'undefined' && SKINS[skinId]) ? SKINS[skinId] : { color: '#00ffcc', glowColor: '#00ffcc' };
-    const baseColor = isInvuln ? '#ffffff' : (skin.color || '#00ffcc');
-    const glow = isInvuln ? '#ffffff' : (skin.glowColor || '#00ffcc');
-
-    if (skinId === 'spark') {
-        // =========================================================================
-        // ========== ⚡ KVANT QIĞILCIMI: ELEKTRİK PLAZMA ULDUZU VƏ CƏRƏYAN QANADLARI ==========
-        // =========================================================================
-        c.rotate(facing || (time * 2.0));
-
-        // 1. Canlı Şimşək Qövsləri (Elektrik Cərəyanları)
-        c.save();
-        c.strokeStyle = '#fef08a';
-        c.lineWidth = 1.5;
-        c.shadowBlur = 12;
-        c.shadowColor = '#facc15';
-        for (let j = 0; j < 3; j++) {
-            const seedAngle = time * 8 + j * 2.1;
-            const startDist = r * 0.5;
-            const endDist = r * 1.6 + Math.sin(time * 12 + j) * 4;
-            const arcAngle = seedAngle;
-            c.beginPath();
-            c.moveTo(Math.cos(arcAngle) * startDist, Math.sin(arcAngle) * startDist);
-            const midX = Math.cos(arcAngle + 0.3) * (startDist + (endDist - startDist) * 0.5);
-            const midY = Math.sin(arcAngle + 0.3) * (startDist + (endDist - startDist) * 0.5);
-            c.lineTo(midX, midY);
-            c.lineTo(Math.cos(arcAngle) * endDist, Math.sin(arcAngle) * endDist);
-            c.stroke();
-        }
-        c.restore();
-
-        // 2. 4 Ədəd İti Elektrik Qanadı / Generator Spikeləri
-        c.shadowBlur = 22;
-        c.shadowColor = glow;
-        for (let i = 0; i < 4; i++) {
-            c.save();
-            c.rotate((i * Math.PI) / 2);
-            // Qanadın xarici qızmar hissəsi
-            c.fillStyle = '#ca8a04';
-            c.beginPath();
-            c.moveTo(r * 1.85, 0);
-            c.lineTo(r * 0.5, -r * 0.45);
-            c.lineTo(r * 0.2, 0);
-            c.lineTo(r * 0.5, r * 0.45);
-            c.closePath();
-            c.fill();
-
-            // Qanadın daxili parlaq neon tikanı
-            c.fillStyle = '#fef08a';
-            c.beginPath();
-            c.moveTo(r * 1.65, 0);
-            c.lineTo(r * 0.6, -r * 0.25);
-            c.lineTo(r * 0.6, r * 0.25);
-            c.closePath();
-            c.fill();
-            c.restore();
-        }
-
-        // 3. Daxili Enerji Romb Korpusu
-        c.beginPath();
-        c.moveTo(0, -r * 0.95);
-        c.lineTo(r * 0.95, 0);
-        c.lineTo(0, r * 0.95);
-        c.lineTo(-r * 0.95, 0);
-        c.closePath();
-        c.fillStyle = '#1e1b4b';
-        c.fill();
-        c.lineWidth = 2;
-        c.strokeStyle = baseColor;
-        c.stroke();
-
-        // 4. Parlaq Ağ-Sarı Şimşək Nüvəsi (⚡)
-        c.shadowBlur = 15;
-        c.shadowColor = '#ffffff';
-        c.fillStyle = '#ffffff';
-        c.beginPath();
-        c.moveTo(r * 0.15, -r * 0.65);
-        c.lineTo(-r * 0.45, r * 0.05);
-        c.lineTo(r * 0.1, r * 0.05);
-        c.lineTo(-r * 0.2, r * 0.65);
-        c.lineTo(r * 0.45, -r * 0.05);
-        c.lineTo(-r * 0.05, -r * 0.05);
-        c.closePath();
-        c.fill();
-
-    } else if (skinId === 'aegis') {
-        // =========================================================================
-        // ========== 🛡️ TİTAN ZİREHLİ: AĞIR ALTIBUCAQLI MECHA TANK VƏ ORBİT SİPƏRLƏRİ ==========
-        // =========================================================================
-        // 1. Ətrafında Fırlanan İkili Mühafizə Sipəri (Deflector Orbitals)
-        const shieldOrbTime = time * 2.5;
-        for (let i = 0; i < 2; i++) {
-            const shAngle = shieldOrbTime + i * Math.PI;
-            const shDist = r * 1.65;
-            const sx = Math.cos(shAngle) * shDist;
-            const sy = Math.sin(shAngle) * shDist;
-            c.save();
-            c.translate(sx, sy);
-            c.rotate(shAngle + Math.PI / 2);
-            c.fillStyle = '#38bdf8';
-            c.shadowBlur = 12;
-            c.shadowColor = '#38bdf8';
-            // Sipər qövsü
-            c.beginPath();
-            if (c.roundRect) c.roundRect(-r * 0.45, -2.5, r * 0.9, 5, 2);
-            else c.rect(-r * 0.45, -2.5, r * 0.9, 5);
-            c.fill();
-            c.restore();
-        }
-
-        c.rotate(facing || 0);
-
-        // 2. Altıbucaqlı Möhkəm Mecha Korpus (Hexagonal Armor Plate)
-        c.shadowBlur = 20;
-        c.shadowColor = glow;
-        c.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const a = (i * Math.PI) / 3;
-            const px = Math.cos(a) * (r * 1.22);
-            const py = Math.sin(a) * (r * 1.22);
-            if (i === 0) c.moveTo(px, py);
-            else c.lineTo(px, py);
-        }
-        c.closePath();
-        c.fillStyle = '#0f172a';
-        c.fill();
-        c.lineWidth = 3;
-        c.strokeStyle = baseColor;
-        c.stroke();
-
-        // 3. Daxili Zireh Katı və Pərçimlər
-        c.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const a = (i * Math.PI) / 3;
-            const px = Math.cos(a) * (r * 0.85);
-            const py = Math.sin(a) * (r * 0.85);
-            if (i === 0) c.moveTo(px, py);
-            else c.lineTo(px, py);
-        }
-        c.closePath();
-        c.fillStyle = '#1e293b';
-        c.fill();
-        c.lineWidth = 1.5;
-        c.strokeStyle = '#0284c7';
-        c.stroke();
-
-        // Künc Pərçimləri
-        c.fillStyle = '#bae6fd';
-        for (let i = 0; i < 6; i++) {
-            const a = (i * Math.PI) / 3;
-            c.beginPath();
-            c.arc(Math.cos(a) * (r * 1.0), Math.sin(a) * (r * 1.0), 2.2, 0, Math.PI * 2);
-            c.fill();
-        }
-
-        // 4. Mərkəzi Foton Reaktor
-        c.beginPath();
-        c.arc(0, 0, r * 0.45, 0, Math.PI * 2);
-        c.fillStyle = '#0284c7';
-        c.shadowBlur = 14;
-        c.shadowColor = '#38bdf8';
-        c.fill();
-
-        c.beginPath();
-        c.arc(0, 0, r * 0.22, 0, Math.PI * 2);
-        c.fillStyle = '#ffffff';
-        c.fill();
-
-    } else if (skinId === 'inferno') {
-        // =========================================================================
-        // ========== 🔥 LAVA CƏLLADI: DİNAMİK ALOVLANAN BUYNIZLAR VƏ QAYNAYAN MAGMA ==========
-        // ========== (HƏMİŞƏ ŞAQULİ DÜZ YUXARI DURUR - CANLI ALOV VƏ NƏFƏS ANİMASİYASI) ==========
-        // =========================================================================
-
-        // 1. Canlı Qopan Magma Qığılcımları (Uçuşan Lava Embers)
-        c.save();
-        for (let i = 0; i < 4; i++) {
-            const seed = i * 1.57;
-            const emberProgress = ((time * 1.8 + seed) % 2.5) / 2.5; // 0..1
-            const emberX = Math.sin(time * 3 + seed) * (r * 1.35) + (i % 2 === 0 ? -r * 0.3 : r * 0.3);
-            const emberY = (r * 0.8) - emberProgress * (r * 2.5); // Aşağıdan yuxarı uçur
-            const emberAlpha = Math.sin(emberProgress * Math.PI);
-            const emberSize = (1.5 + (i % 2) * 1.2) * (1 - emberProgress * 0.4);
-
-            c.shadowBlur = 10;
-            c.shadowColor = '#f97316';
-            c.fillStyle = `rgba(254, 240, 138, ${emberAlpha})`;
-            c.beginPath();
-            c.arc(emberX, emberY, Math.max(0.5, emberSize), 0, Math.PI * 2);
-            c.fill();
-        }
-        c.restore();
-
-        // 2. Dinamik Dalğalanan Canlı Alov Şölələri (Arxada qıvrılan alov dilləri)
-        c.save();
-        const flameWave1 = Math.sin(time * 9) * (r * 0.22);
-        const flameWave2 = Math.cos(time * 11) * (r * 0.18);
-        const flameWave3 = Math.sin(time * 7 + 1.2) * (r * 0.15);
-
-        // Mərkəzi böyük alov dili
-        c.fillStyle = '#f97316';
-        c.shadowBlur = 22;
-        c.shadowColor = '#ef4444';
-        c.beginPath();
-        c.moveTo(-r * 0.55, -r * 0.6);
-        c.quadraticCurveTo(flameWave3 * 0.5, -r * 1.55 - flameWave1, r * 0.55, -r * 0.6);
-        c.quadraticCurveTo(0, -r * 0.3, -r * 0.55, -r * 0.6);
-        c.fill();
-
-        // Sol alov qıvrımı
-        c.fillStyle = '#ef4444';
-        c.beginPath();
-        c.moveTo(-r * 0.6, -r * 0.4);
-        c.quadraticCurveTo(-r * 1.1 + flameWave2, -r * 1.3, -r * 0.2, -r * 0.7);
-        c.closePath();
-        c.fill();
-
-        // Sağ alov qıvrımı
-        c.beginPath();
-        c.moveTo(r * 0.6, -r * 0.4);
-        c.quadraticCurveTo(r * 1.1 - flameWave2, -r * 1.3, r * 0.2, -r * 0.7);
-        c.closePath();
-        c.fill();
-        c.restore();
-
-        // 3. İki Böyük Obsidian Alov Buynuzu (Ucları canlı alov kimi dalğalanır)
-        const hornTipWaveL = Math.sin(time * 8) * (r * 0.08);
-        const hornTipWaveR = Math.cos(time * 8) * (r * 0.08);
-
-        c.shadowBlur = 22;
-        c.shadowColor = '#dc2626';
-
-        // Sol Buynuz
-        c.fillStyle = '#7f1d1d';
-        c.strokeStyle = '#f87171';
-        c.lineWidth = 2;
-        c.beginPath();
-        c.moveTo(-r * 0.5, -r * 0.4);
-        c.quadraticCurveTo(-r * 1.5, -r * 1.2, -r * 0.6 + hornTipWaveL, -r * 1.5 + Math.abs(hornTipWaveL));
-        c.quadraticCurveTo(-r * 0.8, -r * 0.8, -r * 0.2, -r * 0.7);
-        c.closePath();
-        c.fill();
-        c.stroke();
-
-        // Sol buynuzun daxili odlu damarı (Neon titrəyiş)
-        c.strokeStyle = '#f97316';
-        c.lineWidth = 1.2;
-        c.beginPath();
-        c.moveTo(-r * 0.35, -r * 0.6);
-        c.quadraticCurveTo(-r * 1.0, -r * 1.1, -r * 0.65 + hornTipWaveL, -r * 1.4);
-        c.stroke();
-
-        // Sağ Buynuz
-        c.fillStyle = '#7f1d1d';
-        c.strokeStyle = '#f87171';
-        c.lineWidth = 2;
-        c.beginPath();
-        c.moveTo(r * 0.5, -r * 0.4);
-        c.quadraticCurveTo(r * 1.5, -r * 1.2, r * 0.6 + hornTipWaveR, -r * 1.5 + Math.abs(hornTipWaveR));
-        c.quadraticCurveTo(r * 0.8, -r * 0.8, r * 0.2, -r * 0.7);
-        c.closePath();
-        c.fill();
-        c.stroke();
-
-        // Sağ buynuzun daxili odlu damarı (Neon titrəyiş)
-        c.strokeStyle = '#f97316';
-        c.lineWidth = 1.2;
-        c.beginPath();
-        c.moveTo(r * 0.35, -r * 0.6);
-        c.quadraticCurveTo(r * 1.0, -r * 1.1, r * 0.65 + hornTipWaveR, -r * 1.4);
-        c.stroke();
-
-        // 4. Magma Alov Kürəsi (Lava Body - Nəfəs alan canlı qızmar halqa)
-        const bodyPulse = Math.sin(time * 6) * (r * 0.05);
-        c.beginPath();
-        c.arc(0, 0, r * 1.05 + bodyPulse, 0, Math.PI * 2);
-        c.fillStyle = '#dc2626';
-        c.shadowBlur = 24 + Math.sin(time * 8) * 8;
-        c.shadowColor = '#ef4444';
-        c.fill();
-
-        // Obsidian Qara Çatlı Qabıq
-        c.beginPath();
-        c.arc(0, 0, r * 0.88, 0, Math.PI * 2);
-        c.fillStyle = '#18181b';
-        c.fill();
-
-        // 5. Parıldayan Qəzəbli Alovlu Göz Yarıqları (Canlı alov parıltısı və titrəyiş)
-        const eyePulse = Math.sin(time * 12) * 4;
-        c.shadowBlur = 14 + eyePulse;
-        c.shadowColor = '#facc15';
-        c.fillStyle = eyePulse > 1 ? '#ffffff' : '#fef08a';
-
-        // Sol Göz
-        c.beginPath();
-        c.moveTo(-r * 0.55, -r * 0.1);
-        c.lineTo(-r * 0.15, -r * 0.25);
-        c.lineTo(-r * 0.2, 0.05);
-        c.closePath();
-        c.fill();
-
-        // Sağ Göz
-        c.beginPath();
-        c.moveTo(r * 0.55, -r * 0.1);
-        c.lineTo(r * 0.15, -r * 0.25);
-        c.lineTo(r * 0.2, 0.05);
-        c.closePath();
-        c.fill();
-
-        // 6. Ağızda Qaynayan Magma Yarığı (Dinamik nəfəs alma)
-        const mouthGlow = Math.sin(time * 7) * (r * 0.03);
-        c.strokeStyle = '#f97316';
-        c.lineWidth = 2.2;
-        c.shadowBlur = 10;
-        c.shadowColor = '#f97316';
-        c.beginPath();
-        c.moveTo(-r * 0.35, r * 0.35);
-        c.lineTo(0, r * 0.5 + mouthGlow);
-        c.lineTo(r * 0.35, r * 0.35);
-        c.stroke();
-
-    } else if (skinId === 'void') {
-        // =========================================================================
-        // ========== 👑 VOİD HÖKMDARI: ALİ KİBER TAC VƏ 3 ORBİTAL QARA KÜRƏ ==========
-        // =========================================================================
-        // 1. Ətrafında Fırlanan 3 Orbital Qara Materiya Peyki
-        const orbDist = r * 1.65;
-        for (let i = 0; i < 3; i++) {
-            const angle = (time * 2.8) + (i * (Math.PI * 2)) / 3;
-            const ox = Math.cos(angle) * orbDist;
-            const oy = Math.sin(angle) * orbDist;
-            c.save();
-            c.beginPath();
-            c.arc(ox, oy, 5, 0, Math.PI * 2);
-            c.fillStyle = '#e879f9';
-            c.shadowBlur = 14;
-            c.shadowColor = '#c084fc';
-            c.fill();
-
-            // Mini qara mərkəz
-            c.beginPath();
-            c.arc(ox, oy, 2.5, 0, Math.PI * 2);
-            c.fillStyle = '#3b0764';
-            c.fill();
-            c.restore();
-        }
-
-        // 2. Kosmik Qara Dəlik Burulğanı (Void Singularity) - Simmetrik Dairə
-        c.shadowBlur = 25;
-        c.shadowColor = glow;
-        c.beginPath();
-        c.arc(0, 0, r * 1.1, 0, Math.PI * 2);
-        c.fillStyle = '#581c87';
-        c.fill();
-
-        c.beginPath();
-        c.arc(0, 0, r * 0.82, 0, Math.PI * 2);
-        c.fillStyle = '#090212';
-        c.fill();
-
-        // 3. ƏZƏMƏTLİ QIZILI KİBER TAC (HƏMİŞƏ ŞAQULİ YUXARI BAXIR - HEÇ VAXT YANA ƏYİLMİR)
-        c.save();
-        c.shadowBlur = 16;
-        c.shadowColor = '#facc15';
-        c.fillStyle = '#f59e0b';
-        c.strokeStyle = '#fef08a';
-        c.lineWidth = 1.5;
-        c.beginPath();
-        c.moveTo(-r * 0.7, -r * 0.4);
-        c.lineTo(-r * 0.85, -r * 1.35); // Sol qüllə
-        c.lineTo(-r * 0.35, -r * 0.85);
-        c.lineTo(0, -r * 1.55);          // Mərkəzi ali tac qülləsi (Düz yuxarı)
-        c.lineTo(r * 0.35, -r * 0.85);
-        c.lineTo(r * 0.85, -r * 1.35);  // Sağ qüllə
-        c.lineTo(r * 0.7, -r * 0.4);
-        c.closePath();
-        c.fill();
-        c.stroke();
-
-        // Tacın yaqut kristalları
-        c.fillStyle = '#c084fc';
-        c.beginPath();
-        c.arc(0, -r * 1.1, 2.8, 0, Math.PI * 2);
-        c.fill();
-        c.restore();
-
-        // 4. Mərkəzi Sirli Void Gözü (Bəbək hərəkət istiqamətinə zərif baxır)
-        c.shadowBlur = 14;
-        c.shadowColor = '#ffffff';
-        c.fillStyle = '#c084fc';
-        c.beginPath();
-        c.ellipse(0, 0, r * 0.45, r * 0.28, 0, 0, Math.PI * 2);
-        c.fill();
-
-        // Göz bəbəyinin hərəkət istiqaməti
-        const pupilDist = r * 0.18;
-        const lookX = Math.cos(facing || 0) * pupilDist;
-        const lookY = Math.sin(facing || 0) * pupilDist;
-        c.fillStyle = '#ffffff';
-        c.beginPath();
-        c.arc(lookX, lookY, 3, 0, Math.PI * 2);
-        c.fill();
-
-    } else {
-        // =========================================================================
-        // ========== 💠 KİBER QAÇIŞÇI (DEFAULT): KİBER NİNJA KASKI VƏ DALĞALANAN LENTLƏR ==========
-        // =========================================================================
-        c.rotate(facing || 0);
-
-        // 1. Arxada Dinamik Dalğalanan İkili Neon Kiber Lentlər
-        c.fillStyle = 'rgba(0, 255, 204, 0.85)';
-        c.shadowBlur = 12;
-        c.shadowColor = '#00ffcc';
-
-        const wave1 = Math.sin(time * 8) * 4;
-        const wave2 = Math.cos(time * 8) * 4;
-
-        // Sol lent
-        c.beginPath();
-        c.moveTo(-r * 0.4, r * 0.7);
-        c.quadraticCurveTo(-r * 0.9, r * 1.3 + wave1, -r * 1.35, r * 1.85);
-        c.lineTo(-r * 1.0, r * 1.5);
-        c.lineTo(-r * 0.15, r * 0.85);
-        c.closePath();
-        c.fill();
-
-        // Sağ lent
-        c.beginPath();
-        c.moveTo(r * 0.4, r * 0.7);
-        c.quadraticCurveTo(r * 0.9, r * 1.3 + wave2, r * 1.35, r * 1.85);
-        c.lineTo(r * 1.0, r * 1.5);
-        c.lineTo(r * 0.15, r * 0.85);
-        c.closePath();
-        c.fill();
-
-        // 2. Kiber-Ninja Dəbilqə Korpusu
-        c.shadowBlur = 22;
-        c.shadowColor = glow;
-        c.beginPath();
-        c.arc(0, 0, r * 1.05, 0, Math.PI * 2);
-        c.fillStyle = baseColor;
-        c.fill();
-
-        // Yan Kiber Qulaqlıqlar (Earpieces)
-        c.fillStyle = '#0f172a';
-        c.beginPath();
-        c.rect(-r * 1.15, -r * 0.35, r * 0.25, r * 0.7);
-        c.rect(r * 0.9, -r * 0.35, r * 0.25, r * 0.7);
-        c.fill();
-
-        // Qara Ninja Maska Qoruyucusu
-        c.fillStyle = '#090d16';
-        c.beginPath();
-        c.ellipse(0, -1, r * 0.92, r * 0.45, 0, 0, Math.PI * 2);
-        c.fill();
-
-        // 3. Parlaq Kiber-Vizor (HUD Eynək)
-        c.fillStyle = '#00ffcc';
-        c.shadowBlur = 12;
-        c.shadowColor = '#00ffcc';
-        c.beginPath();
-        if (c.roundRect) c.roundRect(-r * 0.7, -4.5, r * 1.4, 8, 3.5);
-        else c.rect(-r * 0.7, -4.5, r * 1.4, 8);
-        c.fill();
-
-        // Vizor İşıq Parıltısı
-        c.fillStyle = '#ffffff';
-        c.beginPath();
-        c.arc(-r * 0.32, -1.5, 2.8, 0, Math.PI * 2);
-        c.fill();
+    if (typeof SkinRegistry !== 'undefined' && SkinRegistry.drawSkinModel) {
+        SkinRegistry.drawSkinModel(c, x, y, r, skinId, facing, time, isInvuln);
     }
-
-    c.restore();
 }
 if (typeof window !== 'undefined') {
     window.drawSkinModel = drawSkinModel;
@@ -721,13 +368,16 @@ if (typeof window !== 'undefined') {
 let gameState = {
     gold: 75,
     floor: 1,
-    bestFloor: parseInt(localStorage.getItem('floor_escape_best_floor')) || 1,
+    bestFloor: (typeof localStorage !== 'undefined' && localStorage.getItem('floor_escape_player') ? (parseInt(localStorage.getItem('floor_escape_best_floor')) || 1) : 1),
+    diamonds: 0,
+    redDiamonds: 0,
     scoreProgress: 0,
     scoreReq: 3,
     borderOpen: false,
     gameOver: false,
     paused: false,
     transitioning: false,
+    isIntroPlaying: false,
     combo: 0,
     maxCombo: 0,
     totalTrapsPlaced: 0,
@@ -784,6 +434,9 @@ function saveActiveRun() {
         playerY: typeof player !== 'undefined' && player ? player.y : null,
         playerHasShield: typeof player !== 'undefined' && player ? !!player.hasShield : false,
         playerHasHyperJump: typeof player !== 'undefined' && player ? !!player.hasHyperJump : false,
+        playerLifeFlowers: typeof player !== 'undefined' && player ? (player.lifeFlowers || 0) : 0,
+        playerMaxLifeFlowers: typeof player !== 'undefined' && player ? (player.maxLifeFlowers || 1) : 1,
+        playerLifeFlowerState: typeof player !== 'undefined' && player ? (player.lifeFlowerState || 'none') : 'none',
         // Meydandakı sikkələr (DƏQİQ SİYAHI)
         coins: typeof coins !== 'undefined' && Array.isArray(coins) ? coins.map(c => ({ x: c.x, y: c.y, value: c.value })) : [],
         // Meydandakı gücləndiricilər (DƏQİQ SİYAHI)
@@ -843,6 +496,12 @@ function loadActiveRun() {
                 }
                 player.hasShield = !!saved.playerHasShield;
                 player.hasHyperJump = !!saved.playerHasHyperJump;
+                if (saved.playerLifeFlowers !== undefined) {
+                    player.lifeFlowers = parseInt(saved.playerLifeFlowers, 10);
+                    player.maxLifeFlowers = parseInt(saved.playerMaxLifeFlowers || 1, 10);
+                    player.lifeFlowerState = saved.playerLifeFlowerState || (player.lifeFlowers > 0 ? 'active' : 'none');
+                    player.hasLifeFlower = player.lifeFlowers > 0;
+                }
             }
 
             // Gücləndirici taymerləri

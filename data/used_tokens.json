@@ -3,5 +3,13 @@
     "blue": 25,
     "red": 15,
     "usedAt": "2026-09-10T11:35:59.502411+00:00"
+  },
+  "GIFT-eyJiIjoyNSwiciI6MTAwLCJuIjoiMEUxODc4RUQiLCJ0IjoxNzg5MjM2Njk4fQ-89FF6D63BA19": {
+    "playerId": "3264047",
+    "claimedAt": "2026-09-12T18:11:45.357010+00:00"
+  },
+  "GIFT-eyJiIjoyNSwiciI6MTAwMCwibiI6IjQ4MUIxQTBGIiwidCI6MTc4OTIzODg0Mn0-ABA9FD4B3B5F": {
+    "playerId": "3264047",
+    "claimedAt": "2026-09-12T18:47:31.102187+00:00"
   }
 }

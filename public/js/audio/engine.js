@@ -10,9 +10,9 @@ class AudioEngine {
         // Səs Səviyyələri (0.0 - 1.0)
         this.volumes = {
             master: 0.85,
-            sfx: 0.85,
-            beats: 0.90,
-            ambient: 0.50
+            sfx: 0.80,
+            beats: 0.40,
+            ambient: 0.65
         };
 
         // Gain Düyünləri
@@ -20,6 +20,7 @@ class AudioEngine {
         this.sfxGain = null;
         this.beatGain = null;
         this.ambientGain = null;
+        this.unlocked = false;
 
         this.loadSettings();
     }
@@ -52,6 +53,10 @@ class AudioEngine {
     }
 
     init() {
+        if (this.ctx && this.ctx.state === 'running' && this.unlocked) {
+            return;
+        }
+
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             this.ctx = new AudioCtx();
@@ -70,10 +75,56 @@ class AudioEngine {
             this.ambientGain.connect(this.masterGain);
 
             this.applyVolumes();
+
+            const removeUnlockListeners = () => {
+                window.removeEventListener('pointerdown', unlockAudio);
+                window.removeEventListener('mousedown', unlockAudio);
+                window.removeEventListener('touchstart', unlockAudio);
+                window.removeEventListener('keydown', unlockAudio);
+                window.removeEventListener('click', unlockAudio);
+            };
+
+            // YALNIZ İLK toxunuş və ya klik anında bir dəfə aktivləşmə (təkrar çağırışları bloklayır)
+            const unlockAudio = () => {
+                if (this.unlocked) {
+                    removeUnlockListeners();
+                    return;
+                }
+                if (this.ctx) {
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume().then(() => {
+                            this.unlocked = true;
+                            removeUnlockListeners();
+                            this.applyVolumes();
+                            if (window.audio && window.audio.ambient && typeof window.audio.ambient.onContextResumed === 'function') {
+                                window.audio.ambient.onContextResumed();
+                            }
+                        }).catch(() => {});
+                    } else if (this.ctx.state === 'running') {
+                        this.unlocked = true;
+                        removeUnlockListeners();
+                        this.applyVolumes();
+                    }
+                }
+            };
+            const opts = { passive: true };
+            window.addEventListener('pointerdown', unlockAudio, opts);
+            window.addEventListener('mousedown', unlockAudio, opts);
+            window.addEventListener('touchstart', unlockAudio, opts);
+            window.addEventListener('keydown', unlockAudio, opts);
+            window.addEventListener('click', unlockAudio, opts);
         }
 
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().then(() => {
+                this.unlocked = true;
+                this.applyVolumes();
+                if (window.audio && window.audio.ambient && typeof window.audio.ambient.onContextResumed === 'function') {
+                    window.audio.ambient.onContextResumed();
+                }
+            }).catch(() => {});
+        } else if (this.ctx && this.ctx.state === 'running') {
+            this.unlocked = true;
         }
     }
 

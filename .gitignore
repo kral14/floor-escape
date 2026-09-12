@@ -6,3 +6,12 @@ __pycache__/
 *.tmp
 
 backup/
+
+# Tarixçə və şəxsi fayllar (GitHub tokenlərinin sızmaması üçün)
+chat_history.html
+history_viewer.py
+baxis_tarixce.bat
+
+# Lokal verilənlər bazaları
+*.db
+database.db

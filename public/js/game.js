@@ -1,4 +1,4 @@
-// ƏSAS OYUN MƏNTİQİ, FİZİKA VƏ OYUN DÖNGƏSİ (GAME LOOP)
+// ƏSAS OYUN MƏNTİQİ, FİZİKA VƏ OYUN DÖNGƏSİ (GAME LOOP & ENGINE COORDINATOR)
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -9,35 +9,6 @@ const canvasWidth = 800;
 const canvasHeight = 680;
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
-
-
-// BÜTÜN MONİTORLARDA TAM ORTALANMA VƏ YUXARIDAN-AŞAĞIDAN DƏQİQ 10PX BOŞLUQ
-function adjustViewportFit() {
-    const gameScreen = document.getElementById('game-screen-container');
-    if (!gameScreen || gameScreen.classList.contains('hidden')) return;
-
-    // Yuxarıdan və aşağıdan dəqiq 10px, yanlardan 10px boşluq
-    const paddingY = 10;
-    const paddingX = 10;
-
-    const availW = Math.max(300, window.innerWidth - (paddingX * 2));
-    const availH = Math.max(300, window.innerHeight - (paddingY * 2));
-
-    const baseW = 1140;
-    const baseH = 750;
-
-    const scale = Math.min(availW / baseW, availH / baseH);
-
-    gameScreen.style.position = 'absolute';
-    gameScreen.style.left = '50%';
-    gameScreen.style.top = '50%';
-    gameScreen.style.margin = '0';
-    gameScreen.style.transformOrigin = 'center center';
-    gameScreen.style.transform = `translate(-50%, -50%) scale(${scale})`;
-}
-
-window.addEventListener('resize', adjustViewportFit);
-window.addEventListener('load', adjustViewportFit);
 
 function resizeCanvas() {
     canvas.width = canvasWidth;
@@ -58,362 +29,21 @@ window.addEventListener('keydown', e => {
     }
 });
 
-// QISAYOL DÜYMƏLƏRİ (KEYBINDS)
-const DEFAULT_KEYBINDS = {
-    wall: '1',
-    ice: '2',
-    shock: '3',
-    mine: '4',
-    plasma: '5'
-};
-
-let keybinds = { ...DEFAULT_KEYBINDS };
-let isKeybindMode = false;
-let recordingTrapType = null;
-
-function loadKeybinds() {
-    try {
-        const saved = localStorage.getItem('floor_escape_keybinds');
-        if (saved) keybinds = { ...DEFAULT_KEYBINDS, ...JSON.parse(saved) };
-    } catch (e) {
-        keybinds = { ...DEFAULT_KEYBINDS };
-    }
-}
-
-function saveKeybinds() {
-    localStorage.setItem('floor_escape_keybinds', JSON.stringify(keybinds));
-}
-
-function formatKeyDisplay(k) {
-    if (!k) return '?';
-    if (k === ' ') return 'SPACE';
-    return k.toUpperCase();
-}
-
-function renderKeybindBadges() {
-    ['wall', 'ice', 'shock', 'mine', 'plasma'].forEach(type => {
-        const badge = document.getElementById(`keybind-badge-${type}`);
-        if (badge) badge.innerText = formatKeyDisplay(keybinds[type]);
-    });
-}
-
-function toggleKeybindMode() {
-    isKeybindMode = !isKeybindMode;
-    const banner = document.getElementById('keybind-help-banner');
-    const btn = document.getElementById('btn-toggle-keybinds');
-    const label = document.getElementById('keybind-mode-label');
-
-    if (isKeybindMode) {
-        banner.classList.remove('hidden');
-        btn.classList.add('border-rose-500', 'text-rose-400');
-        label.innerText = 'Ləğv et';
-        showToast('Qısayol dəyişmə rejimi aktivdir! Nişana klikləyin.', 'info');
-    } else {
-        cancelRebinding();
-    }
-}
-
-function cancelRebinding() {
-    isKeybindMode = false;
-    recordingTrapType = null;
-    const banner = document.getElementById('keybind-help-banner');
-    const btn = document.getElementById('btn-toggle-keybinds');
-    const label = document.getElementById('keybind-mode-label');
-
-    if (banner) banner.classList.add('hidden');
-    if (btn) btn.classList.remove('border-rose-500', 'text-rose-400');
-    if (label) label.innerText = 'Qısayol';
-
-    ['wall', 'ice', 'shock', 'mine', 'plasma'].forEach(t => {
-        const badge = document.getElementById(`keybind-badge-${t}`);
-        if (badge) badge.classList.remove('recording');
-    });
-}
-
-function startRebinding(type, event) {
-    if (event) event.stopPropagation();
-    isKeybindMode = true;
-    recordingTrapType = type;
-
-    ['wall', 'ice', 'shock', 'mine', 'plasma'].forEach(t => {
-        const badge = document.getElementById(`keybind-badge-${t}`);
-        if (badge) {
-            if (t === type) badge.classList.add('recording');
-            else badge.classList.remove('recording');
-        }
-    });
-
-    showToast(`${getTrapName(type)} üçün yeni düyməni basın...`, 'info');
-}
+canvas.addEventListener('click', () => {
+    if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
+    if (typeof audio !== 'undefined') audio.init();
+    canvas.focus();
+});
 
 // OBYEKTLƏR VƏ QURULUŞ
 const player = new Player();
 const monster = new Monster();
-let bullets = [];
-let coins = [];
-let powerUps = [];
-let floatingTexts = [];
-let screenPulse = { color: '#00f0ff', alpha: 0 };
-let particles = [];
-let keys = {};
+window.player = player;
+window.monster = monster;
 let frameCount = 0;
-let hasPassedBorder = false;
-
-// MƏRMİ VƏ TƏLƏ ATMAQ
-function fireBullet(type) {
-    if (gameState.gameOver || gameState.paused || gameState.transitioning) return;
-    audio.init();
-
-    const price = getBulletCost(type);
-
-    if (gameState.gold >= price) {
-        gameState.gold -= price;
-        gameState.totalTrapsPlaced++;
-        if (!gameState.bulletUsage) gameState.bulletUsage = { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 };
-        gameState.bulletUsage[type] = (gameState.bulletUsage[type] || 0) + 1;
-
-        bullets.push(new Bullet(type, player.x, player.y + 15));
-        audio.playShoot();
-
-        updateUI();
-        saveActiveRun();
-    } else {
-        showToast(`Qızıl Çatmır! (${price} 🪙 tələb olunur)`, 'error');
-    }
-}
-
-// QATIN TAMAMLANMASI VƏ SƏRHƏDİN AÇILMASI
-function checkBorderUnlock() {
-    const req = gameState.getFloorRequirement(gameState.floor);
-    if (!gameState.borderOpen && gameState.scoreProgress >= req) {
-        gameState.borderOpen = true;
-        audio.playDoorOpen();
-        showToast(`🚪 SƏRHƏD AÇILDI! Qızıl dayandı, dərhal növbəti qata qalx!`, 'success');
-
-        for (let i = 0; i < 35; i++) {
-            particles.push(new Particle(
-                canvasWidth / 2 + (Math.random() - 0.5) * 250,
-                45 + Math.random() * 20,
-                ['#00ff66', '#ffd700', '#00ffcc', '#ff00ff'],
-                5
-            ));
-        }
-        saveActiveRun();
-    }
-}
-
-function nextFloor() {
-    gameState.floor++;
-    if (window.audio) {
-        audio.setFloor(gameState.floor, true);
-    }
-    const trackNames = ['Neon Retrowave (80s Synthwave)', 'Chiptune Arcade (8-Bit NES)', 'Acid Cyber Techno (TB-303)', 'Magma Doom Slayer (Darksynth)', 'Hyperion Trance (Euro-Trance)'];
-    const trackName = trackNames[(gameState.floor - 1) % trackNames.length];
-    showToast(`🎵 Qat ${gameState.floor}: ${trackName}`, 'info');
-
-    gameState.transitioning = true;
-    keys = {};
-
-    diamonds += 1;
-    savePermanentData();
-    audio.playDiamond();
-
-    if (gameState.floor > gameState.bestFloor) {
-        gameState.bestFloor = gameState.floor;
-        localStorage.setItem('floor_escape_best_floor', gameState.bestFloor.toString());
-        document.getElementById('stat-best-floor').innerText = `🏆 REKORD: ${gameState.bestFloor}`;
-    }
-
-    gameState.scoreProgress = 0;
-    gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
-    gameState.borderOpen = false;
-    gameState.combo = 0;
-    gameState.floorTime = 0;
-    gameState.coinCountdown = getCoinSpawnInterval();
-    hasPassedBorder = false;
-
-    bullets = [];
-    coins = [];
-    player.reset();
-    monster.reset();
-    twinTurrets.reset();
-
-    // 🌀 MƏRHƏLƏ 4: ANOMALİYA TƏYİNİ (PLATFORMASIZ)
-    applyFloorModifier();
-
-    spawnCoins();
-    spawnPowerUps();
-
-    // 🛡️ LABORATORİYA: QATA QALXANLA BAŞLAMA ŞANSI (ALMAZ YÜKSƏLTMƏSİ)
-    if (typeof getShieldStartChance === 'function' && Math.random() < getShieldStartChance()) {
-        player.hasShield = true;
-        showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
-    }
-
-    // 10-cu QAT SANDIQ YOXLANIŞI
-    const openedChest = checkMilestoneChest(gameState.floor);
-
-    const overlay = document.getElementById('floor-clear-overlay');
-    const desc = document.getElementById('floor-clear-desc');
-    let modTxt = '';
-    if (gameState.activeModifier === 'gravity') modTxt = ' [🪐 AY QRAVİTASİYASI]';
-    else if (gameState.activeModifier === 'goldrush') modTxt = ' [💰 QIZIL QIZDIRMASI]';
-
-    desc.innerText = `${gameState.floor}-ci Qata keçdiniz!${modTxt} Tələb olunan xal: ${gameState.scoreReq}`;
-    overlay.classList.remove('hidden');
-
-    document.getElementById('main-view').classList.add('shake');
-    setTimeout(() => {
-        document.getElementById('main-view').classList.remove('shake');
-        overlay.classList.add('hidden');
-        gameState.transitioning = false;
-        keys = {};
-        showToast(`🚀 ${gameState.floor}-ci Qat Başladı!${modTxt}`, 'info');
-        saveActiveRun();
-    }, 1600);
-
-    showToast(`🎉 ${gameState.floor}-ci Qat! (+1 💎 Almaz)`, 'diamond');
-    updateUI();
-    saveActiveRun();
-}
-
-// 🌀 MƏRHƏLƏ 4: ANOMALİYA TƏTBİQİ (Qaranlıq qatı ləğv edildi)
-function applyFloorModifier() {
-    if (gameState.floor < 3) {
-        gameState.activeModifier = 'normal';
-        return;
-    }
-    const roll = Math.random();
-    if (roll < 0.35) {
-        gameState.activeModifier = 'gravity';
-    } else if (roll < 0.70) {
-        gameState.activeModifier = 'goldrush';
-    } else {
-        gameState.activeModifier = 'normal';
-    }
-}
-
-function addFloatingText(x, y, text, color = '#00f0ff', size = 15) {
-    floatingTexts.push({
-        x: x,
-        y: y,
-        text: text,
-        color: color,
-        size: size,
-        alpha: 1.0,
-        vy: -1.3,
-        life: 55
-    });
-}
-
-// ⚡ ANİ VƏ KEÇİCİ İMPULS PARILTISI (QALICI DEYİL, ANİ OLUB İTİR)
-function triggerScreenPulse(color = '#00f0ff', maxAlpha = 0.35) {
-    screenPulse.color = color;
-    screenPulse.alpha = maxAlpha;
-}
-
-function spawnCoins() {
-    coins = [];
-    let coinCount = 6 + gameState.floor * 2;
-    if (gameState.activeModifier === 'goldrush') {
-        coinCount = Math.floor(coinCount * 1.8);
-    }
-    for (let i = 0; i < coinCount; i++) {
-        coins.push(new Coin(
-            Math.random() * (canvasWidth - 80) + 40,
-            Math.random() * (canvasHeight - 340) + 80
-        ));
-    }
-}
-
-function autoSpawnCoin() {
-    if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
-
-    const maxAllowedCoins = 6 + gameState.floor * 2;
-    if (coins.length >= maxAllowedCoins) return;
-
-    const count = Math.min(2, maxAllowedCoins - coins.length);
-    for (let i = 0; i < count; i++) {
-        coins.push(new Coin(
-            Math.random() * (canvasWidth - 60) + 30,
-            Math.random() * (canvasHeight - 280) + 70
-        ));
-    }
-}
-
-function spawnPowerUps() {
-    powerUps = [];
-    if (typeof PowerUp !== 'undefined') {
-        powerUps.push(new PowerUp(
-            Math.random() * (canvasWidth - 120) + 60,
-            Math.random() * (canvasHeight - 320) + 90
-        ));
-    }
-}
-
-function autoSpawnPowerUp() {
-    if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
-    if (powerUps.length >= 2) return;
-    if (typeof PowerUp !== 'undefined') {
-        powerUps.push(new PowerUp(
-            Math.random() * (canvasWidth - 100) + 50,
-            Math.random() * (canvasHeight - 300) + 80
-        ));
-    }
-}
-
-function drawBorderLine() {
-    const borderY = 55;
-    const isOpen = gameState.borderOpen;
-
-    ctx.save();
-    const grad = ctx.createLinearGradient(0, borderY - 15, 0, borderY + 15);
-    if (isOpen) {
-        grad.addColorStop(0, 'rgba(0, 255, 100, 0)');
-        grad.addColorStop(0.3, 'rgba(0, 255, 100, 0.3)');
-        grad.addColorStop(0.5, 'rgba(0, 255, 100, 0.6)');
-        grad.addColorStop(0.7, 'rgba(0, 255, 100, 0.3)');
-        grad.addColorStop(1, 'rgba(0, 255, 100, 0)');
-    } else {
-        grad.addColorStop(0, 'rgba(255, 0, 80, 0)');
-        grad.addColorStop(0.5, 'rgba(255, 0, 80, 0.45)');
-        grad.addColorStop(1, 'rgba(255, 0, 80, 0)');
-    }
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, borderY - 15, canvasWidth, 30);
-
-    ctx.beginPath();
-    ctx.moveTo(0, borderY);
-    ctx.lineTo(canvasWidth, borderY);
-
-    if (isOpen) {
-        ctx.strokeStyle = '#00ff88';
-        ctx.lineWidth = 3.2;
-        ctx.shadowBlur = 22;
-        ctx.shadowColor = '#00ff88';
-        ctx.lineDashOffset = -performance.now() * 0.025;
-        ctx.setLineDash([14, 8]);
-    } else {
-        ctx.strokeStyle = '#ff0055';
-        ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 16;
-        ctx.shadowColor = '#ff0055';
-        ctx.lineDashOffset = 0;
-        ctx.setLineDash([8, 8]);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineDashOffset = 0;
-    ctx.shadowBlur = 0;
-
-    ctx.restore();
-}
 
 // ============================================================================
 // SABİT SÜRƏT VƏ FPS İDARƏETMƏ SİSTEMİ (FIXED TIMESTEP & FPS STABILIZATION)
-// Bütün monitorlarda (60Hz, 120Hz, 144Hz, 240Hz) oyunun sürətini dəqiq 1x real-zaman sürətində saxlayır.
-// Həmçinin zəif cihazlar üçün 30 FPS qənaət rejimini təmin edir.
 // ============================================================================
 
 let targetFPS = parseInt(localStorage.getItem('floor_escape_target_fps') || '60', 10);
@@ -469,6 +99,14 @@ function updateFpsUI() {
 
 // 1. DƏQİQ FİZİKA VƏ OYUN MƏNTİQİ ADDIMI (Həmişə 60Hz sabit addımla hesablanır)
 function updatePhysicsStep() {
+    if (gameState.isIntroPlaying) {
+        if (typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
+            monsPortal.update(1 / 60);
+        }
+        // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
+        monster.y = canvasHeight + 100;
+        return;
+    }
     frameCount++;
 
     if (!gameState.transitioning) {
@@ -492,12 +130,14 @@ function updatePhysicsStep() {
         }
 
         // Əkiz Qüllələrin dövrü
-        twinTurrets.update();
+        if (typeof twinTurrets !== 'undefined' && twinTurrets.update) {
+            twinTurrets.update();
+        }
     }
 
     player.update(keys);
 
-    // 🔥 MƏRHƏLƏ 5: UÇAN NEON MƏTNLƏRİN YENİLƏNMƏSİ
+    // Uçan neon mətnlərin yenilənməsi
     for (let i = floatingTexts.length - 1; i >= 0; i--) {
         const ft = floatingTexts[i];
         ft.y += ft.vy;
@@ -506,61 +146,116 @@ function updatePhysicsStep() {
         if (ft.life <= 0) floatingTexts.splice(i, 1);
     }
 
-    // Sikkələrin çəkilməsi və toplanması
-    coins.forEach((c, index) => {
-        const dist = Math.hypot(player.x - c.x, player.y - c.y);
-        // Super-Maqnit zamanı bütün arenadakı sikkələr güclü cəzb olunur
-        const attractDist = (gameState.superMagnetTimer > 0) ? 950 : gameState.magnetRadius;
-        const magnetMultiplier = (gameState.superMagnetTimer > 0) ? 2.5 : 1;
+    // Sikkələrin süzülməsi və optimallaşdırılmış toplanması
+    let coinsCollectedThisFrame = 0;
+    let totalBatchGold = 0;
+    let effectsPlayedThisFrame = 0;
+    const MAX_EFFECTS_PER_FRAME = 3;
+
+    for (let index = coins.length - 1; index >= 0; index--) {
+        const c = coins[index];
+        const dx = player.x - c.x;
+        const dy = player.y - c.y;
+        const dist = Math.hypot(dx, dy);
+
+        const isSuper = (gameState.superMagnetTimer > 0);
+        const attractDist = isSuper ? 1100 : gameState.magnetRadius;
 
         if (dist < attractDist) {
-            const angle = Math.atan2(player.y - c.y, player.x - c.x);
-            const magnetForce = (4.5 * (1 - dist / attractDist) + 2.5) * magnetMultiplier;
-            c.x += Math.cos(angle) * magnetForce;
-            c.y += Math.sin(angle) * magnetForce;
+            c.isGliding = true;
+            c.glideProgress = Math.min(1, (c.glideProgress || 0) + 0.02);
+
+            // Oyunçuya doğru əsas cazibə bucağı
+            const directAngle = Math.atan2(dy, dx);
+
+            // Kənardan süzülə-süzülə, zərif qövs vuraraq axma effekti
+            const curveOffset = Math.sin((c.bobOffset || 0) + dist * 0.012) * Math.min(2.2, dist / 110);
+            const glideAngle = directAngle + curveOffset * (1 - c.glideProgress);
+
+            // Təbii süzülmə sürəti: uzaqda zərif başlayır, yaxınlaşdıqca axıcı sürətlənir
+            const baseSpeed = isSuper ? 6.0 : 4.2;
+            const distBoost = isSuper ? (2.2 * (1 - dist / attractDist)) : 0.8;
+            const targetSpeed = Math.min(isSuper ? 8.8 : 6.8, baseSpeed + distBoost);
+
+            const targetVx = Math.cos(glideAngle) * targetSpeed;
+            const targetVy = Math.sin(glideAngle) * targetSpeed;
+
+            // İnersiya və süzülmə ləngiməsi (steering easing)
+            c.vx = (c.vx || 0) * 0.86 + targetVx * 0.14;
+            c.vy = (c.vy || 0) * 0.86 + targetVy * 0.14;
+
+            c.x += c.vx;
+            c.y += c.vy;
+        } else {
+            c.isGliding = false;
+            c.vx = (c.vx || 0) * 0.92;
+            c.vy = (c.vy || 0) * 0.92;
+            c.x += c.vx;
+            c.y += c.vy;
         }
 
-        if (dist < player.radius + c.radius) {
+        // Oyunçuya çatdıqda toplanma
+        const collectionThreshold = player.radius + c.radius + 3;
+        if (dist < collectionThreshold) {
+            coinsCollectedThisFrame++;
             gameState.combo++;
             if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
 
-            // 🔥 MƏRHƏLƏ 5: DİNAMİK KOMBO ÇARPANI (1.5x, 2.0x, 3.0x)
             const comboMult = gameState.combo >= 10 ? 3.0 : (gameState.combo >= 5 ? 2.0 : (gameState.combo >= 3 ? 1.5 : 1.0));
             const gainedGold = Math.round(c.value * comboMult);
             gameState.gold += gainedGold;
+            totalBatchGold += gainedGold;
 
-            audio.playCoin();
-            if (gameState.combo >= 3 && typeof audio.playCombo === 'function') {
-                audio.playCombo(gameState.combo);
-            }
+            // Tək-tək toplayanda dəqiq say göstərilir, kütləvi yığılma zamanı isə maksimum 3-4 effekt verilir
+            if (effectsPlayedThisFrame < MAX_EFFECTS_PER_FRAME) {
+                effectsPlayedThisFrame++;
 
-            // Neon Arcade Kombo Bildirişləri
-            if (gameState.combo === 3) {
-                addFloatingText(c.x, c.y - 18, '🔥 COMBO x3! (1.5x)', '#f59e0b', 14);
-                triggerScreenPulse('#f59e0b', 0.22);
-            } else if (gameState.combo === 5) {
-                addFloatingText(c.x, c.y - 20, '⚡ PERFECT ESCAPE! (2.0x)', '#00f0ff', 16);
-                triggerScreenPulse('#00f0ff', 0.25);
-            } else if (gameState.combo === 8) {
-                addFloatingText(c.x, c.y - 22, '💥 UNSTOPPABLE! (2.0x)', '#ec4899', 17);
-                triggerScreenPulse('#ec4899', 0.28);
-            } else if (gameState.combo >= 10 && gameState.combo % 3 === 0) {
-                addFloatingText(c.x, c.y - 24, `👑 ULTRA COMBO x${gameState.combo}! (3.0x)`, '#ffd700', 19);
-                triggerScreenPulse('#ffd700', 0.32);
-            }
+                // Səs idarəsi: eyni kadrda ən çox 2 dəfə çalınır ki, audio tıxanmasın
+                if (typeof audio !== 'undefined' && effectsPlayedThisFrame <= 2) {
+                    audio.playCoin();
+                    if (gameState.combo >= 5 && effectsPlayedThisFrame === 1 && typeof audio.playCombo === 'function') {
+                        audio.playCombo(gameState.combo);
+                    }
+                }
 
-            for (let i = 0; i < 8; i++) {
-                particles.push(new Particle(c.x, c.y, '#ffd700', 3));
+                // Tək-tək toplayanda və ya ilk 3 effektdə sikkənin üstündə dəqiq say görünür
+                addFloatingText(c.x, c.y - 15, `+${gainedGold}`, '#ffd700', 13);
+
+                // Zərif hissəciklər (ekranı dondurmayan yüngül 3 hissəcik)
+                if (typeof particles !== 'undefined') {
+                    for (let i = 0; i < 3; i++) {
+                        particles.push(new Particle(c.x, c.y, '#ffd700', 2.4));
+                    }
+                }
             }
 
             coins.splice(index, 1);
-            showGoldToast(gainedGold);
-            updateUI();
-            if (typeof saveActiveRun === 'function') saveActiveRun();
         }
-    });
+    }
 
-    // ⚡ Gücləndiricilərin (Power-Ups) yenilənməsi və toplanması
+    // Əgər bu kadrda sikkələr toplanıbsa, ağır əməliyyatları (DOM və LocalStorage) dövrün sonunda yalnız 1 DƏFƏ icra edirik
+    if (coinsCollectedThisFrame > 0) {
+        if (coinsCollectedThisFrame > MAX_EFFECTS_PER_FRAME) {
+            // Kütləvi maqnit yığılması zamanı ümumi cəm zərif tək bildirişlə göstərilir
+            addFloatingText(player.x, player.y - 28, `🧲 +${totalBatchGold} 🪙`, '#facc15', 16);
+            if (typeof showGoldToast === 'function') {
+                showGoldToast(totalBatchGold);
+            }
+        } else if (coinsCollectedThisFrame === 1) {
+            // Tək sikkə toplanarkən
+            if (typeof showGoldToast === 'function') {
+                showGoldToast(totalBatchGold);
+            }
+        }
+
+        // 30 dəfə yox, cəmi 1 dəfə yadda saxla və UI-ı yenilə
+        updateUI();
+        if (typeof saveActiveRun === 'function') {
+            saveActiveRun();
+        }
+    }
+
+    // Gücləndiricilərin (Power-Ups) yenilənməsi və toplanması
     for (let i = powerUps.length - 1; i >= 0; i--) {
         const p = powerUps[i];
         if (!p.update()) {
@@ -571,7 +266,6 @@ function updatePhysicsStep() {
 
         const pDist = Math.hypot(player.x - p.x, player.y - p.y);
         if (pDist < player.radius + p.radius) {
-            // Gücləndirici götürüldü!
             if (typeof audio !== 'undefined' && audio.playPowerUp) {
                 audio.playPowerUp();
             }
@@ -605,6 +299,24 @@ function updatePhysicsStep() {
                 if (typeof showToast === 'function') {
                     showToast('🧲 SUPER MAQNİT FIRTINASI (5.0s)!', 'success');
                 }
+            } else if (p.type === 'lifeFlower') {
+                if (typeof player.addLifeFlower === 'function') {
+                    const added = player.addLifeFlower();
+                    if (added) {
+                        addFloatingText(player.x, player.y - 20, `🌸 YAŞAM ÇİÇƏYİ (+1 CAN)! [${player.lifeFlowers}/${player.maxLifeFlowers}]`, '#62e6a0', 16);
+                        if (typeof showToast === 'function') {
+                            showToast(`🌸 Yaşam Çiçəyi bərpa olundu! Cari Can: ${player.lifeFlowers}/${player.maxLifeFlowers}`, 'success');
+                        }
+                    } else {
+                        // Əgər canlar onsuz da maksimumdursa, +50 bonus Qızıl ver
+                        gameState.gold += 50;
+                        gameState.runGold = (gameState.runGold || 0) + 50;
+                        addFloatingText(player.x, player.y - 20, '🌸 MAKSİMUM CAN! +50 🪙', '#ffe3a0', 15);
+                        if (typeof showToast === 'function') {
+                            showToast('🌸 Yaşam çiçəkləri artıq tam doludur! (+50 Qızıl)', 'info');
+                        }
+                    }
+                }
             }
 
             powerUps.splice(i, 1);
@@ -626,82 +338,15 @@ function updatePhysicsStep() {
         }
     }
 
-    // Lavanın yenilənməsi (Qızıl Qızdırması zamanı 20% sürətlənmə)
+    // Lavanın yenilənməsi
     if (gameState.activeModifier === 'goldrush') {
         monster.speed = monster.baseSpeed * 1.20;
     }
     monster.update();
 
-    // Mərmilərin yenilənməsi və lavaya dəyməsi
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i];
-        b.update();
-
-        const monsterTop = monster.surface ? monster.surface(b.x, monster.y) : monster.y;
-        if (b.y >= monsterTop - 12) {
-            if (monster.flash !== undefined) monster.flash = 0.1;
-            audio.playImpact();
-            gameState.totalTrapsDestroyed++;
-
-            const scores = { wall: 1, ice: 2, shock: 3, mine: 4, plasma: 5 };
-            const baseTrapScore = scores[b.type] || 1;
-            const trapMult = gameState.combo >= 5 ? 2.0 : (gameState.combo >= 3 ? 1.5 : 1.0);
-            const trapScore = Math.round(baseTrapScore * trapMult);
-            gameState.scoreProgress += trapScore;
-            checkBorderUnlock();
-
-            const rewards = { wall: 6, ice: 10, shock: 14, mine: 22, plasma: 32 };
-            const reward = Math.round((rewards[b.type] || 6) * trapMult);
-            gameState.gold += reward;
-            showGoldToast(reward);
-
-            if (b.type === 'mine') {
-                addFloatingText(b.x, monster.y - 25, '💥 MONSTER CRUSH!', '#f43f5e', 16);
-            } else if (b.type === 'shock') {
-                addFloatingText(b.x, monster.y - 25, '⚡ SHOCK PARALYSIS!', '#c084fc', 15);
-            }
-
-            if (b.type === 'wall') {
-                audio.playBarricade();
-                monster.wallTimer = Math.max(monster.wallTimer, 180); // 3.0s fiziki barrikada divarı
-                for (let p = 0; p < 14; p++) {
-                    particles.push(new Particle(b.x + (Math.random() - 0.5) * 40, monster.y, '#f59e0b', 4));
-                }
-            } else if (b.type === 'ice') {
-                audio.playIce();
-                monster.iceTimer = Math.max(monster.iceTimer, 210); // 3.5s buz ləngitməsi
-                for (let p = 0; p < 14; p++) {
-                    particles.push(new Particle(b.x + (Math.random() - 0.5) * 40, monster.y, '#00ffff', 4));
-                }
-            } else if (b.type === 'shock') {
-                audio.playShock();
-                monster.shockTimer = Math.max(monster.shockTimer, 240); // 4.0s elektrik iflici
-                for (let p = 0; p < 18; p++) {
-                    particles.push(new Particle(b.x + (Math.random() - 0.5) * 50, monster.y, '#c084fc', 4.5));
-                }
-            } else if (b.type === 'mine') {
-                audio.playExplosion();
-                monster.y = Math.min(canvasHeight + 40, monster.y + 35);
-                monster.mineStunTimer = Math.max(monster.mineStunTimer, 80);
-                for (let p = 0; p < 25; p++) {
-                    particles.push(new Particle(b.x + (Math.random() - 0.5) * 60, monster.y, '#f43f5e', 5));
-                }
-            } else if (b.type === 'plasma') {
-                audio.playPlasma();
-                monster.plasmaTimer = Math.max(monster.plasmaTimer, 300); // 5.0s ərimə
-                for (let p = 0; p < 18; p++) {
-                    particles.push(new Particle(b.x + (Math.random() - 0.5) * 50, monster.y, '#34d399', 4.5));
-                }
-            }
-
-            bullets.splice(i, 1);
-            updateUI();
-            continue;
-        }
-
-        if (b.y > canvasHeight + 50) {
-            bullets.splice(i, 1);
-        }
+    // Mərmilərin yenilənməsi (traps.js)
+    if (typeof updateBullets === 'function') {
+        updateBullets();
     }
 
     // Hissəciklər
@@ -711,33 +356,44 @@ function updatePhysicsStep() {
         if (p.alpha <= 0) particles.splice(idx, 1);
     }
 
-    // Sərhəddən keçid yoxlanışı
+    // Sərhəddən keçid yoxlanışı (Teleport Out ➔ Qat Keçidi)
     const borderY = 55;
     if (gameState.borderOpen && player.y <= borderY + player.radius) {
-        if (!hasPassedBorder) {
+        if (!hasPassedBorder && !gameState.transitioning && !gameState.isIntroPlaying) {
             hasPassedBorder = true;
-            setTimeout(() => {
-                if (!gameState.gameOver) {
-                    nextFloor();
-                }
-            }, 250);
+            playFloorTeleportTransition();
         }
     }
 
-    // 🛡️ / 🚀 Lavanın Təhlükəsi, Kvant Sıçrayışı və Qalxan İerarxiyası
+    // 🧱 Barrikada Təhlükəsizliyi: Barrikada aktivdirsə (monster.wallTimer > 0), o keçilməz fiziki platformadır!
+    // Oyunçu barrikadaya toxunarkən lavaya dəymir və qətiyyən ölə bilməz!
+    const isWallActive = (typeof monster !== 'undefined' && monster && monster.wallTimer > 0);
+    const wallTopY = isWallActive ? ((monster.y + (monster.shockShake || 0)) - 16) : null;
+
+    if (isWallActive && wallTopY !== null) {
+        if (player.y + player.radius >= wallTopY) {
+            player.y = wallTopY - player.radius;
+            // Barrikada üzərində təhlükəsiz dayaq qığılcımları
+            if (frameCount % 5 === 0 && typeof particles !== 'undefined') {
+                particles.push(new Particle(player.x + (Math.random() - 0.5) * 20, wallTopY, '#f59e0b', 2.2));
+            }
+        }
+    }
+
+    // Lavanın təhlükəsi, Kvant Sıçrayışı və Qalxan İerarxiyası
     const playerMonsterY = monster.surface ? monster.surface(player.x, monster.y) : monster.y;
     const distToLava = playerMonsterY - (player.y + player.radius);
 
-    if (!gameState.transitioning && gameState.dashInvulnerable <= 0) {
-        // 1. İLK ÖNCƏ: Lavaya toxunmağa az qalmış (<= 2px) Kvant Sıçrayışı dərhal aktivləşir və bizi yuxarı atır!
+    if (!gameState.transitioning && gameState.dashInvulnerable <= 0 && !isWallActive) {
         if (distToLava <= 2 && player.hasHyperJump) {
             player.hyperJump();
-            // Qalxan toxunulmaz qalır və sonrakı təhlükə üçün saxlanılır!
             if (typeof saveActiveRun === 'function') saveActiveRun();
         } else if (distToLava <= 0) {
-            // 2. Əgər sıçrayış yoxdursa və lavaya toxunsaq, bu dəfə bizi QALXAN qoruyur!
             if (player.hasShield) {
                 player.breakShield();
+                if (typeof saveActiveRun === 'function') saveActiveRun();
+            } else if (player.hasLifeFlower) {
+                player.consumeLifeFlower();
                 if (typeof saveActiveRun === 'function') saveActiveRun();
             } else {
                 triggerGameOver();
@@ -756,7 +412,7 @@ function updatePhysicsStep() {
     }
 }
 
-// 2. RENDERING ADDIMI (Canvas qrafikasının çəkilməsi)
+// 2. RENDERING ADDIMI
 function renderGame() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -792,19 +448,27 @@ function renderGame() {
     ctx.textBaseline = 'middle';
     ctx.fillText(gameState.floor, canvasWidth / 2, canvasHeight / 2);
 
-    drawBorderLine();
+    if (typeof drawBorderLine === 'function') {
+        drawBorderLine();
+    }
 
-    // ⚡ GÜCLƏNDİRİCİLƏR (POWER-UPS)
+    // Gücləndiricilər
     powerUps.forEach(p => p.draw(ctx));
 
-    player.draw();
-    twinTurrets.draw();
+    if (gameState.isIntroPlaying && typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
+        monsPortal.draw(ctx);
+    } else {
+        player.draw();
+    }
+    if (typeof twinTurrets !== 'undefined' && twinTurrets.draw) {
+        twinTurrets.draw();
+    }
     coins.forEach(c => c.draw());
     monster.draw();
     bullets.forEach(b => b.draw());
     particles.forEach(p => p.draw());
 
-    // 🔥 MƏRHƏLƏ 5: UÇAN NEON MƏTNLƏR (FLOATING NEON TEXTS)
+    // Uçan Neon Mətnlər
     floatingTexts.forEach(ft => {
         ctx.save();
         ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
@@ -817,9 +481,7 @@ function renderGame() {
         ctx.restore();
     });
 
-
-
-    // ⚡ MƏRHƏLƏ 5: ANİ VƏ İTMƏSİ SÜRƏTLİ OLAN İMPULS PARILTISI (QALICI DEYİL, ANİ OLUB İTİR)
+    // Keçici İmpuls Parıltısı
     if (screenPulse.alpha > 0.01) {
         ctx.save();
         const pGrad = ctx.createRadialGradient(canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.35, canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.65);
@@ -829,10 +491,10 @@ function renderGame() {
         ctx.fillStyle = pGrad;
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         ctx.restore();
-        screenPulse.alpha *= 0.85; // Bir neçə kadrda (0.2s) sürətlə sönür və tamamilə yox olur!
+        screenPulse.alpha *= 0.85;
     }
 
-    // 🌀 MƏRHƏLƏ 4: AKTİV ANOMALİYA BANNERİ
+    // Aktiv Anomaliya Banneri
     if (gameState.activeModifier && gameState.activeModifier !== 'normal') {
         ctx.save();
         let badgeTxt = '';
@@ -874,28 +536,23 @@ function renderGame() {
     }
 }
 
-// 3. ƏSAS OYUN DÖVRÜ (FIXED TIMESTEP & THROTTLED GAME LOOP)
+// 3. ƏSAS OYUN DÖVRÜ (FIXED TIMESTEP GAME LOOP)
 function gameLoop(timestamp) {
     if (!timestamp) timestamp = performance.now();
     if (!lastFrameTime) lastFrameTime = timestamp;
 
     let elapsed = timestamp - lastFrameTime;
 
-    // 144Hz / 240Hz monitorlarda və ya tez çağırışlarda frame-throttling
-    // (tolerans: 1.5ms vaxt dalğalanmasına görə)
     if (elapsed < frameInterval - 1.5) {
         requestAnimationFrame(gameLoop);
         return;
     }
 
     lastFrameTime = timestamp - (elapsed % frameInterval);
-
-    // Kəskin gecikmə və ya tab dəyişmə zamanı sıçrayışın qarşısını almaq
     if (elapsed > 100) elapsed = 100;
 
     physicsAccumulator += elapsed;
 
-    // Canlı FPS sayğacı
     fpsFramesCount++;
     if (timestamp - fpsLastTime >= 1000) {
         currentMeasuredFPS = Math.round((fpsFramesCount * 1000) / (timestamp - fpsLastTime));
@@ -908,8 +565,6 @@ function gameLoop(timestamp) {
     }
 
     if (!gameState.paused && !gameState.gameOver) {
-        // Hər 16.666ms üçün dəqiq 1 sabit fizika addımı
-        // Beləliklə, istər 60 FPS, istərsə də 30 FPS rejimində oyunun real sürəti 100% sabit qalır!
         let steps = 0;
         while (physicsAccumulator >= FIXED_PHYSICS_DELTA && steps < 5) {
             updatePhysicsStep();
@@ -929,11 +584,14 @@ function gameLoop(timestamp) {
 function triggerGameOver() {
     gameState.gameOver = true;
     gameState.coinCountdown = getCoinSpawnInterval();
-    bullets = [];
+    if (typeof clearBullets === 'function') clearBullets();
     coins = [];
     clearActiveRun();
-    audio.playGameOver();
-    cancelRebinding();
+    if (typeof audio !== 'undefined') {
+        if (typeof audio.stopPauseTheme === 'function') audio.stopPauseTheme();
+        if (typeof audio.playGameOver === 'function') audio.playGameOver();
+    }
+    if (typeof cancelRebinding === 'function') cancelRebinding();
 
     const setTxt = (id, val) => {
         const el = document.getElementById(id);
@@ -979,19 +637,122 @@ function restartGame() {
     gameState.bulletUsage = { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 };
     hasPassedBorder = false;
 
-    document.getElementById('modal-overlay').classList.add('hidden');
-    document.getElementById('pause-overlay').classList.add('hidden');
+    const modal = document.getElementById('modal-overlay');
+    if (modal) modal.classList.add('hidden');
+    const pauseOverlay = document.getElementById('pause-overlay');
+    if (pauseOverlay) pauseOverlay.classList.add('hidden');
 
-    cancelRebinding();
-    bullets = [];
+    if (typeof cancelRebinding === 'function') cancelRebinding();
+    if (typeof clearBullets === 'function') clearBullets();
     coins = [];
+    if (typeof particles !== 'undefined') particles.length = 0;
+    if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
+    if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
     player.reset();
     monster.reset();
-    twinTurrets.reset();
+    if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
     spawnCoins();
     updateUI();
     saveActiveRun();
+
+    // 🎵 Pause və Game Over fon musiqilərini dayandır və 1-ci Qatın fon musiqisini yenidən başlat
+    if (typeof audio !== 'undefined') {
+        if (typeof audio.stopPauseTheme === 'function') {
+            audio.stopPauseTheme();
+        }
+        if (typeof audio.stopGameOverTheme === 'function') {
+            audio.stopGameOverTheme();
+        }
+        if (typeof audio.setFloor === 'function') {
+            audio.setFloor(1, true);
+        }
+    }
+
+    // 🌀 Holoqram Doğuluş Animasiyası (Summon Sequence)
+    playSummonIntro();
 }
+
+// ==================== 🌀 HOLOQRAMDAN DOĞULUŞ (SUMMON INTRO) MENECERİ ====================
+let monsPortal = null;
+
+function playSummonIntro(onFinish) {
+    // Əvvəlki qatdan qalan partlayışları, uçan mətnləri, ekran titrəmələrini və güllələri dərhal təmizləyirik
+    if (typeof particles !== 'undefined') particles.length = 0;
+    if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
+    if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
+    if (typeof clearBullets === 'function') clearBullets();
+
+    const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
+    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+
+    gameState.isIntroPlaying = true;
+    monster.y = canvasHeight + 100; // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
+
+    const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
+    if (SpawnClass) {
+        monsPortal = new SpawnClass({
+            x: player.x,
+            y: player.y + 40,       // Monsun ilk başladığı yerdən bir az aşağıda (kompakt)
+            targetY: player.y,       // Monsun duracağı nöqtə (y = 120)
+            skinId: skinId,
+            animType: animType,
+            onComplete: () => {
+                gameState.isIntroPlaying = false;
+                lastFrameTime = performance.now();
+                physicsAccumulator = 0;
+                if (typeof onFinish === 'function') onFinish();
+            }
+        });
+    } else {
+        gameState.isIntroPlaying = false;
+        if (typeof onFinish === 'function') onFinish();
+    }
+}
+
+// ==================== 🌀 QAT KEÇİDİ TELEPORTASİYASI (TELEPORT OUT ➔ TELEPORT IN) ====================
+function playFloorTeleportTransition() {
+    if (gameState.gameOver) return;
+    gameState.transitioning = true;
+    keys = {};
+
+    // Qat keçidində əvvəlki döyüşün partlayışlarını, mətnlərini və güllələrini dərhal təmizləyirik
+    if (typeof particles !== 'undefined') particles.length = 0;
+    if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
+    if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
+    if (typeof clearBullets === 'function') clearBullets();
+
+    const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
+    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
+
+    const startX = player.x;
+    const startY = player.y;
+
+    gameState.isIntroPlaying = true;
+    monster.y = canvasHeight + 100; // Canavar aşağıda gözləyir
+
+    if (SpawnClass) {
+        // Mərhələ 1: Teleport Out (Mons portala sovrulur və yox olur)
+        monsPortal = new SpawnClass({
+            x: startX,
+            y: startY + 25,
+            targetY: startY,
+            skinId: skinId,
+            animType: animType,
+            mode: 'out',
+            onComplete: () => {
+                // Mons portala çəkildi və yox oldu!
+                // Mərhələ 2: Qat artırılır və növbəti qatda Teleport In ilə çıxır
+                if (typeof nextFloor === 'function') {
+                    nextFloor();
+                }
+            }
+        });
+    } else {
+        if (typeof nextFloor === 'function') nextFloor();
+    }
+}
+window.playFloorTeleportTransition = playFloorTeleportTransition;
 
 function togglePause() {
     lastFrameTime = performance.now();
@@ -999,10 +760,23 @@ function togglePause() {
     if (gameState.gameOver) return;
     gameState.paused = !gameState.paused;
     const pauseOverlay = document.getElementById('pause-overlay');
-    if (gameState.paused) {
-        pauseOverlay.classList.remove('hidden');
-    } else {
-        pauseOverlay.classList.add('hidden');
+    if (pauseOverlay) {
+        if (gameState.paused) {
+            pauseOverlay.classList.remove('hidden');
+            if (typeof audio !== 'undefined' && typeof audio.startPauseTheme === 'function') {
+                audio.startPauseTheme();
+            }
+        } else {
+            pauseOverlay.classList.add('hidden');
+            if (typeof audio !== 'undefined') {
+                if (typeof audio.stopPauseTheme === 'function') {
+                    audio.stopPauseTheme();
+                }
+                if (typeof audio.startAmbient === 'function' && !audio.ambient.isPlaying) {
+                    audio.startAmbient();
+                }
+            }
+        }
     }
 }
 
@@ -1012,12 +786,13 @@ function pauseGame() {
     physicsAccumulator = 0;
     gameState.paused = true;
     const pauseOverlay = document.getElementById('pause-overlay');
-    if (pauseOverlay) {
-        pauseOverlay.classList.remove('hidden');
+    if (pauseOverlay) pauseOverlay.classList.remove('hidden');
+    if (typeof audio !== 'undefined' && typeof audio.startPauseTheme === 'function') {
+        audio.startPauseTheme();
     }
 }
 
-// ⏸️ BRAUZERDƏ TAB DƏYİŞDİKDƏ VƏ YA PƏNCƏRƏ AŞAĞI SALINDIQDA (BLUR) AVTOMATİK FASİLƏ
+// Brauzerdə pəncərə arxaya düşəndə fasilə
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         pauseGame();
@@ -1047,101 +822,6 @@ function toggleAudio() {
     }
 }
 
-// KLAVİATURA İDARƏETMƏSİ
-window.addEventListener('keydown', e => {
-    if (!e || typeof e.key === 'undefined') return;
-
-    // Əgər istifadəçi çatda, hədiyyə kodu və ya başqa inputda mətn yazırsa, oyunu tətikləməsin
-    const activeTag = document.activeElement ? (document.activeElement.tagName || '').toLowerCase() : '';
-    if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
-        return;
-    }
-
-    if (e.key === 'Tab' || e.code === 'Tab') {
-        e.preventDefault();
-    }
-
-    if (gameState.transitioning) return;
-    audio.init();
-    const k = (e.key || '').toLowerCase();
-
-    if (recordingTrapType) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        let assignedKey = k;
-        if (e.code === 'Space') assignedKey = ' ';
-        if (e.code === 'Tab') assignedKey = 'tab';
-
-        keybinds[recordingTrapType] = assignedKey;
-        saveKeybinds();
-        renderKeybindBadges();
-        audio.playKeySet();
-        showToast(`${getTrapName(recordingTrapType)} qısayolu [${formatKeyDisplay(assignedKey)}] olaraq təyin edildi!`, 'success');
-
-        cancelRebinding();
-        return;
-    }
-
-    if (k) keys[k] = true;
-
-    if (e.code === 'Space' || e.key === ' ') {
-        e.preventDefault();
-        player.dash();
-        return;
-    }
-
-    // Tələ atış qısayolları
-    let matchedType = null;
-    for (const [type, boundKey] of Object.entries(keybinds)) {
-        if (boundKey === 'tab' && (e.key === 'Tab' || e.code === 'Tab')) {
-            matchedType = type;
-            break;
-        } else if (boundKey === ' ' && (e.code === 'Space' || e.key === ' ')) {
-            matchedType = type;
-            break;
-        } else if (boundKey && typeof boundKey === 'string' && boundKey.toLowerCase() === k) {
-            matchedType = type;
-            break;
-        }
-    }
-
-    if (matchedType) {
-        e.preventDefault();
-        fireBullet(matchedType);
-    }
-});
-
-window.addEventListener('keyup', e => {
-    if (!e || typeof e.key === 'undefined') return;
-    if (e.key === 'Tab' || e.code === 'Tab') {
-        e.preventDefault();
-    }
-    const k = (e.key || '').toLowerCase();
-    if (k) keys[k] = false;
-});
-
-canvas.addEventListener('click', () => {
-    if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
-    audio.init();
-    canvas.focus();
-});
-
-function handleTouchStart(dir) {
-    if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
-    audio.init();
-    keys['touch_' + dir] = true;
-}
-function handleTouchEnd(dir) {
-    keys['touch_' + dir] = false;
-}
-
-function triggerPlayerDash() {
-    if (gameState.transitioning || gameState.gameOver || gameState.paused) return;
-    audio.init();
-    player.dash();
-}
-
 window.addEventListener('beforeunload', () => {
     if (!gameState.gameOver) {
         saveActiveRun();
@@ -1150,22 +830,23 @@ window.addEventListener('beforeunload', () => {
 
 // İLKİN İŞƏSALMA
 loadPermanentData();
-loadKeybinds();
+if (typeof loadKeybinds === 'function') loadKeybinds();
 resizeCanvas();
 adjustViewportFit();
 
 player.reset();
 monster.reset();
-twinTurrets.reset();
+if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
 applyFloorModifier();
 
 const hasLoadedRun = loadActiveRun();
 
-document.getElementById('stat-best-floor').innerText = `🏆 REKORD: ${gameState.bestFloor}`;
+const bestEl = document.getElementById('stat-best-floor');
+if (bestEl) bestEl.innerText = `🏆 REKORD: ${gameState.bestFloor}`;
 gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
-renderKeybindBadges();
-updatePermUpgradesUI();
-updateTurretsUI();
+if (typeof renderKeybindBadges === 'function') renderKeybindBadges();
+if (typeof updatePermUpgradesUI === 'function') updatePermUpgradesUI();
+if (typeof updateTurretsUI === 'function') updateTurretsUI();
 updateUI();
 
 if (gameState.activeModifier === 'darkness') {
@@ -1173,20 +854,31 @@ if (gameState.activeModifier === 'darkness') {
 }
 
 if (hasLoadedRun) {
-    showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Vəziyyət tam saxlanıldı)`, 'success');
+    if (typeof showToast === 'function') {
+        showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Vəziyyət tam saxlanıldı)`, 'success');
+    }
 } else {
-    // Yalnız YENİ OYUNDA sikkələr və gücləndiricilər sıfırdan yaradılır
     spawnCoins();
     spawnPowerUps();
     if (typeof getShieldStartChance === 'function' && Math.random() < getShieldStartChance()) {
         player.hasShield = true;
-        showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
+        if (typeof showToast === 'function') {
+            showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
+        }
     }
 }
 
-// Oyun birbaşa başlayır
+const shouldPlayIntro = (!hasLoadedRun || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('floor_escape_play_intro') === 'true'));
+try {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('floor_escape_play_intro');
+} catch (e) {}
+
+if (shouldPlayIntro) {
+    playSummonIntro();
+}
+
 gameState.paused = false;
-if (window.audio) {
+if (window.audio && typeof audio.setFloor === 'function') {
     audio.init();
     audio.setFloor(gameState.floor, true);
 }
@@ -1198,9 +890,11 @@ adjustViewportFit();
 
 requestAnimationFrame(gameLoop);
 
-
-// Pəncərə aktivliyi dəyişəndə vaxt sıçrayışının qarşısını almaq
-document.addEventListener('visibilitychange', () => {
-    lastFrameTime = performance.now();
-    physicsAccumulator = 0;
-});
+window.triggerGameOver = triggerGameOver;
+window.restartGame = restartGame;
+window.togglePause = togglePause;
+window.pauseGame = pauseGame;
+window.toggleAudio = toggleAudio;
+window.setTargetFPS = setTargetFPS;
+window.toggleFpsMode = toggleFpsMode;
+window.playSummonIntro = playSummonIntro;

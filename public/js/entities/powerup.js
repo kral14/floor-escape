@@ -11,6 +11,16 @@ class PowerUp {
         const types = ['shield', 'chrono', 'jump', 'magnet'];
         const extraShield = (typeof permUpgrades !== 'undefined' && permUpgrades.shieldLvl) ? permUpgrades.shieldLvl * 0.05 : 0;
         const weights = [0.30 + extraShield, 0.25, 0.25, 0.20]; // Qalxan çıxma şansı artır
+
+        // 🌸 Yaşam Çiçəyi animasiyası aktivdirsə, arenada bərpaedici çiçək peyda ola bilər
+        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed') ||
+                               (typeof player !== 'undefined' && player && player.maxLifeFlowers > 0);
+        if (isSeedEquipped) {
+            types.push('lifeFlower');
+            const missingLife = (typeof player !== 'undefined' && player) ? ((player.lifeFlowers || 0) < (player.maxLifeFlowers || 1)) : true;
+            weights.push(missingLife ? 0.35 : 0.15);
+        }
+
         const totalWeight = weights.reduce((a, b) => a + b, 0);
         
         if (type && types.includes(type)) {
@@ -63,6 +73,13 @@ class PowerUp {
                 bg: 'rgba(52, 211, 153, 0.2)',
                 icon: '🧲',
                 name: 'Super Maqnit'
+            },
+            lifeFlower: {
+                color: '#62e6a0',
+                glow: '#ffe3a0',
+                bg: 'rgba(98, 230, 160, 0.25)',
+                icon: '🌸',
+                name: 'Yaşam Çiçəyi'
             }
         };
 

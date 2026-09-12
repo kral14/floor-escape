@@ -11,25 +11,38 @@
         return global.FLOOR_ESCAPE_ICONS_REGISTRY || {};
     }
 
-    // ID və ya ad ilə ikonu tapmaq
+    // ID və ya ad ilə ikonu tapmaq (Ağıllı Axtarış: camelCase, snake_case və defisləri dəstəkləyir)
     function findIconDef(idOrKey) {
         if (!idOrKey) return null;
         const registry = getRegistry();
 
-        // Rəqəmli ID ilə axtarış (məs: 101, 102, 103)
+        // 1. Rəqəmli ID ilə axtarış (məs: 101, 102, 103, "102")
         if (typeof idOrKey === 'number' || (!isNaN(Number(idOrKey)) && String(idOrKey).trim() !== '')) {
             const num = Number(idOrKey);
             if (registry[num]) return registry[num];
         }
 
-        // Simvolik açar və ya alias ilə axtarış (məs: 'ruby', 'ruby_diamond', 'qirmizi_almaz')
-        const strKey = String(idOrKey).toLowerCase().trim();
+        const rawStr = String(idOrKey).trim();
+        const lowerStr = rawStr.toLowerCase();
+        // Alt xətt, defis və boşluqları silərək tam təmiz forma (məs: coinVal -> coinval, coin_val -> coinval)
+        const cleanStr = lowerStr.replace(/[\-_\s]/g, '');
+
+        // 2. Birbaşa açar və ya alias müqayisəsi
         for (const id in registry) {
             const def = registry[id];
             if (!def) continue;
-            if (def.key && def.key.toLowerCase() === strKey) return def;
-            if (Array.isArray(def.alias) && def.alias.some(a => a.toLowerCase() === strKey)) {
-                return def;
+
+            const defKey = (def.key || '').toLowerCase();
+            const cleanDefKey = defKey.replace(/[\-_\s]/g, '');
+
+            if (defKey === lowerStr || cleanDefKey === cleanStr) return def;
+
+            if (Array.isArray(def.alias)) {
+                for (const a of def.alias) {
+                    const aLower = String(a).toLowerCase();
+                    const aClean = aLower.replace(/[\-_\s]/g, '');
+                    if (aLower === lowerStr || aClean === cleanStr) return def;
+                }
             }
         }
 

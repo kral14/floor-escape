@@ -56,6 +56,9 @@ class UnifiedAudioController {
         this.beats.updateMonsterBeat(monsterY, canvasHeight, isPaused, isGameOver, floor);
 
         if (this.ambient) {
+            // Əgər Game Over və ya Pause fon musiqisi rejimidirsə, normal qat musiqi rejimi kəsilmir
+            if (this.ambient.isGameOverMode || this.ambient.isPauseMode) return;
+
             if (this.ambient.currentFloor !== floor) {
                 this.ambient.setFloor(floor, true);
             }
@@ -78,6 +81,34 @@ class UnifiedAudioController {
     startAmbient() { this.ambient.start(); }
     stopAmbient() { this.ambient.stop(); }
 
+    // 💀 GAME OVER XÜSUSİ ARXA FON SOUNDTRACK METODLARI
+    startGameOverTheme() {
+        if (this.beats && typeof this.beats.stop === 'function') this.beats.stop();
+        if (this.ambient && typeof this.ambient.startGameOverTheme === 'function') {
+            this.ambient.startGameOverTheme();
+        }
+    }
+
+    stopGameOverTheme() {
+        if (this.ambient && typeof this.ambient.stopGameOverTheme === 'function') {
+            this.ambient.stopGameOverTheme();
+        }
+    }
+
+    // ⏸️ OYUN DAYANDIQDA (PAUSE) XÜSUSİ ARXA FON SOUNDTRACK METODLARI
+    startPauseTheme() {
+        if (this.beats && typeof this.beats.stop === 'function') this.beats.stop();
+        if (this.ambient && typeof this.ambient.startPauseTheme === 'function') {
+            this.ambient.startPauseTheme();
+        }
+    }
+
+    stopPauseTheme() {
+        if (this.ambient && typeof this.ambient.stopPauseTheme === 'function') {
+            this.ambient.stopPauseTheme();
+        }
+    }
+
     // 🎮 SFX METODLARI
     playCoin() { this.sfx.playCoin(); }
     playShoot() { this.sfx.playShoot(); }
@@ -85,7 +116,13 @@ class UnifiedAudioController {
     playDash() { this.sfx.playDash(); }
     playImpact() { this.sfx.playImpact(); }
     playDoorOpen() { this.sfx.playDoorOpen(); }
-    playGameOver() { this.sfx.playGameOver(); }
+    playGameOver() {
+        this.sfx.playGameOver();
+        if (this.beats && typeof this.beats.stop === 'function') this.beats.stop();
+        if (this.ambient && typeof this.ambient.startGameOverTheme === 'function') {
+            this.ambient.startGameOverTheme();
+        }
+    }
     playKeySet() { this.sfx.playKeySet(); }
     playDiamond() { this.sfx.playDiamond(); }
     playChest() { this.sfx.playChest(); }

@@ -21,7 +21,8 @@ class TwinTurrets {
     }
 
     reset() {
-        this.cooldown = permUpgrades.turretInterval || 5;
+        const interval = typeof getTurretInterval === 'function' ? getTurretInterval() : (permUpgrades.turretInterval || 7.0);
+        this.cooldown = interval;
         this.recoilLeft = 0;
         this.recoilRight = 0;
     }
@@ -30,7 +31,7 @@ class TwinTurrets {
         if (!permUpgrades.hasTwinTurrets || !permUpgrades.turretEnabled) return;
         if (gameState.gameOver || gameState.paused || gameState.transitioning) return;
 
-        this.glowPhase += 0.05;
+        this.glowPhase += permUpgrades.turretAwakened ? 0.09 : 0.05;
         if (this.recoilLeft > 0) this.recoilLeft *= 0.85;
         if (this.recoilRight > 0) this.recoilRight *= 0.85;
 
@@ -39,7 +40,8 @@ class TwinTurrets {
 
         if (this.cooldown <= 0) {
             this.fire();
-            this.cooldown = Math.max(2, parseFloat(permUpgrades.turretInterval) || 5);
+            const interval = typeof getTurretInterval === 'function' ? getTurretInterval() : 7.0;
+            this.cooldown = interval;
         }
     }
 
@@ -154,19 +156,32 @@ class TwinTurrets {
 
         // Baza korpusu (divara bərkidilmiş lövhə)
         ctx.fillStyle = '#0f172a';
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = permUpgrades.turretAwakened ? '#f43f5e' : '#334155';
+        ctx.lineWidth = permUpgrades.turretAwakened ? 2.5 : 2;
         ctx.beginPath();
         ctx.roundRect(dir === 1 ? -18 : -6, -24, 24, 48, 6);
         ctx.fill();
         ctx.stroke();
 
+        // Oyanış (Awakened) Xüsusi Enerji Sahəsi
+        if (permUpgrades.turretAwakened) {
+            ctx.save();
+            ctx.shadowBlur = 18 + Math.sin(this.glowPhase * 2) * 6;
+            ctx.shadowColor = '#ff0055';
+            ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(dir === 1 ? -6 : 6, 0, 20 + Math.sin(this.glowPhase * 3) * 3, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         // Enerji nüvəsi (seçilmiş mərmi rəngində parıltı)
-        ctx.shadowBlur = 12 + Math.sin(this.glowPhase) * 4;
-        ctx.shadowColor = activeColor;
-        ctx.fillStyle = activeColor;
+        ctx.shadowBlur = (permUpgrades.turretAwakened ? 20 : 12) + Math.sin(this.glowPhase) * 4;
+        ctx.shadowColor = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
+        ctx.fillStyle = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
         ctx.beginPath();
-        ctx.arc(dir === 1 ? -2 : 2, 0, 5, 0, Math.PI * 2);
+        ctx.arc(dir === 1 ? -2 : 2, 0, permUpgrades.turretAwakened ? 6 : 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
@@ -179,25 +194,26 @@ class TwinTurrets {
 
         // Lülə geri təpmə (recoil)
         ctx.fillStyle = '#1e293b';
-        ctx.strokeStyle = activeColor;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
+        ctx.lineWidth = permUpgrades.turretAwakened ? 2 : 1.5;
         ctx.beginPath();
         ctx.roundRect(-4 - recoil, -3.5, 18, 7, 2);
         ctx.fill();
         ctx.stroke();
 
         // Lülə ucluğu
-        ctx.fillStyle = activeColor;
+        ctx.fillStyle = permUpgrades.turretAwakened ? '#ffe4e6' : activeColor;
         ctx.fillRect(12 - recoil, -4.5, 3, 9);
         ctx.restore();
 
         // Taymer göstəricisi (hər iki qüllənin üstündə kiçik rəqəm)
         if (!gameState.gameOver) {
             ctx.font = 'bold 9px Orbitron';
-            ctx.fillStyle = activeColor;
+            ctx.fillStyle = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            ctx.fillText(`${Math.max(0, this.cooldown).toFixed(1)}s`, dir === 1 ? 12 : -12, -26);
+            const badge = permUpgrades.turretAwakened ? '🔥 ' : '';
+            ctx.fillText(`${badge}${Math.max(0, this.cooldown).toFixed(1)}s`, dir === 1 ? 12 : -12, -26);
         }
 
         ctx.restore();

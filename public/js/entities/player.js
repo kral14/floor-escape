@@ -10,12 +10,26 @@ class Player {
         this.trailColor = 'rgba(0, 255, 204,';
         this.glowColor = '#00ffcc';
         this.trail = [];
-        this.facing = Math.PI / 2;
+        this.facing = -Math.PI / 2;
+        this.visualAngle = 0; // İlk doğanda şaquli düz durur
         this.canPassBorder = false;
         this.hasShield = false;
         this.shieldAngle = 0;
         this.hasHyperJump = false; // 🚀 Ehtiyat Kvant Sıçrayışı (Lava yaxınlaşdıqda avtomatik atır)
-        this.stunTimer = 0;
+        this.flapPhase = 0;
+        this.draculaDust = [];
+        this.dustBudget = 0;
+        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
+        const maxCapacity = (typeof getMaxLifeFlowers === 'function') ? getMaxLifeFlowers() : ((permUpgrades && permUpgrades.seedLifeLvl) || 1);
+        this.maxLifeFlowers = Math.max(1, Math.min(3, maxCapacity));
+        this.lifeFlowers = isSeedEquipped ? this.maxLifeFlowers : 0;
+        this.hasLifeFlower = this.lifeFlowers > 0;
+        this.lifeFlowerState = this.hasLifeFlower ? 'active' : 'none';
+        this.lifeFlowerWitherAge = 0;
+        this.lifeFlowerTrail = [];
+        this.lifeFlowerBudget = 0;
+        this.vx = 0;
+        this.vy = 0;
         this.applySkin();
     }
 
@@ -33,15 +47,44 @@ class Player {
         }
     }
 
-    reset() {
+    reset(isNewRun = true) {
         this.x = canvasWidth / 2;
         this.y = 120;
         this.speed = getBaseSpeed();
         this.trail = [];
-        this.facing = Math.PI / 2;
+        this.facing = -Math.PI / 2;
+        this.visualAngle = 0; // İlk doğanda şaquli düz durur
         this.canPassBorder = false;
         this.hasHyperJump = false;
-        this.stunTimer = 0;
+        this.flapPhase = 0;
+        this.draculaDust = [];
+        this.dustBudget = 0;
+
+        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
+        const maxCapacity = (typeof getMaxLifeFlowers === 'function') ? getMaxLifeFlowers() : ((permUpgrades && permUpgrades.seedLifeLvl) || 1);
+        this.maxLifeFlowers = Math.max(1, Math.min(3, maxCapacity));
+
+        if (isNewRun) {
+            // Yalnız yeni oyunda tam bərpa olunur
+            this.lifeFlowers = isSeedEquipped ? this.maxLifeFlowers : 0;
+            this.hasLifeFlower = this.lifeFlowers > 0;
+            this.lifeFlowerState = this.hasLifeFlower ? 'active' : 'none';
+            this.lifeFlowerWitherAge = 0;
+            this.lifeFlowerTrail = [];
+            this.lifeFlowerBudget = 0;
+            if (typeof SeedSpawnEffect !== 'undefined' && typeof SeedSpawnEffect.resetLifeFlower === 'function') {
+                SeedSpawnEffect.resetLifeFlower();
+            }
+        } else {
+            // Qat keçidində mövcud can statusu QALICIDIR (qorunur):
+            // Əgər can bitibsə və ya solub yox olubsa, qat keçəndə geri qayıtmır!
+            this.hasLifeFlower = ((this.lifeFlowers || 0) > 0);
+            if (!this.hasLifeFlower && this.lifeFlowerState !== 'withering') {
+                this.lifeFlowerState = 'removed';
+            }
+        }
+        this.vx = 0;
+        this.vy = 0;
         this.applySkin();
     }
 
@@ -87,6 +130,107 @@ class Player {
             this.facing = Math.atan2(dy, dx);
         }
 
+        // 🦇 MONS BAŞININ MEYLLƏNMƏSİ VƏ DÜZ DAYANMASI (İstifadəçinin verdiyi koda tam uyğun):
+        // Baş daha hərəkət istiqamətinə (360 dərəcə) əyilmir!
+        // Yalnız üfüqi hərəkət zamanı bir az bucaqla (~16 dərəcə) çevrilir.
+        // Hərəkət dayandıqda isə dərhal və hamar şəkildə şaquli düz dayanır (0 bucaq).
+        const maxBank = 0.28; // ~16 dərəcə zərif meyllənmə
+        const targetBank = (currentSpeed > 0 && dx !== 0) ? (dx / currentSpeed) * maxBank : 0;
+        this.visualAngle = (typeof this.visualAngle === 'number') ? this.visualAngle : 0;
+        this.visualAngle += (targetBank - this.visualAngle) * 0.20;
+        if (Math.abs(this.visualAngle) < 0.003) {
+            this.visualAngle = 0;
+        }
+
+        this.vx = dx;
+        this.vy = dy;
+
+        // 🦇 HƏRƏKƏTƏ UYĞUN QANAD ÇIRPINMASI (İstifadəçinin verdiyi kod alqoritmi ilə)
+        const speedLen = Math.hypot(dx, dy);
+        const speedRatio = Math.min(1, speedLen / (currentSpeed || 1));
+        const dt = 1 / 60;
+        this.flapPhase = (this.flapPhase || 0) + dt * (2.5 + speedRatio * 7.0);
+
+        // 🦇 DRAKULA QANADLARINDAN TÖKÜLƏN QIZILI, BƏNÖVŞƏYİ VƏ FİRUZƏYİ TOZ ZƏRRƏCİKLƏRİ:
+        if (this.draculaDust && this.draculaDust.length > 0) {
+            for (const p of this.draculaDust) {
+                p.life -= dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 14 * dt;
+                p.angle += p.spin * dt;
+            }
+            this.draculaDust = this.draculaDust.filter(p => p.life > 0);
+        }
+
+        if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'dracula' && typeof getIngameWingDustPoint === 'function') {
+            const beat = 0.5 + 0.5 * Math.cos(this.flapPhase);
+            this.dustBudget = (this.dustBudget || 0) + dt * (16 + speedRatio * 32 + beat * 22);
+            while (this.dustBudget >= 1) {
+                this.dustBudget--;
+                for (const side of [-1, 1]) {
+                    const pos = getIngameWingDustPoint(side, this);
+                    const life = 0.7 + Math.random() * 0.6;
+                    this.draculaDust.push({
+                        x: pos.x,
+                        y: pos.y,
+                        vx: side * (3 + Math.random() * 6) + this.vx * 0.25,
+                        vy: 12 + Math.random() * 16 + this.vy * 0.15,
+                        life,
+                        maxLife: life,
+                        size: 0.7 + Math.random() * 1.5,
+                        angle: Math.random() * 6.28,
+                        spin: (Math.random() - 0.5) * 2,
+                        star: Math.random() < 0.22,
+                        color: ['#ffe5b4', '#d8bdff', '#c3f3ef'][Math.floor(Math.random() * 3)]
+                    });
+                }
+            }
+            if (this.draculaDust.length > 150) this.draculaDust.splice(0, this.draculaDust.length - 150);
+        }
+
+        // 🌸 Yaşam Çiçəyinin Solma və Ləçək İzi İdarəetməsi
+        if (this.lifeFlowerState === 'withering') {
+            this.lifeFlowerWitherAge += dt;
+            if (this.lifeFlowerWitherAge >= 2.8) {
+                this.lifeFlowerWitherAge = 2.8;
+                this.lifeFlowerState = 'removed';
+            }
+        }
+
+        if (this.lifeFlowerTrail && this.lifeFlowerTrail.length > 0) {
+            for (const p of this.lifeFlowerTrail) {
+                p.life -= dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.angle += p.spin * dt;
+            }
+            this.lifeFlowerTrail = this.lifeFlowerTrail.filter(p => p.life > 0);
+        }
+
+        if (this.hasLifeFlower && (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed')) {
+            const isMoving = speedRatio > 0.08;
+            this.lifeFlowerBudget = (this.lifeFlowerBudget || 0) + dt * (isMoving ? 28 : 10);
+            while (this.lifeFlowerBudget >= 1) {
+                this.lifeFlowerBudget--;
+                const a = Math.random() * Math.PI * 2;
+                const rDist = (this.radius || 16) * (0.8 + Math.random() * 0.8);
+                const life = 0.7 + Math.random() * 0.5;
+                this.lifeFlowerTrail.push({
+                    x: this.x + Math.cos(a) * rDist,
+                    y: this.y + Math.sin(a) * rDist,
+                    vx: -this.vx * 0.15 + (Math.random() - 0.5) * 14,
+                    vy: 12 + Math.random() * 14,
+                    life,
+                    max: life,
+                    angle: Math.random() * 6.28,
+                    spin: (Math.random() - 0.5) * 3,
+                    petal: Math.random() < 0.65
+                });
+            }
+            if (this.lifeFlowerTrail.length > 100) this.lifeFlowerTrail.splice(0, this.lifeFlowerTrail.length - 100);
+        }
+
         this.x += dx;
         this.y += dy;
 
@@ -98,6 +242,15 @@ class Player {
             this.canPassBorder = false;
             this.y = Math.max(borderY + this.radius + 5, Math.min(canvasHeight - this.radius - 10, this.y));
         }
+
+        // 🧱 Fiziki Barrikada Dayağı: Barrikada aktivdirsə, oyunçu onun üstündə təhlükəsiz dayanır
+        if (typeof monster !== 'undefined' && monster && monster.wallTimer > 0) {
+            const wallTopY = (monster.y + (monster.shockShake || 0)) - 16;
+            if (this.y + this.radius > wallTopY) {
+                this.y = wallTopY - this.radius;
+            }
+        }
+
         this.x = Math.max(this.radius + 10, Math.min(canvasWidth - this.radius - 10, this.x));
 
         this.trail.push({ x: this.x, y: this.y, alpha: 0.6 });
@@ -130,6 +283,78 @@ class Player {
         if (typeof showToast === 'function') {
             showToast('🛡️ ENERJİ QALXANI SİZİ LAVADAN XİLAS ETDİ!', 'success');
         }
+    }
+
+    // 🌸 YAŞAM ÇİÇƏYİ BONUS CANININ SƏRF EDİLMƏSİ VƏ XİLAS OLUNMA
+    consumeLifeFlower() {
+        if (!this.hasLifeFlower || (this.lifeFlowers || 0) <= 0) return false;
+
+        this.lifeFlowers = Math.max(0, (this.lifeFlowers || 0) - 1);
+        this.hasLifeFlower = (this.lifeFlowers > 0);
+
+        if (this.lifeFlowers === 0) {
+            this.lifeFlowerState = 'withering';
+            this.lifeFlowerWitherAge = 0;
+            if (typeof SeedSpawnEffect !== 'undefined' && typeof SeedSpawnEffect.consumeLifeFlower === 'function') {
+                SeedSpawnEffect.consumeLifeFlower();
+            }
+            if (typeof showToast === 'function') {
+                showToast('🥀 BÜTÜN YAŞAM ÇİÇƏKLƏRİ SOLDU! (Qalan Can: 0)', 'error');
+            }
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('life-flower-removed', { detail: { source: 'life-flower' } }));
+            }
+        } else {
+            this.lifeFlowerState = 'active';
+            if (typeof showToast === 'function') {
+                showToast(`🌸 YAŞAM ÇİÇƏYİ SİZİ XİLAS ETDİ! (Qalan Can: ${this.lifeFlowers}/${this.maxLifeFlowers})`, 'warning');
+            }
+        }
+
+        let invulnDuration = 90; // 1.5 saniyəlik toxunulmazlıq
+        if (typeof gameState !== 'undefined') {
+            gameState.dashInvulnerable = invulnDuration;
+        }
+        this.y = Math.max(70, this.y - 170); // Təhlükəsiz zonaya fırladır
+
+        if (typeof audio !== 'undefined' && audio.playShieldBreak) {
+            audio.playShieldBreak();
+        }
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 35; i++) {
+                particles.push(new Particle(this.x, this.y, ['#62e6a0', '#d8ffba', '#ffe3a0', '#ffffff'][Math.floor(Math.random() * 4)], 4.5));
+            }
+        }
+        return true;
+    }
+
+    // 🌸 İTİRİLMİŞ YAŞAM ÇİÇƏYİ CANININ BƏRPA EDİLMƏSİ (ARENADAN YIĞILDIQDA)
+    addLifeFlower() {
+        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
+        if (!isSeedEquipped) return false;
+
+        const maxCap = this.maxLifeFlowers || 1;
+        if ((this.lifeFlowers || 0) >= maxCap) {
+            return false; // Artıq maksimumdur
+        }
+
+        this.lifeFlowers = Math.min(maxCap, (this.lifeFlowers || 0) + 1);
+        this.hasLifeFlower = true;
+        this.lifeFlowerState = 'active';
+        this.lifeFlowerWitherAge = 0;
+
+        if (typeof SeedSpawnEffect !== 'undefined') {
+            SeedSpawnEffect.flowerState = 'active';
+            SeedSpawnEffect.witherAge = 0;
+            SeedSpawnEffect.healthGranted = true;
+        }
+
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 25; i++) {
+                particles.push(new Particle(this.x, this.y, ['#62e6a0', '#ffe3a0', '#ffffff'][Math.floor(Math.random() * 3)], 3.8));
+            }
+        }
+        return true;
     }
 
     // 🚀 KVANT SIÇRAYIŞI (REAKTİV İMPULS)
@@ -204,16 +429,56 @@ class Player {
         ctx.fill();
         ctx.restore();
 
+        // 🕒 Ümumi Animasiya Zamanı
+        const animTime = performance.now() * 0.003;
+
+        // 🦇 Drakula qanad tozlarının oyunda canlı axışı
+        if (typeof drawIngameWingDust === 'function' && this.draculaDust && this.draculaDust.length > 0) {
+            drawIngameWingDust(ctx, this.draculaDust);
+        }
+
+        // 🌸 Yaşam Çiçəyinin Ləçək Və Köz İzi
+        if (this.lifeFlowerTrail && this.lifeFlowerTrail.length > 0) {
+            for (const p of this.lifeFlowerTrail) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.globalAlpha = Math.pow(p.life / p.max, 1.3);
+                ctx.fillStyle = p.petal ? '#c4ecab' : '#b6ffce';
+                ctx.shadowColor = '#93e9a5';
+                ctx.shadowBlur = p.petal ? 0 : 6;
+                if (p.petal) {
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 3.8, 1.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-2.5, -0.6, 5, 1.2);
+                    ctx.fillRect(-0.6, -2.5, 1.2, 5);
+                }
+                ctx.restore();
+            }
+        }
+
+        // 🌸 Yaşam Çiçəkləri və Sarmaşıq Beşiyi (Arxa Plan)
+        if (typeof drawIngameLifeFlowers === 'function') {
+            drawIngameLifeFlowers(ctx, this, animTime, false);
+        }
+
         // Xüsusi Kiber Dəri Modeli (Ninja Vizor, Elektrik Spikelər, Mecha Lövhələr, Alov Buynuzları, Kiber Tac)
         const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-        const animTime = performance.now() * 0.003;
+        const drawAngle = (typeof this.visualAngle === 'number') ? this.visualAngle : 0;
         if (typeof drawSkinModel === 'function') {
-            drawSkinModel(ctx, this.x, this.y, this.radius, skinId, this.facing, animTime, gameState.dashInvulnerable > 0);
+            drawSkinModel(ctx, this.x, this.y, this.radius, skinId, drawAngle, animTime, gameState.dashInvulnerable > 0, this);
         } else {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = gameState.dashInvulnerable > 0 ? '#ffffff' : this.color;
             ctx.fill();
+        }
+
+        // 🌸 Yaşam Çiçəkləri (Ön Plan)
+        if (typeof drawIngameLifeFlowers === 'function') {
+            drawIngameLifeFlowers(ctx, this, animTime, true);
         }
 
         // 🚀 AKTİV KVANT SIÇRAYIŞI HAZIRLIĞI (EMERGENCY QUANTUM HYPER-JUMP WINGS & THRUSTERS)
