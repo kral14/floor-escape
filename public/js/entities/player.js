@@ -28,6 +28,9 @@ class Player {
         this.lifeFlowerWitherAge = 0;
         this.lifeFlowerTrail = [];
         this.lifeFlowerBudget = 0;
+        this.hasSingularity = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'singularity');
+        this.singularityAngles = { r1: 0, r2: 0, r3: 0 };
+        this.singularityRot = { rx: 0, ry: 0, rz: 0 };
         this.vx = 0;
         this.vy = 0;
         this.applySkin();
@@ -49,7 +52,8 @@ class Player {
 
     reset(isNewRun = true) {
         this.x = canvasWidth / 2;
-        this.y = 120;
+        const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
+        this.y = worldH - 180;
         this.speed = getBaseSpeed();
         this.trail = [];
         this.facing = -Math.PI / 2;
@@ -59,6 +63,10 @@ class Player {
         this.flapPhase = 0;
         this.draculaDust = [];
         this.dustBudget = 0;
+        this.singularityAngles = { r1: 0, r2: 0, r3: 0 };
+        this.singularityRot = { rx: 0, ry: 0, rz: 0 };
+        this.starDropCooldown = 1.0;
+        this._eKeyLocked = false;
 
         const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
         const maxCapacity = (typeof getMaxLifeFlowers === 'function') ? getMaxLifeFlowers() : ((permUpgrades && permUpgrades.seedLifeLvl) || 1);
@@ -231,16 +239,76 @@ class Player {
             if (this.lifeFlowerTrail.length > 100) this.lifeFlowerTrail.splice(0, this.lifeFlowerTrail.length - 100);
         }
 
+        // 🌀 Kvant Laboratoriyası / 4 Mövzu (Kiber Sinqulyarlıq, Plazma Supernova, Kvant Sinapsı, Dərin Abiss)
+        const quantumThemes = ['singularity', 'supernova', 'synapse', 'abyssal'];
+        const equippedQuantumAnim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+        if (quantumThemes.includes(equippedQuantumAnim)) {
+            this.hasSingularity = true;
+            this.singularityTheme = equippedQuantumAnim;
+
+            const spinRate = 0.5 + speedRatio * 2.5;
+            this.singularityAngles.r1 += 1.8 * spinRate * dt;
+            this.singularityAngles.r2 -= 1.2 * spinRate * dt;
+            this.singularityAngles.r3 += 0.8 * spinRate * dt;
+
+            const targetRy = Math.max(-0.55, Math.min(0.55, -(this.vx / 240) * 0.55));
+            const targetRx = Math.max(-0.45, Math.min(0.45, (this.vy / 240) * 0.45));
+            this.singularityRot.rx += (targetRx - this.singularityRot.rx) * 0.12;
+            this.singularityRot.ry += (targetRy - this.singularityRot.ry) * 0.12;
+
+            // ⚡ Düşən Ulduzlar: Orbitdən müntəzəm aşağı atılır və lavaya zərər vurur
+            this.starDropCooldown = (this.starDropCooldown || 1.2) - dt;
+            if (this.starDropCooldown <= 0) {
+                if (typeof SingularitySpawnEffect !== 'undefined') {
+                    SingularitySpawnEffect.launchInGameStar(this);
+                }
+                this.starDropCooldown = 1.4 + Math.random() * 0.8;
+            }
+
+            // Klaviaturada [E] basdıqda əl ilə dərhal ulduz qopartma
+            if (keys && keys['e'] && !this._eKeyLocked) {
+                this._eKeyLocked = true;
+                if (typeof SingularitySpawnEffect !== 'undefined') {
+                    SingularitySpawnEffect.launchInGameStar(this);
+                }
+            } else if (keys && !keys['e']) {
+                this._eKeyLocked = false;
+            }
+
+            // Düşən ulduzların hərəkəti və lavaya/canavara zərbə vurması
+            if (typeof SingularitySpawnEffect !== 'undefined') {
+                SingularitySpawnEffect.updateInGame(dt, this);
+            }
+
+            // Hərəkət zamanı tematik parıltı hissəcikləri
+            if (speedRatio > 0.15 && Math.random() < 0.28 && typeof particles !== 'undefined') {
+                const colorsByTheme = {
+                    singularity: ['#38bdf8', '#06b6d4', '#e0f2fe'],
+                    supernova: ['#fbbf24', '#f97316', '#fffbeb'],
+                    synapse: ['#c084fc', '#a855f7', '#faf5ff'],
+                    abyssal: ['#2dd4bf', '#14b8a6', '#f0fdfa']
+                };
+                const themePalette = colorsByTheme[equippedQuantumAnim] || colorsByTheme.singularity;
+                particles.push(new Particle(
+                    this.x + (Math.random() - 0.5) * 20,
+                    this.y + (Math.random() - 0.5) * 20,
+                    themePalette[Math.floor(Math.random() * themePalette.length)],
+                    2.8
+                ));
+            }
+        }
+
         this.x += dx;
         this.y += dy;
 
         const borderY = 55;
+        const currentH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
         if (gameState.borderOpen) {
             this.canPassBorder = true;
-            this.y = Math.max(10, Math.min(canvasHeight - this.radius - 10, this.y));
+            this.y = Math.max(10, Math.min(currentH - this.radius - 10, this.y));
         } else {
             this.canPassBorder = false;
-            this.y = Math.max(borderY + this.radius + 5, Math.min(canvasHeight - this.radius - 10, this.y));
+            this.y = Math.max(borderY + this.radius + 5, Math.min(currentH - this.radius - 10, this.y));
         }
 
         // 🧱 Fiziki Barrikada Dayağı: Barrikada aktivdirsə, oyunçu onun üstündə təhlükəsiz dayanır
@@ -395,13 +463,19 @@ class Player {
             this.y += Math.sin(this.facing) * dashDistance;
 
             const borderY = 55;
+            const currentH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
             const minY = gameState.borderOpen ? 10 : borderY + this.radius + 5;
-            this.y = Math.max(minY, Math.min(canvasHeight - this.radius - 10, this.y));
+            this.y = Math.max(minY, Math.min(currentH - this.radius - 10, this.y));
             this.x = Math.max(this.radius + 10, Math.min(canvasWidth - this.radius - 10, this.x));
 
             audio.playDash();
             for (let i = 0; i < 20; i++) {
                 particles.push(new Particle(this.x, this.y, '#00ffff', 4));
+            }
+            if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'singularity') {
+                if (typeof SingularitySpawnEffect !== 'undefined' && SingularitySpawnEffect.themes) {
+                    SingularitySpawnEffect.themes.singularity.triggerBurst();
+                }
             }
             showToast('⚡ DASH!', 'info');
         }
@@ -479,6 +553,26 @@ class Player {
         // 🌸 Yaşam Çiçəkləri (Ön Plan)
         if (typeof drawIngameLifeFlowers === 'function') {
             drawIngameLifeFlowers(ctx, this, animTime, true);
+        }
+
+        // 🌀 Kvant Laboratoriyası 3D Halqaları, Oriyentasiya Qanadları və Düşən Ulduzlar (4 Mövzu)
+        const quantumThemes = ['singularity', 'supernova', 'synapse', 'abyssal'];
+        const activeSpawnAnim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+        if (quantumThemes.includes(activeSpawnAnim)) {
+            const SingularityModule = (typeof SingularitySpawnEffect !== 'undefined') ? SingularitySpawnEffect : null;
+            if (SingularityModule && SingularityModule.themes) {
+                const activeThemeKey = activeSpawnAnim;
+                const activeTheme = SingularityModule.themes[activeThemeKey] || SingularityModule.themes.singularity;
+                ctx.save();
+                const speedFact = Math.min(1, Math.hypot(this.vx, this.vy) / 200);
+                activeTheme.render(ctx, this.x, this.y, animTime, this.singularityRot, speedFact, this.singularityAngles, 0.28);
+                ctx.restore();
+
+                // Aşağıya doğru atılan ulduzlar və lavada/döşəmədə parçalanan kristal qəlpələr
+                if (typeof SingularityModule.drawInGameProjectiles === 'function') {
+                    SingularityModule.drawInGameProjectiles(ctx);
+                }
+            }
         }
 
         // 🚀 AKTİV KVANT SIÇRAYIŞI HAZIRLIĞI (EMERGENCY QUANTUM HYPER-JUMP WINGS & THRUSTERS)

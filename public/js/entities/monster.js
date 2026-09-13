@@ -29,11 +29,23 @@ class Monster {
         this.surgeSide = null;
         this.surgeTimer = 0;
         this.surgeHeight = 0;
+
+        // 👾 BOSS SAĞLAMLIQ (HP) VƏ DALĞA SİSTEMİ
+        this.currentBossWave = 1;
+        this.totalBossWaves = 3;
+        this.hp = 1500;
+        this.maxHp = 1500;
+        this.displayHp = 1500;
+        this.isDefeated = false;
+        this.hpBarShake = 0;
+        this.initBossWave(1, 1);
     }
 
     reset() {
-        this.y = canvasHeight + 50;
-        this.baseSpeed = 0.22 + (gameState.floor - 1) * 0.06;
+        const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
+        const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : canvasHeight;
+        this.y = worldH + 50;
+        this.baseSpeed = 0.22 + (fl - 1) * 0.06;
         this.speed = this.baseSpeed;
         this.wallTimer = 0;
         this.shockTimer = 0;
@@ -47,6 +59,10 @@ class Monster {
         this.gazeX = 0;
         this.gazeY = 0;
         this.flash = 0;
+
+        // Boss dalğası və canını sıfırla
+        this.isDefeated = false;
+        this.initBossWave(fl, 1);
 
         // Boss hücumlarını sıfırla
         this.meteors = [];
@@ -438,7 +454,8 @@ class Monster {
 
         // 3. PLAZMA ƏRİDİCİ
         if (this.plasmaTimer > 0) {
-            this.y = Math.min(canvasHeight + 50, this.y + 0.22);
+            const currentH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
+            this.y = Math.min(currentH + 50, this.y + 0.22);
         }
 
         // 🔥 LAVA QABARMASI (SURGE) TAYMERİ
@@ -457,9 +474,10 @@ class Monster {
             if (this.meteorCooldown <= 0) {
                 this.meteorCooldown = Math.max(220, 380 - (gameState.floor || 1) * 15);
                 const meteorCount = Math.min(3, 1 + Math.floor((gameState.floor || 1) / 3));
+                const currentH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
                 for (let m = 0; m < meteorCount; m++) {
                     const tx = Math.random() * (canvasWidth - 140) + 70;
-                    const ty = Math.random() * (canvasHeight - 320) + 100;
+                    const ty = Math.max(80, Math.min(currentH - 120, (typeof player !== 'undefined' && player ? player.y : currentH - 200) + (Math.random() - 0.5) * 350));
                     this.spawnMeteor(tx, ty);
                 }
                 if (typeof audio !== 'undefined' && audio.playMeteorWarning) {
@@ -534,13 +552,19 @@ class Monster {
         c.save(); // Monster draw() state izolyasiyası
         const w = typeof canvasWidth !== 'undefined' ? canvasWidth : (c.canvas ? c.canvas.width : 800);
         const h = typeof canvasHeight !== 'undefined' ? canvasHeight : (c.canvas ? c.canvas.height : 680);
+        const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
+        const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
+        const bottomH = worldH + 350;
         const top = this.y + this.shockShake;
 
-        // Əgər lava tamamilə ekranın altındadırsa çəkməyə ehtiyac yoxdur
-        if (top > h + 180) return;
+        // Əgər lava tamamilə dünyanın altındadırsa çəkməyə ehtiyac yoxdur
+        if (top > worldH + 250) {
+            c.restore();
+            return;
+        }
 
         // A) LAVA MAYESİ VƏ QABARCIQLAR
-        const grad = c.createLinearGradient(0, top, 0, h);
+        const grad = c.createLinearGradient(0, top, 0, bottomH);
         if (this.iceTimer > 0) {
             grad.addColorStop(0, '#7ee7ff');
             grad.addColorStop(0.23, '#0284c7');
@@ -555,11 +579,11 @@ class Monster {
 
         c.fillStyle = grad;
         c.beginPath();
-        c.moveTo(0, h);
+        c.moveTo(0, bottomH);
         for (let x = 0; x <= w + 6; x += 6) {
             c.lineTo(x, this.surface(x, top));
         }
-        c.lineTo(w, h);
+        c.lineTo(w, bottomH);
         c.fill();
 
         // Parıldayan dalğavari səth xətti
@@ -577,11 +601,11 @@ class Monster {
         c.shadowBlur = 0;
 
         // Qabarcıqlar
-        const depth = Math.max(1, h - top);
+        const depth = Math.max(1, bottomH - top);
         for (let i = 0; i < 26; i++) {
             const x = (i * 137.3) % w;
             const y = top + 35 + ((i * 43 - this.t * 25) % depth + depth) % depth;
-            if (y < h) {
+            if (y < bottomH) {
                 c.globalAlpha = 0.22;
                 this.ellipse(c, x, y, 5 + i % 5, 7 + i % 4, this.iceTimer > 0 ? '#bae6fd' : '#ff9b14');
                 this.ellipse(c, x - 1, y + 1, 3, 4, this.iceTimer > 0 ? '#0284c7' : '#ef4800');
@@ -590,7 +614,7 @@ class Monster {
         c.globalAlpha = 1;
 
         // B) BƏDƏN VƏ 3D BAŞ
-        const s = Math.min(w / 500, h / 400) * 0.85;
+        const s = Math.min(w / 500, 680 / 400) * 0.85;
         const attack = this.attackPose();
         const fy = this.headAnchor(top, s);
 
@@ -601,7 +625,7 @@ class Monster {
         if (this.iceTimer > 0) {
             c.save();
             c.fillStyle = 'rgba(147, 197, 253, 0.25)';
-            c.fillRect(0, top, w, h - top);
+            c.fillRect(0, top, w, Math.max(0, bottomH - top));
             c.fillStyle = '#bae6fd';
             c.font = 'bold 13px Orbitron, sans-serif';
             c.textAlign = 'center';
@@ -852,6 +876,26 @@ class Monster {
             // Düşmə hərəkəti
             m.y += m.speed;
 
+            // ☄️ Havada oyunçuya birbaşa dəymə (Falling lava hit)
+            if (typeof player !== 'undefined' && player && typeof gameState !== 'undefined' && gameState.dashInvulnerable <= 0) {
+                const airDist = Math.hypot(player.x - m.x, player.y - m.y);
+                if (airDist < (m.radius + (player.radius || 16))) {
+                    m.landed = true;
+                    m.y = m.targetY;
+                    if (player.hasShield) {
+                        player.breakShield();
+                        if (typeof showToast === 'function') showToast('🛡️ METEOR DƏYDİ! Qalxanınız parçalandı!', 'warning');
+                    } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
+                        player.consumeLifeFlower();
+                        if (typeof showToast === 'function') showToast('🌸 METEOR DƏYDİ! Yaşam Çiçəyi sizi qorudu!', 'warning');
+                    } else {
+                        if (typeof showToast === 'function') showToast('💥 DÜŞƏN LAVA SİZİ VURDU VƏ MƏHV ETDİ!', 'danger');
+                        if (typeof triggerGameOver === 'function') triggerGameOver();
+                        return;
+                    }
+                }
+            }
+
             // Hədəfə çatdıqda partlayış
             if (m.y >= m.targetY) {
                 m.landed = true;
@@ -878,18 +922,24 @@ class Monster {
                     }
                 }
 
-                // Oyunçu yaxınlıqdadırsa zədələnmə
-                if (typeof player !== 'undefined' && player) {
+                // Oyunçu partlayış yaxınlığındadırsa zərbə və ölüm
+                if (typeof player !== 'undefined' && player && typeof gameState !== 'undefined' && gameState.dashInvulnerable <= 0) {
                     const dist = Math.hypot(player.x - m.targetX, player.y - m.targetY);
-                    if (dist < 48 && gameState.dashInvulnerable <= 0) {
+                    if (dist < 48) {
                         if (player.hasShield) {
                             player.breakShield();
+                            if (typeof showToast === 'function') showToast('🛡️ METEOR PARTLAYIŞI! Qalxanınız parçalandı!', 'warning');
+                        } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
+                            player.consumeLifeFlower();
+                            if (typeof showToast === 'function') showToast('🌸 METEOR PARTLAYIŞI! Yaşam Çiçəyi sizi qorudu!', 'warning');
                         } else {
-                            player.y = Math.min(canvasHeight - 50, player.y + 60);
-                            gameState.dashInvulnerable = 45;
                             if (typeof showToast === 'function') {
-                                showToast('💥 METEOR SİZİ ZƏDƏLƏDİ!', 'error');
+                                showToast('💥 LAVA METEORU PARTLAYIŞI SİZİ MƏHV ETDİ!', 'danger');
                             }
+                            if (typeof triggerGameOver === 'function') {
+                                triggerGameOver();
+                            }
+                            return;
                         }
                     }
                 }
@@ -1037,5 +1087,251 @@ class Monster {
 
             c.restore();
         });
+    }
+
+    // ========================================================================
+    // 👾 BOSS SAĞLAMLIQ, ZƏDƏ VƏ DALĞA İDARƏETMƏ SİSTEMİ
+    // ========================================================================
+
+    initBossWave(floor = 1, wave = 1) {
+        this.currentBossWave = wave;
+        this.totalBossWaves = (floor % 10 === 0) ? 4 : 3;
+
+        // Baza HP şkalası: 1-ci qatda:
+        // Boss 1 = 1500 HP
+        // Boss 2 = 2500 HP
+        // Boss 3 = 3000 HP
+        // 10-cu qatda 4-cü Nəhəng Boss = 5000 HP
+        let baseHp = 1500;
+        if (wave === 2) baseHp = 2500;
+        else if (wave === 3) baseHp = 3000;
+        else if (wave >= 4) baseHp = 5000;
+
+        // Sonrakı qatlarda HP əvvəlkilərdən daha çox olur
+        const floorScale = 1 + (floor - 1) * 0.25;
+        this.maxHp = Math.round(baseHp * floorScale);
+        this.hp = this.maxHp;
+        this.displayHp = this.hp;
+        this.flash = 0;
+        this.hpBarShake = 0;
+    }
+
+    takeDamage(amount, type = 'normal', hitX = null, hitY = null) {
+        if (this.hp <= 0 || this.isDefeated) return;
+
+        this.hp = Math.max(0, this.hp - amount);
+        this.flash = 0.22;
+        this.hpBarShake = 9;
+
+        // Uçan zədə rəqəmi (Floating Damage Text)
+        const posX = hitX !== null ? hitX : (typeof canvasWidth !== 'undefined' ? canvasWidth / 2 : 400);
+        const posY = hitY !== null ? (hitY - 20) : (this.y - 30);
+        const dmgColors = {
+            wall: '#f59e0b',
+            ice: '#38bdf8',
+            shock: '#c084fc',
+            mine: '#f43f5e',
+            plasma: '#34d399'
+        };
+        const color = dmgColors[type] || '#f87171';
+
+        if (typeof addFloatingText === 'function') {
+            addFloatingText(posX + (Math.random() - 0.5) * 20, posY, `-${amount}`, color, amount >= 150 ? 18 : 14);
+        }
+
+        // Zədə qığılcımları
+        if (typeof particles !== 'undefined') {
+            const count = amount >= 150 ? 16 : 8;
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(posX + (Math.random() - 0.5) * 35, posY, color, 3.5));
+            }
+        }
+
+        // Əgər Boss öldüsə
+        if (this.hp <= 0) {
+            this.onBossDefeated();
+        }
+    }
+
+    onBossDefeated() {
+        const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
+        
+        // Hər bossu öldürdükdə: azca qızıl (+50) və 1 almaz (Diamond)!
+        const goldReward = 50;
+        if (typeof gameState !== 'undefined') {
+            gameState.gold += goldReward;
+        }
+        if (typeof diamonds !== 'undefined') {
+            diamonds += 1;
+        }
+        if (typeof savePermanentData === 'function') {
+            savePermanentData();
+        }
+
+        // Təntənəli səs
+        if (typeof audio !== 'undefined') {
+            if (typeof audio.playDiamond === 'function') audio.playDiamond();
+            if (typeof audio.playSuccess === 'function') audio.playSuccess();
+        }
+
+        // Geniş partlayış zərrəcikləri
+        const w = typeof canvasWidth !== 'undefined' ? canvasWidth : 800;
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 60; i++) {
+                particles.push(new Particle(
+                    w * (0.2 + Math.random() * 0.6),
+                    this.y + (Math.random() - 0.5) * 40,
+                    ['#fcd34d', '#f59e0b', '#38bdf8', '#ef4444'][i % 4],
+                    5
+                ));
+            }
+        }
+
+        // Ekran titrəməsi
+        const mainView = document.getElementById('main-view');
+        if (mainView) {
+            mainView.classList.add('shake');
+            setTimeout(() => mainView.classList.remove('shake'), 400);
+        }
+
+        const waveNum = this.currentBossWave;
+        const totalWaves = this.totalBossWaves;
+
+        if (waveNum < totalWaves) {
+            // NÖVBƏTİ BOSS DALĞASI
+            if (typeof showToast === 'function') {
+                showToast(`🎉 BOSS ${waveNum}/${totalWaves} MƏHV EDİLDİ! (+1 Almaz 💎, +${goldReward} Qızıl 🪙)`, 'success');
+            }
+
+            // Lava xeyli aşağı itələnir
+            const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
+            this.y = worldH + 150;
+            this.wallTimer = 180; // Təhlükəsizlik barrikadası
+
+            this.currentBossWave++;
+            this.initBossWave(fl, this.currentBossWave);
+
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast(`⚠️ NÖVBƏTİ BOSS ${this.currentBossWave}/${totalWaves} OYANIR! (${this.maxHp} HP)`, 'warning');
+                }
+            }, 1200);
+
+        } else {
+            // 📜 3-CÜ (VƏ YA SONUNCU) BOSS MƏHV EDİLDİ: KEÇİD KAĞIZI DÜŞÜR!
+            this.isDefeated = true;
+            const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
+            this.y = worldH + 250; // Lava tamamilə aşağı çəkilir
+
+            if (typeof showToast === 'function') {
+                showToast(`🏆 BÜTÜN BOSSLAR MƏĞLUB EDİLDİ! (+1 Almaz 💎, +${goldReward} Qızıl 🪙)`, 'success');
+            }
+
+            // Keçid Kağızını arenaya salırıq (Oyunçunun çatacağı əlçatan nöqtəyə)
+            if (typeof spawnEscapePass === 'function') {
+                const passY = Math.max(120, Math.min(worldH - 220, (typeof player !== 'undefined' && player ? player.y - 120 : worldH / 2)));
+                spawnEscapePass(w / 2, passY);
+            }
+
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast('📜 KEÇİD KAĞIZI DÜŞDÜ! Onu götürün və sərhəd qapısından keçin!', 'info');
+                }
+            }, 1500);
+        }
+
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof saveActiveRun === 'function') saveActiveRun();
+    }
+
+    drawBossHpBar(c) {
+        if (this.isDefeated && this.hp <= 0) return;
+
+        const w = typeof canvasWidth !== 'undefined' ? canvasWidth : 800;
+        const barWidth = 360;
+        const barHeight = 16;
+        const barX = (w - barWidth) / 2;
+        const barY = 48; // Sərhəd xəttinin bir az altında
+
+        // Hamar can gecikməsi (Display HP lerp)
+        if (this.displayHp > this.hp) {
+            this.displayHp -= Math.max(2, (this.displayHp - this.hp) * 0.08);
+        } else {
+            this.displayHp = this.hp;
+        }
+
+        // Titrəmə
+        let shakeX = 0;
+        if (this.hpBarShake > 0) {
+            shakeX = (Math.random() - 0.5) * this.hpBarShake;
+            this.hpBarShake *= 0.85;
+            if (this.hpBarShake < 0.5) this.hpBarShake = 0;
+        }
+
+        c.save();
+        c.translate(shakeX, 0);
+
+        // 1. Üst Məlumat Başlığı (Boss Dalğası və Adı)
+        c.font = '900 11px Orbitron, sans-serif';
+        c.textAlign = 'left';
+        c.fillStyle = '#f87171';
+        c.shadowColor = '#ef4444';
+        c.shadowBlur = 10;
+        c.fillText(`👾 LAVA OBSİDİAN BOSS — DALĞA ${this.currentBossWave}/${this.totalBossWaves}`, barX, barY - 7);
+
+        c.textAlign = 'right';
+        c.fillStyle = '#fef08a';
+        c.shadowColor = '#f59e0b';
+        c.shadowBlur = 8;
+        c.fillText(`${Math.ceil(this.hp)} / ${this.maxHp} HP`, barX + barWidth, barY - 7);
+
+        // 2. Fon qutusu
+        c.fillStyle = 'rgba(6, 7, 21, 0.88)';
+        c.strokeStyle = 'rgba(239, 68, 68, 0.65)';
+        c.lineWidth = 1.8;
+        c.shadowColor = 'rgba(239, 68, 68, 0.35)';
+        c.shadowBlur = 14;
+        c.beginPath();
+        c.roundRect(barX, barY, barWidth, barHeight, 5);
+        c.fill();
+        c.stroke();
+
+        // 3. Ağ Zədə Kölgəsi (Damage Lag Bar)
+        const lagRatio = Math.max(0, Math.min(1, this.displayHp / this.maxHp));
+        if (lagRatio > 0) {
+            c.fillStyle = 'rgba(254, 240, 138, 0.7)';
+            c.beginPath();
+            c.roundRect(barX + 2, barY + 2, (barWidth - 4) * lagRatio, barHeight - 4, 3);
+            c.fill();
+        }
+
+        // 4. Əsas Can Zolağı (Fiery Gradient)
+        const hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
+        if (hpRatio > 0) {
+            const hpGrad = c.createLinearGradient(barX, 0, barX + barWidth, 0);
+            hpGrad.addColorStop(0, '#dc2626');
+            hpGrad.addColorStop(0.5, '#ea580c');
+            hpGrad.addColorStop(1, '#f59e0b');
+
+            c.fillStyle = hpGrad;
+            c.shadowColor = '#f97316';
+            c.shadowBlur = 12;
+            c.beginPath();
+            c.roundRect(barX + 2, barY + 2, (barWidth - 4) * hpRatio, barHeight - 4, 3);
+            c.fill();
+        }
+
+        // 5. Zolaq Bölmə Xətləri (Segment Dividers - 4 bərabər hissəyə bölür)
+        c.strokeStyle = 'rgba(15, 23, 42, 0.5)';
+        c.lineWidth = 1.5;
+        for (let s = 1; s <= 3; s++) {
+            const segX = barX + (barWidth / 4) * s;
+            c.beginPath();
+            c.moveTo(segX, barY + 2);
+            c.lineTo(segX, barY + barHeight - 2);
+            c.stroke();
+        }
+
+        c.restore();
     }
 }

@@ -143,8 +143,14 @@ window.addEventListener('keydown', e => {
 
     if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
-        if (typeof player !== 'undefined' && player.dash) player.dash();
+        triggerPlayerDash();
         return;
+    }
+
+    if ((e.code === 'KeyE' || k === 'e') && keybinds.wall !== 'e' && keybinds.ice !== 'e' && keybinds.shock !== 'e' && keybinds.mine !== 'e' && keybinds.plasma !== 'e') {
+        if (typeof SingularitySpawnEffect !== 'undefined' && typeof player !== 'undefined') {
+            SingularitySpawnEffect.launchInGameStar(player);
+        }
     }
 
     // Tələ atış qısayolları
@@ -191,6 +197,13 @@ function triggerPlayerDash() {
     if (typeof gameState !== 'undefined' && (gameState.transitioning || gameState.gameOver || gameState.paused)) return;
     if (typeof audio !== 'undefined') audio.init();
     if (typeof player !== 'undefined' && player.dash) player.dash();
+    if (typeof SingularitySpawnEffect !== 'undefined' && SingularitySpawnEffect.themes) {
+        const activeThemeKey = (typeof player !== 'undefined' && player.singularityTheme) ? player.singularityTheme : 'singularity';
+        const activeTheme = SingularitySpawnEffect.themes[activeThemeKey];
+        if (activeTheme && typeof activeTheme.triggerBurst === 'function') {
+            activeTheme.triggerBurst();
+        }
+    }
 }
 
 window.keybinds = keybinds;

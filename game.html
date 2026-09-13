@@ -214,6 +214,19 @@
                     <span id="floor-timer" class="font-orbitron text-xs text-slate-300 tracking-wider">⏱ 0s</span>
                 </div>
 
+                <!-- 🌀 KVANT FX LABORATARİYASI MÖVZU SEÇİCİSİ (İSTİFADƏÇİNİN KODU ƏSASINDA) -->
+                <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/85 border border-cyan-500/30 backdrop-blur shadow-xl">
+                    <span class="text-[9px] font-mono font-bold text-cyan-400 flex items-center gap-1">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                        <span>MÖVZU:</span>
+                    </span>
+                    <button id="btn-theme-singularity" tabindex="-1" onclick="setIngameQuantumTheme('singularity'); this.blur();" class="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-cyan-500/20 border border-cyan-400 text-cyan-300 transition hover:scale-105" title="Kiber Sinqulyarlıq (Cyan/Mavi)">Sinqulyarlıq</button>
+                    <button id="btn-theme-supernova" tabindex="-1" onclick="setIngameQuantumTheme('supernova'); this.blur();" class="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-400 hover:text-amber-300 transition hover:scale-105" title="Plazma Supernova (Qızıl/Alov)">Supernova</button>
+                    <button id="btn-theme-synapse" tabindex="-1" onclick="setIngameQuantumTheme('synapse'); this.blur();" class="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-400 hover:text-purple-300 transition hover:scale-105" title="Kvant Sinapsı (Bənövşəyi/Elektrik)">Sinaps</button>
+                    <button id="btn-theme-abyssal" tabindex="-1" onclick="setIngameQuantumTheme('abyssal'); this.blur();" class="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-400 hover:text-teal-300 transition hover:scale-105" title="Dərin Abiss (Zümrüd/Tirkuaz)">Abiss</button>
+                    <button tabindex="-1" onclick="if (typeof player !== 'undefined' && typeof SingularitySpawnEffect !== 'undefined') SingularitySpawnEffect.launchInGameStar(player); this.blur();" class="ml-1 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[8px] font-mono font-bold transition active:scale-95 shadow" title="Orbitdən Ulduz Qopart [E]">⚡ Ulduz [E]</button>
+                </div>
+
 
                 <!-- NÖVBƏTİ SİKKƏ GERİ SAYIM TAYMERİ -->
                 <div class="absolute top-4 left-4 glass-panel px-3 py-1.5 rounded-xl border border-amber-500/40 flex items-center gap-2 pointer-events-none z-10 bg-slate-950/70 shadow-lg">
@@ -876,29 +889,32 @@
     <script src="js/skins/void.js?v=1.0"></script>
 
     <!-- DOĞULUŞ VƏ TELEPORT ANİMASİYALARI MODULLARI -->
-    <script src="js/engine/spawn-effects/portal.js?v=2.0"></script>
-    <script src="js/engine/spawn-effects/crystal.js?v=2.0"></script>
-    <script src="js/engine/spawn-effects/stellar.js?v=2.0"></script>
-    <script src="js/engine/spawn-effects/dracula.js?v=2.0"></script>
-    <script src="js/engine/spawn-effects/seed.js?v=2.0"></script>
-    <script src="js/engine/spawn-effects/manager.js?v=2.0"></script>
+    <script src="js/engine/spawn-effects/portal.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/crystal.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/stellar.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/dracula.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/seed.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/singularity.js?v=5.0"></script>
+    <script src="js/engine/spawn-effects/manager.js?v=5.0"></script>
 
     <script src="js/entities/player.js?v=3.2"></script>
-    <script src="js/entities/monster.js?v=3.2"></script>
+    <script src="js/entities/monster.js?v=3.3"></script>
     <script src="js/entities/bullet.js?v=3.2"></script>
     <script src="js/entities/coin.js?v=3.2"></script>
     <script src="js/entities/powerup.js?v=3.2"></script>
     <script src="js/entities/turrets.js?v=3.2"></script>
+    <script src="js/entities/escape-pass.js?v=1.0"></script>
     <script src="js/giftcodes.js?v=3.2"></script>
     <script src="js/auth.js?v=3.3"></script>
     <script src="js/inbox.js?v=3.3"></script>
-    <script src="js/ui/toasts.js?v=1.0"></script>
-    <script src="js/ui/chest-modal.js?v=1.0"></script>
-    <script src="js/ui/lab-panel.js?v=1.0"></script>
-    <script src="js/ui/turrets-panel.js?v=1.0"></script>
-    <script src="js/ui/skins-shop.js?v=1.0"></script>
+    <script src="js/ui/toasts.js?v=5.0"></script>
+    <script src="js/ui/chest-modal.js?v=5.0"></script>
+    <script src="js/ui/lab-panel.js?v=5.0"></script>
+    <script src="js/ui/turrets-panel.js?v=5.0"></script>
+    <script src="js/ui/skins-shop.js?v=5.0"></script>
     <script src="js/ui.js?v=3.2"></script>
     <script src="js/engine/input.js?v=1.0"></script>
+    <script src="js/engine/platforms.js?v=1.0"></script>
     <script src="js/engine/spawner.js?v=1.0"></script>
     <script src="js/engine/traps.js?v=1.0"></script>
     <script src="js/engine/intro.js?v=1.0"></script>

@@ -33,7 +33,8 @@ function fireBullet(type) {
 }
 
 function updateBullets() {
-    const canvasHeight = 680;
+    const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : 680;
     for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
         b.update();
@@ -49,7 +50,13 @@ function updateBullets() {
             const trapMult = gameState.combo >= 5 ? 2.0 : (gameState.combo >= 3 ? 1.5 : 1.0);
             const trapScore = Math.round(baseTrapScore * trapMult);
             gameState.scoreProgress += trapScore;
-            if (typeof checkBorderUnlock === 'function') checkBorderUnlock();
+
+            // 👾 BOSS ZƏDƏ SİSTEMİ (BOSS DAMAGE)
+            const baseDamages = { wall: 35, ice: 55, shock: 90, mine: 180, plasma: 250 };
+            const dmg = Math.round((baseDamages[b.type] || 35) * trapMult);
+            if (typeof monster !== 'undefined' && typeof monster.takeDamage === 'function') {
+                monster.takeDamage(dmg, b.type, b.x, monsterTop);
+            }
 
             const rewards = { wall: 6, ice: 10, shock: 14, mine: 22, plasma: 32 };
             const reward = Math.round((rewards[b.type] || 6) * trapMult);
@@ -82,7 +89,7 @@ function updateBullets() {
                 }
             } else if (b.type === 'mine') {
                 if (typeof audio !== 'undefined' && audio.playExplosion) audio.playExplosion();
-                monster.y = Math.min(canvasHeight + 40, monster.y + 35);
+                monster.y = Math.min(worldH + 40, monster.y + 35);
                 monster.mineStunTimer = Math.max(monster.mineStunTimer, 80);
                 for (let p = 0; p < 25; p++) {
                     particles.push(new Particle(b.x + (Math.random() - 0.5) * 60, monster.y, '#f43f5e', 5));
@@ -100,7 +107,7 @@ function updateBullets() {
             continue;
         }
 
-        if (b.y > canvasHeight + 50) {
+        if (b.y > worldH + 60) {
             bullets.splice(i, 1);
         }
     }

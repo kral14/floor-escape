@@ -183,6 +183,58 @@ const SPAWN_ANIMS = {
         desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq 1-3 can qorunması bəxş edir. Arenada çiçək yığaraq canları bərpa etmək olar.',
         costType: 'redDiamonds',
         cost: 45
+    },
+    singularity: {
+        id: 'singularity',
+        name: 'Kiber Sinqulyarlıq',
+        title: 'Cyber Singularity',
+        icon: 'fa-circle-nodes',
+        fallbackIcon: 'fa-atom',
+        color: '#38bdf8',
+        glowColor: '#06b6d4',
+        badge: '🌀 Kvant Sinqulyarlığı (3D Halqalar & Lavaya Zərbə)',
+        desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.',
+        costType: 'redDiamonds',
+        cost: 55
+    },
+    supernova: {
+        id: 'supernova',
+        name: 'Plazma Supernova',
+        title: 'Plasma Supernova',
+        icon: 'fa-fire-alt',
+        fallbackIcon: 'fa-sun',
+        color: '#fbbf24',
+        glowColor: '#f97316',
+        badge: '🔥 Plazma Supernova (Alovlu 3D Orbit & Lavaya Zərbə)',
+        desc: 'Qızmar plazma qığılcımları və supernova nüvəsi: Aşağı şığıyan ulduzlar lavanı partladıb soyudur (-45px) və qəlpələrə bölür.',
+        costType: 'redDiamonds',
+        cost: 55
+    },
+    synapse: {
+        id: 'synapse',
+        name: 'Kvant Sinapsı',
+        title: 'Quantum Synapse',
+        icon: 'fa-bolt-lightning',
+        fallbackIcon: 'fa-bolt',
+        color: '#c084fc',
+        glowColor: '#a855f7',
+        badge: '⚡ Kvant Sinapsı (Bio-Elektrik Şəbəkə & Lavaya Zərbə)',
+        desc: 'Bio-elektrik neyron şəbəkəsi və bənövşəyi pulslar: Kvant ulduzları aşağı atılaraq lavanı dondurub ləngidir və zərər vurur.',
+        costType: 'redDiamonds',
+        cost: 55
+    },
+    abyssal: {
+        id: 'abyssal',
+        name: 'Dərin Abiss',
+        title: 'Deep Abyssal',
+        icon: 'fa-water',
+        fallbackIcon: 'fa-eye',
+        color: '#2dd4bf',
+        glowColor: '#0f766e',
+        badge: '🌊 Dərin Abiss (Biolüminisent Sporlar & Lavaya Zərbə)',
+        desc: 'Dərin okean leviathan gözü və spor dalğaları: Düşən zümrüd kristalları lavaya zərbə vuraraq lavanı geriyə itələyir.',
+        costType: 'redDiamonds',
+        cost: 55
     }
 };
 if (typeof window !== 'undefined') {
@@ -200,8 +252,8 @@ const DEFAULT_PERM_UPGRADES = {
     startGoldLvl: 1,      // Başlanğıc qızıl
     equippedSkin: 'default', // Aktiv dəri (skin)
     ownedSkins: ['default'], // Sahib olunan dərilər
-    equippedSpawnAnim: 'portal', // Aktiv doğuluş animasiyası (portal, lightning, meteor, void, matrix)
-    ownedSpawnAnims: ['portal'], // Sahib olunan animasiyalar
+    equippedSpawnAnim: 'singularity', // 🌀 YENİ ƏSAS DOĞULUŞ ANİMASİYASI (Kvant Laboratoriyası FX)
+    ownedSpawnAnims: ['singularity', 'supernova', 'synapse', 'abyssal', 'portal'], // Sahib olunan animasiyalar
     seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
     hasTwinTurrets: false,
@@ -268,11 +320,21 @@ function loadPermanentData() {
             if (!permUpgrades.equippedSkin || !SKINS[permUpgrades.equippedSkin]) {
                 permUpgrades.equippedSkin = 'default';
             }
-            if (!Array.isArray(permUpgrades.ownedSpawnAnims) || permUpgrades.ownedSpawnAnims.length === 0) {
-                permUpgrades.ownedSpawnAnims = ['portal'];
+            if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
+                permUpgrades.ownedSpawnAnims = ['singularity', 'supernova', 'synapse', 'abyssal', 'portal'];
             }
-            if (!permUpgrades.equippedSpawnAnim || !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim]) {
-                permUpgrades.equippedSpawnAnim = 'portal';
+            // 4 Kvant laboratoriya temasını sahib olunanlara təminatlı əlavə edirik
+            ['singularity', 'supernova', 'synapse', 'abyssal'].forEach(th => {
+                if (!permUpgrades.ownedSpawnAnims.includes(th)) {
+                    permUpgrades.ownedSpawnAnims.push(th);
+                }
+            });
+            // Köhnə 'portal' qalıbsa, birbaşa yeni Kvant Sinqulyarlığına keçir
+            if (!permUpgrades.equippedSpawnAnim || permUpgrades.equippedSpawnAnim === 'portal') {
+                permUpgrades.equippedSpawnAnim = 'singularity';
+            }
+            if (!SPAWN_ANIMS[permUpgrades.equippedSpawnAnim]) {
+                permUpgrades.equippedSpawnAnim = 'singularity';
             }
             if (permUpgrades.turretBulletType && !permUpgrades.turretLeftType) {
                 permUpgrades.turretLeftType = permUpgrades.turretBulletType;
@@ -424,6 +486,12 @@ function saveActiveRun() {
         floorTime: gameState.floorTime,
         coinCountdown: gameState.coinCountdown,
         bulletUsage: gameState.bulletUsage || { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 },
+        // Boss dalğası və canı
+        monsterBossWave: typeof monster !== 'undefined' && monster ? monster.currentBossWave : 1,
+        monsterTotalWaves: typeof monster !== 'undefined' && monster ? monster.totalBossWaves : 3,
+        monsterHp: typeof monster !== 'undefined' && monster ? monster.hp : 1500,
+        monsterMaxHp: typeof monster !== 'undefined' && monster ? monster.maxHp : 1500,
+        monsterIsDefeated: typeof monster !== 'undefined' && monster ? !!monster.isDefeated : false,
         // Lavanın dəqiq yeri və effektləri
         monsterY: typeof monster !== 'undefined' && monster ? monster.y : null,
         monsterSlowTimer: typeof monster !== 'undefined' && monster ? monster.slowTimer : 0,
@@ -478,22 +546,49 @@ function loadActiveRun() {
                 gameState.bulletUsage = { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 };
             }
 
+            const currentWorldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
+
             // Lavanı bərpa edirik
             if (typeof monster !== 'undefined' && monster && saved.monsterY !== undefined && saved.monsterY !== null) {
-                monster.y = parseFloat(saved.monsterY);
+                let mY = parseFloat(saved.monsterY);
+                // Əgər köhnə saxlanmış dəyər yeni şaquli dünyaya uyğun deyilsə və ya yuxarıdadırsa düzəldirik
+                if (isNaN(mY) || mY < currentWorldH * 0.35) {
+                    mY = currentWorldH + 50;
+                }
+                monster.y = mY;
                 monster.slowTimer = parseInt(saved.monsterSlowTimer) || 0;
                 monster.stunTimer = parseInt(saved.monsterStunTimer) || 0;
                 monster.plasmaTimer = parseInt(saved.monsterPlasmaTimer) || 0;
                 monster.baseSpeed = 0.22 + (gameState.floor - 1) * 0.06;
                 monster.speed = monster.slowTimer > 0 ? monster.baseSpeed * 0.45 : monster.baseSpeed;
+
+                // Boss dalğası və canını bərpa edirik
+                if (saved.monsterBossWave !== undefined) {
+                    monster.currentBossWave = parseInt(saved.monsterBossWave) || 1;
+                    monster.totalBossWaves = parseInt(saved.monsterTotalWaves) || ((gameState.floor % 10 === 0) ? 4 : 3);
+                    monster.maxHp = parseInt(saved.monsterMaxHp) || 1500;
+                    monster.hp = parseInt(saved.monsterHp) !== undefined ? parseInt(saved.monsterHp) : monster.maxHp;
+                    monster.displayHp = monster.hp;
+                    monster.isDefeated = !!saved.monsterIsDefeated;
+                }
             }
 
             // Oyunçunu, Qalxanını və Kvant Sıçrayışını bərpa edirik
             if (typeof player !== 'undefined' && player) {
                 if (saved.playerX !== undefined && saved.playerY !== undefined && saved.playerX !== null && saved.playerY !== null) {
                     player.x = parseFloat(saved.playerX);
-                    player.y = parseFloat(saved.playerY);
+                    let pY = parseFloat(saved.playerY);
+                    // Əgər saxlanmış Y köhnə 680px hündürlüyündən qalıbsa və qapı açılmayıbsa
+                    if (isNaN(pY) || (pY < currentWorldH - 450 && !gameState.borderOpen)) {
+                        pY = currentWorldH - 180;
+                    }
+                    player.y = pY;
                 }
+                // Hər ehtimala qarşı: canavar oyunçudan ən az 150px aşağıda olmalıdır ki, ani ölüm olmasın
+                if (typeof monster !== 'undefined' && monster && monster.y <= player.y + 120) {
+                    monster.y = player.y + 240;
+                }
+                gameState.dashInvulnerable = 90; // Yüklənərkən 1.5s təhlükəsizlik
                 player.hasShield = !!saved.playerHasShield;
                 player.hasHyperJump = !!saved.playerHasHyperJump;
                 if (saved.playerLifeFlowers !== undefined) {

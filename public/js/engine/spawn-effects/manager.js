@@ -14,6 +14,21 @@ const SpawnEffectRegistry = {
     },
 
     get(id) {
+        if (this.effects[id]) return this.effects[id];
+        const effectsMap = (typeof window !== 'undefined' && window.SingularityEffects ? window.SingularityEffects : (typeof global !== 'undefined' && global.SingularityEffects ? global.SingularityEffects : null));
+        if (effectsMap && effectsMap[id]) return effectsMap[id];
+
+        const singFx = (typeof SingularitySpawnEffect !== 'undefined' ? SingularitySpawnEffect : (typeof window !== 'undefined' && window.SingularitySpawnEffect ? window.SingularitySpawnEffect : (typeof global !== 'undefined' && global.SingularitySpawnEffect ? global.SingularitySpawnEffect : null)));
+        if (['singularity', 'supernova', 'synapse', 'abyssal'].includes(id)) {
+            if (singFx) {
+                return {
+                    id: id,
+                    duration: 7.8,
+                    draw: (c, w, h, t, dm, ig) => singFx.draw(c, w, h, t, dm, ig, id)
+                };
+            }
+            return null;
+        }
         return this.effects[id] || this.effects['portal'] || null;
     },
 
@@ -28,7 +43,7 @@ class MonsSpawnEffect {
         y = 160,
         targetY = 120,
         skinId = 'default',
-        animType = 'portal',
+        animType = 'singularity',
         mode = 'in',           // 'in' (doğuluş/giriş) | 'out' (teleport/qatdan çıxış)
         loop = false,
         onComplete
@@ -38,7 +53,7 @@ class MonsSpawnEffect {
         this.targetY = targetY;
         this.skinId = skinId;
         this.skin = (typeof SKINS !== 'undefined' && SKINS[skinId]) ? SKINS[skinId] : null;
-        this.animType = ['crystal', 'stellar', 'dracula', 'seed'].includes(animType) ? animType : 'portal';
+        this.animType = ['singularity', 'supernova', 'synapse', 'abyssal', 'crystal', 'stellar', 'dracula', 'seed'].includes(animType) ? animType : 'singularity';
         this.mode = mode || 'in';
         this.loop = !!loop;
         this.onComplete = onComplete;
@@ -84,7 +99,7 @@ class MonsSpawnEffect {
         }
 
         if (typeof particles !== 'undefined' && typeof Particle === 'function') {
-            const blastColor = (this.animType === 'crystal') ? '#b899ff' : (this.animType === 'stellar' ? '#54d8cf' : (this.animType === 'dracula' ? '#ba7886' : (this.animType === 'seed' ? '#62e6a0' : '#65dfff')));
+            const blastColor = (this.animType === 'crystal') ? '#b899ff' : (this.animType === 'stellar' ? '#54d8cf' : (this.animType === 'dracula' ? '#ba7886' : (this.animType === 'seed' ? '#62e6a0' : (this.animType === 'singularity' ? '#38bdf8' : '#65dfff'))));
             const count = (this.mode === 'out') ? 35 : 24;
             for (let i = 0; i < count; i++) {
                 particles.push(new Particle(this.x, this.targetY, blastColor, 4.2));
@@ -118,13 +133,13 @@ class MonsSpawnEffect {
 
         if (canvasWidth && canvasHeight) {
             // Birbaşa mağaza səhnəsi (canvas koordinatları ilə)
-            fxModule.draw(c, canvasWidth, canvasHeight, animT, drawMonster, false);
+            fxModule.draw(c, canvasWidth, canvasHeight, animT, drawMonster, false, this.animType);
         } else {
             // Oyundaxili koordinat sistemi: mərkəz (this.x, this.y)
             c.save();
             c.translate(this.x - 300 * this.scale, this.y - 200 * this.scale);
             c.scale(this.scale, this.scale);
-            fxModule.draw(c, 600, 400, animT, drawMonster, true);
+            fxModule.draw(c, 600, 400, animT, drawMonster, true, this.animType);
             c.restore();
         }
     }
@@ -136,8 +151,21 @@ if (typeof CrystalSpawnEffect !== 'undefined') SpawnEffectRegistry.register('cry
 if (typeof StellarSpawnEffect !== 'undefined') SpawnEffectRegistry.register('stellar', StellarSpawnEffect);
 if (typeof DraculaSpawnEffect !== 'undefined') SpawnEffectRegistry.register('dracula', DraculaSpawnEffect);
 if (typeof SeedSpawnEffect !== 'undefined') SpawnEffectRegistry.register('seed', SeedSpawnEffect);
+const resolvedEffects = (typeof window !== 'undefined' && window.SingularityEffects ? window.SingularityEffects : (typeof global !== 'undefined' && global.SingularityEffects ? global.SingularityEffects : null));
+if (resolvedEffects) {
+    Object.keys(resolvedEffects).forEach(id => {
+        SpawnEffectRegistry.register(id, resolvedEffects[id]);
+    });
+}
 
 // Qlobal reyestr
-window.SpawnEffectRegistry = SpawnEffectRegistry;
-window.MonsSpawnEffect = MonsSpawnEffect;
-window.MonsPortalEffect = MonsSpawnEffect;
+if (typeof window !== 'undefined') {
+    window.SpawnEffectRegistry = SpawnEffectRegistry;
+    window.MonsSpawnEffect = MonsSpawnEffect;
+    window.MonsPortalEffect = MonsSpawnEffect;
+}
+if (typeof global !== 'undefined') {
+    global.SpawnEffectRegistry = SpawnEffectRegistry;
+    global.MonsSpawnEffect = MonsSpawnEffect;
+    global.MonsPortalEffect = MonsSpawnEffect;
+}

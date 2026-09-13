@@ -41,6 +41,8 @@ const monster = new Monster();
 window.player = player;
 window.monster = monster;
 let frameCount = 0;
+let cameraY = 0;
+window.cameraY = cameraY;
 
 // ============================================================================
 // SABİT SÜRƏT VƏ FPS İDARƏETMƏ SİSTEMİ (FIXED TIMESTEP & FPS STABILIZATION)
@@ -103,8 +105,9 @@ function updatePhysicsStep() {
         if (typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
             monsPortal.update(1 / 60);
         }
-        // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
-        monster.y = canvasHeight + 100;
+        // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər şaquli dünyanın altında gözləyir
+        const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+        monster.y = worldH + 100;
         return;
     }
     frameCount++;
@@ -349,6 +352,22 @@ function updatePhysicsStep() {
         updateBullets();
     }
 
+    // 📜 Keçid Kağızının yenilənməsi
+    if (typeof updateEscapePass === 'function') {
+        updateEscapePass(FIXED_PHYSICS_DELTA / 1000);
+    }
+
+    // 🏔️ Qayalar və Axan Lava Fizikası
+    if (typeof updatePlatformsPhysics === 'function') {
+        updatePlatformsPhysics(player, FIXED_PHYSICS_DELTA / 1000);
+    }
+
+    // 🎥 Şaquli Kamera İzləməsi (Smooth Vertical Camera Following Player)
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+    const targetCamY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
+    cameraY += (targetCamY - cameraY) * 0.14;
+    window.cameraY = cameraY;
+
     // Hissəciklər
     for (let idx = particles.length - 1; idx >= 0; idx--) {
         const p = particles[idx];
@@ -416,45 +435,63 @@ function updatePhysicsStep() {
 function renderGame() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    // Qrid Xətləri (20x17 xana)
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+
+    // ==================== A) DÜNYA MƏKANI (WORLD SPACE TRANSLATED BY -cameraY) ====================
+    ctx.save();
+    ctx.translate(0, -Math.round(cameraY));
+
+    // 1. Qrid Xətləri (Dünya hündürlüyü boyu)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
     ctx.lineWidth = 1;
     for (let x = 0; x < canvasWidth; x += 40) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvasHeight);
+        ctx.lineTo(x, worldH);
         ctx.stroke();
     }
     ctx.beginPath();
     ctx.moveTo(canvasWidth, 0);
-    ctx.lineTo(canvasWidth, canvasHeight);
+    ctx.lineTo(canvasWidth, worldH);
     ctx.stroke();
 
-    for (let y = 0; y < canvasHeight; y += 40) {
+    for (let y = 0; y < worldH; y += 40) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvasWidth, y);
         ctx.stroke();
     }
     ctx.beginPath();
-    ctx.moveTo(0, canvasHeight);
-    ctx.lineTo(canvasWidth, canvasHeight);
+    ctx.moveTo(0, worldH);
+    ctx.lineTo(canvasWidth, worldH);
     ctx.stroke();
 
-    // Mərkəzi Qat Nişanı
+    // 2. Mərkəzi Qat Nişanı
     ctx.fillStyle = 'rgba(255,255,255,0.025)';
     ctx.font = '120px Orbitron';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(gameState.floor, canvasWidth / 2, canvasHeight / 2);
+    ctx.fillText(gameState.floor, canvasWidth / 2, worldH / 2);
 
+    // 3. 🏔️ Qayalar və Animasiyalı Axan Lava Blokları
+    if (typeof drawPlatforms === 'function') {
+        drawPlatforms(ctx);
+    }
+
+    // 4. Sərhəd Qapısı
     if (typeof drawBorderLine === 'function') {
         drawBorderLine();
     }
 
-    // Gücləndiricilər
+    // 5. Gücləndiricilər
     powerUps.forEach(p => p.draw(ctx));
 
+    // 6. 📜 Keçid Kağızı (Escape Pass)
+    if (typeof drawEscapePass === 'function') {
+        drawEscapePass(ctx);
+    }
+
+    // 7. Oyunçu, Qüllələr, Sikkələr, Mərmilər, Canavar və Zərrəciklər
     if (gameState.isIntroPlaying && typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
         monsPortal.draw(ctx);
     } else {
@@ -468,7 +505,7 @@ function renderGame() {
     bullets.forEach(b => b.draw());
     particles.forEach(p => p.draw());
 
-    // Uçan Neon Mətnlər
+    // Uçan Neon Mətnlər (Dünya məkanında)
     floatingTexts.forEach(ft => {
         ctx.save();
         ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
@@ -481,7 +518,20 @@ function renderGame() {
         ctx.restore();
     });
 
-    // Keçici İmpuls Parıltısı
+    ctx.restore(); // ==================== DÜNYA MƏKANININ SONU ====================
+
+    // ==================== B) EKRAN MƏKANI (SCREEN SPACE HUD) ====================
+    // 1. 👾 Boss HP Bar (Ekranın yuxarısında həmişə sabit)
+    if (typeof monster !== 'undefined' && typeof monster.drawBossHpBar === 'function') {
+        monster.drawBossHpBar(ctx);
+    }
+
+    // 2. 📍 Şaquli Dırmaşma Mini-Şkalası (Sağ tərəfdə faiz və irəliləyiş)
+    if (typeof drawHeightMinimap === 'function') {
+        drawHeightMinimap(ctx, player, worldH);
+    }
+
+    // 3. Keçici İmpuls Parıltısı
     if (screenPulse.alpha > 0.01) {
         ctx.save();
         const pGrad = ctx.createRadialGradient(canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.35, canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.65);
@@ -648,9 +698,14 @@ function restartGame() {
     if (typeof particles !== 'undefined') particles.length = 0;
     if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
     if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
+    if (typeof initFloorPlatforms === 'function') initFloorPlatforms(1);
     player.reset();
     monster.reset();
     if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(1) : canvasHeight;
+    cameraY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
+    window.cameraY = cameraY;
+    gameState.dashInvulnerable = 120; // Başlanğıcda 2 saniyə təhlükəsizlik
     spawnCoins();
     updateUI();
     saveActiveRun();
@@ -683,10 +738,11 @@ function playSummonIntro(onFinish) {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
 
     gameState.isIntroPlaying = true;
-    monster.y = canvasHeight + 100; // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+    monster.y = worldH + 100; // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
 
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
     if (SpawnClass) {
@@ -698,6 +754,7 @@ function playSummonIntro(onFinish) {
             animType: animType,
             onComplete: () => {
                 gameState.isIntroPlaying = false;
+                gameState.dashInvulnerable = 90; // Doğuluş bitdikdə 1.5s qoruma
                 lastFrameTime = performance.now();
                 physicsAccumulator = 0;
                 if (typeof onFinish === 'function') onFinish();
@@ -705,6 +762,7 @@ function playSummonIntro(onFinish) {
         });
     } else {
         gameState.isIntroPlaying = false;
+        gameState.dashInvulnerable = 90;
         if (typeof onFinish === 'function') onFinish();
     }
 }
@@ -722,14 +780,15 @@ function playFloorTeleportTransition() {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
 
     const startX = player.x;
     const startY = player.y;
 
     gameState.isIntroPlaying = true;
-    monster.y = canvasHeight + 100; // Canavar aşağıda gözləyir
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+    monster.y = worldH + 100; // Canavar aşağıda gözləyir
 
     if (SpawnClass) {
         // Mərhələ 1: Teleport Out (Mons portala sovrulur və yox olur)
@@ -834,12 +893,18 @@ if (typeof loadKeybinds === 'function') loadKeybinds();
 resizeCanvas();
 adjustViewportFit();
 
+if (typeof initFloorPlatforms === 'function') initFloorPlatforms(gameState.floor || 1);
 player.reset();
 monster.reset();
 if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
 applyFloorModifier();
 
 const hasLoadedRun = loadActiveRun();
+
+const startWorldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor || 1) : canvasHeight;
+cameraY = Math.max(0, Math.min(startWorldH - canvasHeight, player.y - canvasHeight * 0.55));
+window.cameraY = cameraY;
+gameState.dashInvulnerable = 120; // Açılışda 2 saniyə toxunulmazlıq
 
 const bestEl = document.getElementById('stat-best-floor');
 if (bestEl) bestEl.innerText = `🏆 REKORD: ${gameState.bestFloor}`;
@@ -889,6 +954,33 @@ if (gameScreenContainer) {
 adjustViewportFit();
 
 requestAnimationFrame(gameLoop);
+
+function setIngameQuantumTheme(themeKey) {
+    const key = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(themeKey) ? themeKey : 'singularity';
+    if (typeof permUpgrades !== 'undefined') {
+        permUpgrades.equippedSpawnAnim = key;
+        if (typeof savePermanentData === 'function') savePermanentData();
+    }
+    if (typeof SingularitySpawnEffect !== 'undefined') {
+        SingularitySpawnEffect.setTheme(key);
+    }
+    if (typeof player !== 'undefined' && player) {
+        player.singularityTheme = key;
+    }
+    ['singularity', 'supernova', 'synapse', 'abyssal'].forEach(k => {
+        const b = document.getElementById(`btn-theme-${k}`);
+        if (!b) return;
+        if (k === key) {
+            b.className = 'px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-cyan-500/20 border border-cyan-400 text-cyan-300 transition shadow-sm';
+        } else {
+            b.className = 'px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-400 hover:text-slate-200 transition';
+        }
+    });
+}
+window.setIngameQuantumTheme = setIngameQuantumTheme;
+
+const initialQuantumTheme = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+setTimeout(() => setIngameQuantumTheme(initialQuantumTheme), 50);
 
 window.triggerGameOver = triggerGameOver;
 window.restartGame = restartGame;

@@ -28,15 +28,15 @@ function triggerScreenPulse(color = '#00f0ff', maxAlpha = 0.35) {
 function spawnCoins() {
     coins = [];
     const canvasWidth = 800;
-    const canvasHeight = 680;
-    let coinCount = 6 + gameState.floor * 2;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 680;
+    let coinCount = 10 + gameState.floor * 3;
     if (gameState.activeModifier === 'goldrush') {
         coinCount = Math.floor(coinCount * 1.8);
     }
     for (let i = 0; i < coinCount; i++) {
         coins.push(new Coin(
             Math.random() * (canvasWidth - 80) + 40,
-            Math.random() * (canvasHeight - 340) + 80
+            Math.random() * (worldH - 340) + 120
         ));
     }
 }
@@ -45,7 +45,7 @@ function autoSpawnCoin() {
     if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
 
     const canvasWidth = 800;
-    const canvasHeight = 680;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 680;
     const maxAllowedCoins = 6 + gameState.floor * 2;
     if (coins.length >= maxAllowedCoins) return;
 
@@ -53,7 +53,7 @@ function autoSpawnCoin() {
     for (let i = 0; i < count; i++) {
         coins.push(new Coin(
             Math.random() * (canvasWidth - 60) + 30,
-            Math.random() * (canvasHeight - 280) + 70
+            Math.random() * (worldH - 340) + 120
         ));
     }
 }
@@ -61,12 +61,15 @@ function autoSpawnCoin() {
 function spawnPowerUps() {
     powerUps = [];
     const canvasWidth = 800;
-    const canvasHeight = 680;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 680;
     if (typeof PowerUp !== 'undefined') {
-        powerUps.push(new PowerUp(
-            Math.random() * (canvasWidth - 120) + 60,
-            Math.random() * (canvasHeight - 320) + 90
-        ));
+        const count = 2 + Math.floor(gameState.floor / 2);
+        for (let i = 0; i < count; i++) {
+            powerUps.push(new PowerUp(
+                Math.random() * (canvasWidth - 120) + 60,
+                Math.random() * (worldH - 360) + 140
+            ));
+        }
     }
 }
 
@@ -74,11 +77,11 @@ function autoSpawnPowerUp() {
     if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
     if (powerUps.length >= 2) return;
     const canvasWidth = 800;
-    const canvasHeight = 680;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 680;
     if (typeof PowerUp !== 'undefined') {
         powerUps.push(new PowerUp(
             Math.random() * (canvasWidth - 100) + 50,
-            Math.random() * (canvasHeight - 300) + 80
+            Math.random() * (worldH - 360) + 140
         ));
     }
 }
@@ -154,10 +157,12 @@ function nextFloor() {
     hasPassedBorder = false;
 
     if (typeof window.clearBullets === 'function') window.clearBullets();
+    if (typeof clearEscapePass === 'function') clearEscapePass();
     coins = [];
     if (typeof particles !== 'undefined') particles.length = 0;
     if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
     if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
+    if (typeof initFloorPlatforms === 'function') initFloorPlatforms(gameState.floor);
     if (typeof player !== 'undefined' && player.reset) player.reset(false);
     if (typeof monster !== 'undefined' && monster.reset) monster.reset();
     if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();

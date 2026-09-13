@@ -21,7 +21,11 @@ function getSpawnAnimsCatalog() {
         crystal: { id: 'crystal', name: 'Kristal Yarığı', title: 'Crystal Rift', icon: 'fa-gem', color: '#b899ff', glowColor: '#d9c5ff', badge: '💎 Kristal Yarığı', desc: 'İşıq çatı açılır, 3D perspektiv kristallar ayrılır, şimşək çaxır və Mons meydana çıxır.', costType: 'redDiamonds', cost: 15 },
         stellar: { id: 'stellar', name: 'Ulduz Nüvəsi', title: 'Stellar Bloom', icon: 'fa-sun', color: '#54d8cf', glowColor: '#f8d49a', badge: '🌟 Ulduz Nüvəsi', desc: 'Enerji toplanır, 3D axın lentləri fəzanı yarır, ulduz nüvəsi açılır və Mons doğulur.', costType: 'redDiamonds', cost: 25 },
         dracula: { id: 'dracula', name: 'Drakula', title: 'Dracula', icon: 'fa-bat', fallbackIcon: 'fa-feather', color: '#ba7886', glowColor: '#9774be', badge: '🦇 Yarasa Qanadları (+1 Sürət)', desc: 'Qaranlıq oyanır, nəhəng yarasa qanadları açılır və Monsa oyunda +1 hərəkət sürəti bəxş edir.', costType: 'redDiamonds', cost: 35 },
-        seed: { id: 'seed', name: 'Yaşam Çiçəyi', title: 'Time Seed', icon: 'fa-seedling', fallbackIcon: 'fa-leaf', color: '#62e6a0', glowColor: '#ffe3a0', badge: '🌸 Yaşam Çiçəyi (+1 Can)', desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq +1 əlavə can bəxş edir.', costType: 'redDiamonds', cost: 45 }
+        seed: { id: 'seed', name: 'Yaşam Çiçəyi', title: 'Time Seed', icon: 'fa-seedling', fallbackIcon: 'fa-leaf', color: '#62e6a0', glowColor: '#ffe3a0', badge: '🌸 Yaşam Çiçəyi (+1 Can)', desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq +1 əlavə can bəxş edir.', costType: 'redDiamonds', cost: 45 },
+        singularity: { id: 'singularity', name: 'Kiber Sinqulyarlıq', title: 'Cyber Singularity', icon: 'fa-circle-nodes', fallbackIcon: 'fa-atom', color: '#38bdf8', glowColor: '#06b6d4', badge: '🌀 Kvant Sinqulyarlığı (3D Halqalar & Lavaya Zərbə)', desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.', costType: 'redDiamonds', cost: 55 },
+        supernova: { id: 'supernova', name: 'Plazma Supernova', title: 'Plasma Supernova', icon: 'fa-fire-alt', fallbackIcon: 'fa-sun', color: '#fbbf24', glowColor: '#f97316', badge: '🔥 Plazma Supernova (Alovlu 3D Orbit & Lavaya Zərbə)', desc: 'Qızmar plazma qığılcımları və supernova nüvəsi: Aşağı şığıyan ulduzlar lavanı partladıb soyudur (-45px) və qəlpələrə bölür.', costType: 'redDiamonds', cost: 55 },
+        synapse: { id: 'synapse', name: 'Kvant Sinapsı', title: 'Quantum Synapse', icon: 'fa-bolt-lightning', fallbackIcon: 'fa-bolt', color: '#c084fc', glowColor: '#a855f7', badge: '⚡ Kvant Sinapsı (Bio-Elektrik Şəbəkə & Lavaya Zərbə)', desc: 'Bio-elektrik neyron şəbəkəsi və bənövşəyi pulslar: Kvant ulduzları aşağı atılaraq lavanı dondurub ləngidir və zərər vurur.', costType: 'redDiamonds', cost: 55 },
+        abyssal: { id: 'abyssal', name: 'Dərin Abiss', title: 'Deep Abyssal', icon: 'fa-water', fallbackIcon: 'fa-eye', color: '#2dd4bf', glowColor: '#0f766e', badge: '🌊 Dərin Abiss (Biolüminisent Sporlar & Lavaya Zərbə)', desc: 'Dərin okean leviathan gözü və spor dalğaları: Düşən zümrüd kristalları lavaya zərbə vuraraq lavanı geriyə itələyir.', costType: 'redDiamonds', cost: 55 }
     };
 }
 window.getSpawnAnimsCatalog = getSpawnAnimsCatalog;
@@ -210,6 +214,9 @@ function initSpawnAnimPreview(animId) {
     if (!canvas) return;
 
     const activeSkin = currentPreviewSkinId || (permUpgrades && permUpgrades.equippedSkin) || 'default';
+    if (window.SingularitySpawnEffect && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId)) {
+        window.SingularitySpawnEffect.setTheme(animId);
+    }
     const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(animId) : null;
     const fullDuration = (fxModule && fxModule.duration) ? fxModule.duration : 6.0;
 
@@ -404,7 +411,7 @@ function startSkinStageAnimation() {
                 };
 
                 // Animasiya mühərrikini mini canvas üçün çağırırıq
-                fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster);
+                fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster, false, aid);
             });
         }
 
@@ -841,6 +848,67 @@ function openSpawnAnimFullscreenPreview(animId) {
                     </p>
                 </div>
             `;
+        } else if (['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId)) {
+            const themeDetails = {
+                singularity: {
+                    title: 'Kiber Sinqulyarlıq (Cyan / Mavi)',
+                    badge: '🌀 Hadisə Üfüqü & Qara Dəlik',
+                    desc: 'Qara dəlik nüvəsi və foton halqası: Ulduzlar orbitdən ayrılıb lavaya şığıyır, lavanı güclü dondurub -45px geri itələyir və canavara zərər vurur.',
+                    color: 'text-cyan-300',
+                    border: 'border-cyan-500/40',
+                    bg: 'bg-cyan-500/20'
+                },
+                supernova: {
+                    title: 'Plazma Supernova (Qızıl / Alov)',
+                    badge: '🔥 Alovlu Plazma Qığılcımları',
+                    desc: 'Qızmar plazma partlayışları və supernova nüvəsi: Aşağı şığıyan ulduzlar lavanı partladıb soyudur (-45px) və qəlpələrə bölür.',
+                    color: 'text-amber-300',
+                    border: 'border-amber-500/40',
+                    bg: 'bg-amber-500/20'
+                },
+                synapse: {
+                    title: 'Kvant Sinapsı (Bənövşəyi / Elektrik)',
+                    badge: '⚡ Bio-Elektrik Neyron Şəbəkəsi',
+                    desc: 'Sinaps xətləri və elektrik pulsları: Kvant ulduzları aşağı atılaraq lavanı dondurub ləngidir və zərər vurur.',
+                    color: 'text-purple-300',
+                    border: 'border-purple-500/40',
+                    bg: 'bg-purple-500/20'
+                },
+                abyssal: {
+                    title: 'Dərin Abiss (Zümrüd / Tirkuaz)',
+                    badge: '🌊 Dərinlik Leviathan Qolları',
+                    desc: 'Biolüminisent sporlar və leviathan gözü: Düşən zümrüd kristalları lavaya zərbə vuraraq lavanı geriyə itələyir.',
+                    color: 'text-teal-300',
+                    border: 'border-teal-500/40',
+                    bg: 'bg-teal-500/20'
+                }
+            };
+            const activeDetail = themeDetails[animId] || themeDetails.singularity;
+
+            perkBox.innerHTML = `
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-orbitron font-bold ${activeDetail.color} flex items-center gap-1.5">
+                            <i class="fa-solid fa-atom"></i> ${activeDetail.title}
+                        </span>
+                        <span class="text-[9px] font-orbitron font-bold px-2 py-0.5 rounded ${activeDetail.bg} ${activeDetail.color} border ${activeDetail.border}">
+                            ${activeDetail.badge}
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-slate-300 leading-relaxed flex flex-col gap-1">
+                        <div>• <strong>Kvant Simulyasiyası:</strong> 3D Pitch, Roll və Yaw bucaqları ilə fəzada dönən 3 pilləli telemetriya halqaları və dinamik qanadlar.</div>
+                        <div>• <strong>Lavaya Zərbə:</strong> Düşən ulduzlar lavaya dəyəndə lavanı dərhal soyudur (-45px), kristal qəlpələrə parçalayır və canavara zərər vurur!</div>
+                        <div>• <strong>Əl ilə Ulduz Qopartma:</strong> Oyunda [E] düyməsinə basdıqda orbitdən ulduz qoparaq aşağı şığıyır.</div>
+                    </div>
+                    <div class="pt-2 mt-1 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5">
+                        <span class="text-[9px] text-slate-400 font-mono">MÖVZU SEÇİMİ:</span>
+                        <button type="button" onclick="if (window.SingularitySpawnEffect) { window.SingularitySpawnEffect.setTheme('singularity'); openSpawnAnimFullscreenPreview('singularity'); }" class="px-2.5 py-1 bg-cyan-950/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-[9px] rounded-lg font-mono transition shadow-sm">🌀 Kiber Sinqulyarlıq</button>
+                        <button type="button" onclick="if (window.SingularitySpawnEffect) { window.SingularitySpawnEffect.setTheme('supernova'); openSpawnAnimFullscreenPreview('supernova'); }" class="px-2.5 py-1 bg-amber-950/80 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[9px] rounded-lg font-mono transition shadow-sm">🔥 Plazma Supernova</button>
+                        <button type="button" onclick="if (window.SingularitySpawnEffect) { window.SingularitySpawnEffect.setTheme('synapse'); openSpawnAnimFullscreenPreview('synapse'); }" class="px-2.5 py-1 bg-purple-950/80 border border-purple-500/40 hover:border-purple-400 text-purple-300 text-[9px] rounded-lg font-mono transition shadow-sm">⚡ Kvant Sinapsı</button>
+                        <button type="button" onclick="if (window.SingularitySpawnEffect) { window.SingularitySpawnEffect.setTheme('abyssal'); openSpawnAnimFullscreenPreview('abyssal'); }" class="px-2.5 py-1 bg-teal-950/80 border border-teal-500/40 hover:border-teal-400 text-teal-300 text-[9px] rounded-lg font-mono transition shadow-sm">🌊 Dərin Abiss</button>
+                    </div>
+                </div>
+            `;
         } else {
             perkBox.innerHTML = `
                 <div class="flex flex-col gap-1.5">
@@ -867,6 +935,8 @@ function openSpawnAnimFullscreenPreview(animId) {
             hintEl.innerHTML = `<span class="text-amber-300 font-bold"><i class="fa-solid fa-gamepad mr-1"></i> W A S D / Oxlar — Sərbəst Uçuş və Qanad İdarəsi</span>`;
         } else if (animId === 'seed') {
             hintEl.innerHTML = `<span class="text-emerald-300 font-bold"><i class="fa-solid fa-seedling mr-1"></i> W A S D / Oxlar — Hərəkət və Çiçək Aurası</span>`;
+        } else if (['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId)) {
+            hintEl.innerHTML = `<span class="text-cyan-300 font-bold font-mono text-[11px]"><i class="fa-solid fa-atom mr-1"></i> [W][A][S][D] / Drag: 3D Uçuş · [BOŞLUQ]: Şok Dalğası · [E]: Ulduz Qopart</span>`;
         } else {
             hintEl.innerHTML = `60 FPS Dinamik Kiber Doğuluş`;
         }
@@ -929,6 +999,9 @@ function startFullscreenAnim(animId) {
     if (!ctx) return;
 
     const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(animId) : null;
+    if (window.SingularitySpawnEffect && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId)) {
+        window.SingularitySpawnEffect.setTheme(animId);
+    }
     if (fxModule) {
         if (typeof fxModule.resetFlight === 'function') fxModule.resetFlight();
         fxModule.interactive = (animId === 'dracula' || animId === 'seed');
@@ -975,7 +1048,7 @@ function startFullscreenAnim(animId) {
                     drawSkinModel(mctx, 0, 0, 32, fullscreenAnimInstance.skinId, 0, mt * 3, false);
                 }
             };
-            fxModule.draw(ctx, w, h, fullscreenAnimInstance.time, drawMonster);
+            fxModule.draw(ctx, w, h, fullscreenAnimInstance.time, drawMonster, false, fullscreenAnimInstance.animId);
         }
 
         // Progress bar və taymeri yenilə
