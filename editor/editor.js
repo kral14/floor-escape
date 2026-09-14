@@ -35,6 +35,9 @@
     const btnDirRight = document.getElementById('btn-dir-right');
     const btnDirLeft = document.getElementById('btn-dir-left');
     const btnDeleteLava = document.getElementById('btn-delete-lava');
+    const btnToggleTerminate = document.getElementById('btn-toggle-terminate');
+    const textTerminateStatus = document.getElementById('text-terminate-status');
+    const iconTerminateStatus = document.getElementById('icon-terminate-status');
 
     const statRocksCount = document.getElementById('stat-rocks-count');
     const statLavaCount = document.getElementById('stat-lava-count');
@@ -209,6 +212,26 @@
             btnDirAuto.classList.toggle('active', dir === 'auto');
             btnDirRight.classList.toggle('active', dir === 'right');
             btnDirLeft.classList.toggle('active', dir === 'left');
+
+            // Platformada sonlanma statusu
+            updateTerminateUI(!!lava.stopOnHit);
+        }
+    }
+
+    function updateTerminateUI(isTerminated) {
+        if (!btnToggleTerminate || !textTerminateStatus) return;
+        if (isTerminated) {
+            textTerminateStatus.textContent = '🛑 Platformada Sonlanır';
+            iconTerminateStatus.className = 'fa-solid fa-hand text-orange';
+            btnToggleTerminate.style.background = 'rgba(239, 68, 68, 0.25)';
+            btnToggleTerminate.style.borderColor = '#ef4444';
+            btnToggleTerminate.style.color = '#ff6b6b';
+        } else {
+            textTerminateStatus.textContent = '⬇️ Tam Aşağı Axır';
+            iconTerminateStatus.className = 'fa-solid fa-water text-cyan';
+            btnToggleTerminate.style.background = 'rgba(30, 41, 59, 0.9)';
+            btnToggleTerminate.style.borderColor = '#475569';
+            btnToggleTerminate.style.color = '#94a3b8';
         }
     }
 
@@ -289,14 +312,22 @@
                     outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
                 }
 
+                const isTerminated = !!src.stopOnHit;
                 path.shelves.push({
                     sourceIndex: sIdx,
                     step: d,
                     rock: hitRock,
                     hitX: hitX,
                     outX: outX,
-                    goRight: goRight
+                    goRight: goRight,
+                    terminated: isTerminated
                 });
+
+                // Əgər istifadəçi bu lavı töküldüyü platformada sonlandırıbsa, aşağıya yeni şəlalə getmir!
+                if (isTerminated) {
+                    path.terminated = true;
+                    break;
+                }
 
                 currW = Math.min(currW, 26);
                 currX = outX - currW * 0.5;
@@ -417,30 +448,57 @@
                         ctx.fill();
                         ctx.restore();
 
-                        // 🎯 Lavanın Platformadakı Tökülmə Tutacağı (Spillway Gizmo Handle)
-                        ctx.save();
-                        ctx.shadowColor = '#ff6600';
-                        ctx.shadowBlur = 14;
-                        ctx.fillStyle = '#ff6600';
-                        ctx.beginPath();
-                        ctx.arc(shelf.outX, rock.y + 2, 11, 0, Math.PI * 2);
-                        ctx.fill();
+                        if (shelf.terminated) {
+                            // 🛑 Platformada Sonlanmış Qızmar Gölməçə və Stop Nişanı
+                            ctx.save();
+                            ctx.shadowColor = '#ef4444';
+                            ctx.shadowBlur = 18;
+                            ctx.fillStyle = '#ef4444';
+                            ctx.beginPath();
+                            ctx.arc(shelf.hitX, rock.y + 2, 13, 0, Math.PI * 2);
+                            ctx.fill();
 
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 2.5;
-                        ctx.stroke();
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 2.5;
+                            ctx.stroke();
 
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 11px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText('↔', shelf.outX, rock.y + 2);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 12px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('🛑', shelf.hitX, rock.y + 2);
 
-                        // Qayanın üstündə tökülmə nöqtəsi yazısı
-                        ctx.fillStyle = '#ffd567';
-                        ctx.font = 'bold 10px Orbitron, monospace';
-                        ctx.fillText(`TÖKÜLMƏ X:${Math.round(shelf.outX)}`, shelf.outX, rock.y - 10);
-                        ctx.restore();
+                            // Qayanın üstündə parlaq dayandı yazısı
+                            ctx.fillStyle = '#ff6b6b';
+                            ctx.font = 'bold 11px Orbitron, monospace';
+                            ctx.fillText(`🛑 SONLANDI (AŞAĞI AÇIQDIR)`, shelf.hitX, rock.y - 12);
+                            ctx.restore();
+                        } else {
+                            // 🎯 Lavanın Platformadakı Tökülmə Tutacağı (Spillway Gizmo Handle)
+                            ctx.save();
+                            ctx.shadowColor = '#ff6600';
+                            ctx.shadowBlur = 14;
+                            ctx.fillStyle = '#ff6600';
+                            ctx.beginPath();
+                            ctx.arc(shelf.outX, rock.y + 2, 11, 0, Math.PI * 2);
+                            ctx.fill();
+
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 2.5;
+                            ctx.stroke();
+
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 11px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('↔', shelf.outX, rock.y + 2);
+
+                            // Qayanın üstündə tökülmə nöqtəsi yazısı
+                            ctx.fillStyle = '#ffd567';
+                            ctx.font = 'bold 10px Orbitron, monospace';
+                            ctx.fillText(`TÖKÜLMƏ X:${Math.round(shelf.outX)}`, shelf.outX, rock.y - 10);
+                            ctx.restore();
+                        }
                     }
                 }
             }
@@ -736,6 +794,22 @@
             }
         }
 
+        // 🛑 Platformada Sonlandırma Düyməsi
+        if (btnToggleTerminate) {
+            btnToggleTerminate.addEventListener('click', () => {
+                if (selectedType === 'lava' && currentTrack.lavaSources[selectedIndex]) {
+                    const lava = currentTrack.lavaSources[selectedIndex];
+                    lava.stopOnHit = !lava.stopOnHit;
+                    updateTerminateUI(lava.stopOnHit);
+                    showToast(lava.stopOnHit 
+                        ? '🛑 Lava platformada sonlandırıldı! Aşağı dəhliz tam açıqdır.' 
+                        : '⬇️ Lava yenidən aşağı axır.', 
+                        lava.stopOnHit ? 'warning' : 'info'
+                    );
+                }
+            });
+        }
+
         // Sınaq Rejimi Düyməsi
         btnModeTest.addEventListener('click', () => {
             isTestMode = !isTestMode;
@@ -851,22 +925,34 @@
             if (isTestMode) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
 
-            // 1. Qaya üstündəki Lava Tökülmə / İstiqamət Tutacağını (Spillway Gizmo) yoxla
+            // 1. Qaya üstündəki Lava Tökülmə / İstiqamət Tutacağını (Spillway Gizmo) və ya Sonlandırma Nişanını yoxla
             const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
             for (const path of cascadePaths) {
                 for (const shelf of path.shelves) {
-                    const distHandle = Math.hypot(mouseX - shelf.outX, mouseY - (shelf.rock.y + 2));
-                    if (distHandle < 20) {
-                        isDraggingLavaDir = true;
-                        activeLavaHandle = {
-                            sourceIndex: shelf.sourceIndex,
-                            step: shelf.step || 0,
-                            rock: shelf.rock,
-                            hitX: shelf.hitX
-                        };
-                        selectElement('lava', shelf.sourceIndex);
-                        canvas.style.cursor = 'ew-resize';
-                        return;
+                    if (shelf.terminated) {
+                        const distStop = Math.hypot(mouseX - shelf.hitX, mouseY - (shelf.rock.y + 2));
+                        if (distStop < 22) {
+                            selectElement('lava', shelf.sourceIndex);
+                            const lava = currentTrack.lavaSources[shelf.sourceIndex];
+                            lava.stopOnHit = false;
+                            updateTerminateUI(false);
+                            showToast('⬇️ Lava axını yenidən açıldı (tam aşağı axır).', 'info');
+                            return;
+                        }
+                    } else {
+                        const distHandle = Math.hypot(mouseX - shelf.outX, mouseY - (shelf.rock.y + 2));
+                        if (distHandle < 20) {
+                            isDraggingLavaDir = true;
+                            activeLavaHandle = {
+                                sourceIndex: shelf.sourceIndex,
+                                step: shelf.step || 0,
+                                rock: shelf.rock,
+                                hitX: shelf.hitX
+                            };
+                            selectElement('lava', shelf.sourceIndex);
+                            canvas.style.cursor = 'ew-resize';
+                            return;
+                        }
                     }
                 }
             }

@@ -363,13 +363,21 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
                 outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
             }
 
+            const isTerminated = !!src.stopOnHit;
             path.shelves.push({
                 rock: hitRock,
                 hitX: hitX,
-                outX: outX,
+                outX: isTerminated ? hitX : outX,
                 goRight: goRight,
-                d: d
+                d: d,
+                terminated: isTerminated
             });
+
+            // Əgər istifadəçi bu lavı töküldüyü platformada sonlandırıbsa, aşağıya yeni şəlalə getmir!
+            if (isTerminated) {
+                path.terminated = true;
+                break;
+            }
 
             // Növbəti şəlalə bu qayanın alt dodağından yenidən aşağı tökülür!
             currW = Math.min(currW, 26);
@@ -507,8 +515,8 @@ function drawPlatforms(ctx) {
         for (const path of cascadePaths) {
             for (const shelf of path.shelves) {
                 if (shelf.rock === rock) {
-                    const startX = Math.min(shelf.hitX, shelf.outX) - 4;
-                    const endX = Math.max(shelf.hitX, shelf.outX) + 4;
+                    const startX = shelf.terminated ? (shelf.hitX - 18) : (Math.min(shelf.hitX, shelf.outX) - 4);
+                    const endX = shelf.terminated ? (shelf.hitX + 18) : (Math.max(shelf.hitX, shelf.outX) + 4);
 
                     c.save();
                     let surface = c.createLinearGradient(0, rock.y - 6, 0, rock.y + 8);
