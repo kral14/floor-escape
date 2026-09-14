@@ -12,6 +12,6 @@ COPY . .
 
 RUN mkdir -p /app/data
 
-EXPOSE 4000 4001
+EXPOSE 4000 4001 8082
 
 CMD ["python", "server.py"]
