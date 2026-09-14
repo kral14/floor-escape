@@ -56,9 +56,11 @@
     let hoveredType = null;
     let hoveredIndex = -1;
 
-    // Sürükləmə (Drag & Resize)
+    // Sürükləmə (Drag, Resize & Direction Gizmo)
     let isDragging = false;
     let isResizing = false;
+    let isDraggingLavaDir = false;
+    let activeLavaHandle = null;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
 
@@ -229,6 +231,7 @@
             let currY = src.y;
 
             const path = {
+                sourceIndex: sIdx,
                 source: { x: currX, y: currY, w: currW },
                 falls: [],
                 shelves: []
@@ -277,6 +280,7 @@
                 const outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
 
                 path.shelves.push({
+                    sourceIndex: sIdx,
                     rock: hitRock,
                     hitX: hitX,
                     outX: outX,
@@ -401,6 +405,26 @@
                         ctx.roundRect(startX, rock.y - 2, Math.max(16, endX - startX), 7, 2);
                         ctx.fill();
                         ctx.restore();
+
+                        // 🎯 Lavanın İstiqamət Tutacağı (Gizmo Handle - Siçanla tutub istiqaməti dəyişin!)
+                        ctx.save();
+                        ctx.shadowColor = '#f97316';
+                        ctx.shadowBlur = 12;
+                        ctx.fillStyle = '#f97316';
+                        ctx.beginPath();
+                        ctx.arc(shelf.outX, rock.y + 2, 9, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(shelf.goRight ? '▶' : '◀', shelf.outX, rock.y + 2);
+                        ctx.restore();
                     }
                 }
             }
@@ -430,6 +454,32 @@
                 ctx.fillStyle = '#f97316';
                 ctx.font = 'bold 11px Orbitron, monospace';
                 ctx.fillText(`🔥 LAVA X:${lava.x} Y:${lava.y}`, lava.x - 12, lava.y - 30);
+
+                // İstiqaməti əllə dəyişmək üçün Tez Ox Düymələri (◀ və ▶)
+                const curDir = lava.direction || 'auto';
+                ctx.setLineDash([]);
+
+                // Sol düyməcik
+                ctx.fillStyle = curDir === 'left' ? '#f97316' : 'rgba(30, 41, 59, 0.9)';
+                ctx.beginPath();
+                ctx.roundRect(lava.x - 42, lava.y - 12, 24, 22, 4);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('◀', lava.x - 30, lava.y - 1);
+
+                // Sağ düyməcik
+                ctx.fillStyle = curDir === 'right' ? '#f97316' : 'rgba(30, 41, 59, 0.9)';
+                ctx.beginPath();
+                ctx.roundRect(lava.x + (lava.w || 24) + 18, lava.y - 12, 24, 22, 4);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.fillText('▶', lava.x + (lava.w || 24) + 30, lava.y - 1);
+
                 ctx.restore();
             }
         }
@@ -780,12 +830,58 @@
             canvas.style.cursor = 'default';
         });
 
-        // Siçanla Seçim və Sürükləməyə Başlama
+        // Siçanla Seçim, İstiqamət Dəyişmə və Sürükləməyə Başlama
         canvas.addEventListener('mousedown', (e) => {
             if (isTestMode) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
 
-            // 1. Resize tutacağını yoxla
+            // 1. Qaya üstündəki Lava İstiqamət Tutacağını (Gizmo Handle) yoxla
+            const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
+            for (const path of cascadePaths) {
+                for (const shelf of path.shelves) {
+                    const distHandle = Math.hypot(mouseX - shelf.outX, mouseY - (shelf.rock.y + 2));
+                    if (distHandle < 18) {
+                        isDraggingLavaDir = true;
+                        activeLavaHandle = {
+                            sourceIndex: shelf.sourceIndex,
+                            rock: shelf.rock,
+                            hitX: shelf.hitX
+                        };
+                        selectElement('lava', shelf.sourceIndex);
+
+                        // Klikləndikdə dərhal istiqaməti tərsinə çevir
+                        const currentDir = currentTrack.lavaSources[shelf.sourceIndex].direction || (shelf.goRight ? 'right' : 'left');
+                        const toggledDir = (currentDir === 'right') ? 'left' : 'right';
+                        setLavaDir(toggledDir);
+                        showToast(`Lavanın istiqaməti dəyişdirildi: ${toggledDir === 'right' ? 'Sağa ▶' : 'Sola ◀'}`, 'info');
+                        return;
+                    }
+                }
+            }
+
+            // 2. Lava Mənbəyinin yanındakı Tez İstiqamət Düymələrini (◀ və ▶) yoxla
+            for (let i = currentTrack.lavaSources.length - 1; i >= 0; i--) {
+                const lava = currentTrack.lavaSources[i];
+                const lw = lava.w || 24;
+
+                // Sol ox düyməsi (◀)
+                if (mouseX >= lava.x - 44 && mouseX <= lava.x - 16 && mouseY >= lava.y - 14 && mouseY <= lava.y + 12) {
+                    selectElement('lava', i);
+                    setLavaDir('left');
+                    showToast('Lava sola yönləndirildi ◀', 'info');
+                    return;
+                }
+
+                // Sağ ox düyməsi (▶)
+                if (mouseX >= lava.x + lw + 16 && mouseX <= lava.x + lw + 44 && mouseY >= lava.y - 14 && mouseY <= lava.y + 12) {
+                    selectElement('lava', i);
+                    setLavaDir('right');
+                    showToast('Lava sağa yönləndirildi ▶', 'info');
+                    return;
+                }
+            }
+
+            // 3. Resize tutacağını yoxla
             if (selectedType === 'rock' && selectedIndex >= 0) {
                 const rock = currentTrack.rocks[selectedIndex];
                 if (rock) {
@@ -799,7 +895,7 @@
                 }
             }
 
-            // 2. Lava mənbələrini yoxla (Geniş tutma sahəsi)
+            // 4. Lava mənbələrini sürükləmək üçün yoxla
             for (let i = currentTrack.lavaSources.length - 1; i >= 0; i--) {
                 const lava = currentTrack.lavaSources[i];
                 if (mouseX >= lava.x - 25 && mouseX <= lava.x + (lava.w || 24) + 25 &&
@@ -813,7 +909,7 @@
                 }
             }
 
-            // 3. Platformaları (Qayaları) yoxla
+            // 5. Platformaları (Qayaları) sürükləmək üçün yoxla
             for (let i = currentTrack.rocks.length - 1; i >= 0; i--) {
                 const rock = currentTrack.rocks[i];
                 if (mouseX >= rock.x && mouseX <= rock.x + rock.w &&
@@ -833,8 +929,21 @@
 
         // Sürükləmə Hərəkəti (Pəncərə boyu qüsursuz işləyir)
         window.addEventListener('mousemove', (e) => {
-            if (!isDragging && !isResizing) return;
+            if (!isDragging && !isResizing && !isDraggingLavaDir) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
+
+            // 🎯 Lavanın İstiqamətini Siçanla Sağa/Sola Çəkərək Yönləndirmək
+            if (isDraggingLavaDir && activeLavaHandle) {
+                const src = currentTrack.lavaSources[activeLavaHandle.sourceIndex];
+                if (src) {
+                    if (mouseX > activeLavaHandle.hitX + 12) {
+                        if (src.direction !== 'right') setLavaDir('right');
+                    } else if (mouseX < activeLavaHandle.hitX - 12) {
+                        if (src.direction !== 'left') setLavaDir('left');
+                    }
+                }
+                return;
+            }
 
             // Ölçü dəyişimi
             if (isResizing && selectedType === 'rock' && currentTrack.rocks[selectedIndex]) {
@@ -862,9 +971,11 @@
 
         // Sürükləmənin Bitməsi
         window.addEventListener('mouseup', () => {
-            if (isDragging || isResizing) {
+            if (isDragging || isResizing || isDraggingLavaDir) {
                 isDragging = false;
                 isResizing = false;
+                isDraggingLavaDir = false;
+                activeLavaHandle = null;
                 canvas.style.cursor = 'default';
             }
         });
