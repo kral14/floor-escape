@@ -39,4 +39,12 @@ if (fs.existsSync(publicGuide)) {
     console.log('✓ Root guide.html sinxronlaşdırıldı.');
 }
 
+// 5. Root lava-preview.html
+const publicLava = path.join(publicDir, 'lava-preview.html');
+if (fs.existsSync(publicLava)) {
+    let lavaHtml = fs.readFileSync(publicLava, 'utf-8');
+    fs.writeFileSync(path.join(__dirname, 'lava-preview.html'), lavaHtml, 'utf-8');
+    console.log('✓ Root lava-preview.html sinxronlaşdırıldı.');
+}
+
 console.log('✓ Build prosesi uğurla tamamlandı!');

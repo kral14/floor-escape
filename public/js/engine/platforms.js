@@ -176,24 +176,28 @@ function updatePlatformsPhysics(player, dt = 0.016) {
 }
 window.updatePlatformsPhysics = updatePlatformsPhysics;
 
-// 4. Yanma və Qorunma Hadisəsi
-function onPlayerTouchLava(player, lavaSource) {
-    if (typeof gameState !== 'undefined' && gameState.dashInvulnerable > 0) return;
+// 4. Lavaya Dəymə və Yanma İdarəetməsi
+function handleLavaBurn(player) {
+    if (!player) return;
 
-    // Yanma reaksiyası: Oyunçunu geriyə sıçradır
-    const pushAngle = Math.atan2(player.y - (lavaSource.y + lavaSource.h / 2), player.x - (lavaSource.x + lavaSource.w / 2));
-    player.x += Math.cos(pushAngle) * 35;
-    player.y += Math.sin(pushAngle) * 35;
+    if (typeof gameState !== 'undefined') {
+        if (gameState.dashInvulnerable > 0 || gameState.transitioning || gameState.gameOver) {
+            return;
+        }
+    }
 
-    // Yanma alov hissəcikləri
+    // Yanma zərrəcikləri
     if (typeof particles !== 'undefined') {
-        for (let i = 0; i < 24; i++) {
-            particles.push(new Particle(
-                player.x + (Math.random() - 0.5) * 30,
-                player.y + (Math.random() - 0.5) * 30,
-                ['#ef4444', '#f97316', '#fcd34d', '#7f1d1d'][i % 4],
-                4.5
-            ));
+        for (let i = 0; i < 22; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 60 + Math.random() * 160;
+            const pColor = i % 2 === 0 ? '#facc15' : '#ef4444';
+            if (typeof Particle !== 'undefined') {
+                const p = new Particle(player.x, player.y, pColor, 3.5);
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                particles.push(p);
+            }
         }
     }
 
@@ -238,115 +242,87 @@ function onPlayerTouchLava(player, lavaSource) {
         triggerGameOver();
     }
 }
+window.handleLavaBurn = handleLavaBurn;
 
-// 5. Qaya və Axan Lava Renderi
+// 5. Qaya və Axan Lava Renderi (ULTRA-DİNAMİK LAVA ENGINE İLƏ)
 function drawPlatforms(ctx) {
     const c = ctx || (typeof window !== 'undefined' ? window.ctx : null);
     if (!c) return;
 
-    // A) QAYALAR (Rock Platforms - Obsidian / Cyber Slate)
-    for (const rock of currentRocks) {
-        c.save();
+    const useEngine = (typeof LavaEngine !== 'undefined' && LavaEngine);
+    const t = lavaFlowOffset * 0.032;
 
-        // 1. Qaya xarici kölgəsi
-        c.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        c.shadowBlur = 18;
-        c.shadowOffsetY = 8;
+    // A) ANIMASIYALI AXAN LAVA ŞƏLALƏLƏRİ (Platformadan və ya Divardan Tökülən Maye)
+    for (let i = 0; i < currentLavaFalls.length; i++) {
+        const fall = currentLavaFalls[i];
 
-        // 2. Əsas Qaya Gövdəsi (Teksturalı Tünd Qaya)
-        const rockGrad = c.createLinearGradient(rock.x, rock.y, rock.x, rock.y + rock.h);
-        rockGrad.addColorStop(0, '#334155');
-        rockGrad.addColorStop(0.35, '#1e293b');
-        rockGrad.addColorStop(1, '#0f172a');
+        if (useEngine) {
+            // 1. Dinamik Lava Şəlaləsi (Axıcı kənarlar, qızmar nüvə və soyuyan bazalt qabığı)
+            LavaEngine.drawPlatformWaterfall(c, t + i * 0.7, fall.x, fall.y, fall.w, fall.h, {
+                spread: 0.12,
+                wobble: 1.15
+            });
 
-        c.fillStyle = rockGrad;
-        c.strokeStyle = '#475569';
-        c.lineWidth = 2.5;
-        c.beginPath();
-        c.roundRect(rock.x, rock.y, rock.w, rock.h, 8);
-        c.fill();
-        c.stroke();
-        c.shadowBlur = 0;
+            // 2. Qayanın daxili vulkanik çıxış oyuqu (Aperture)
+            LavaEngine.drawLavaSourceRock(c, fall.x, fall.y, fall.w, fall.seed || i, t);
 
-        // 3. Qayanın üst kənar işıqlanması (Bevel highlight)
-        c.strokeStyle = '#94a3b8';
-        c.lineWidth = 2;
-        c.beginPath();
-        c.moveTo(rock.x + 8, rock.y + 2);
-        c.lineTo(rock.x + rock.w - 8, rock.y + 2);
-        c.stroke();
+            // 3. Şəlalənin alt töküldüyü yerdə qaynayan gölməçə və yuxarı sıçrayan damcılar
+            LavaEngine.drawLavaImpactPool(c, t + i * 0.5, fall.x + fall.w * 0.5, fall.y + fall.h, fall.w * 0.65);
 
-        // 4. Qaya Çatları və Həndəsi Cizgilər
-        c.strokeStyle = 'rgba(15, 23, 42, 0.75)';
-        c.lineWidth = 1.6;
-        c.beginPath();
-        c.moveTo(rock.x + rock.w * 0.25, rock.y + 2);
-        c.lineTo(rock.x + rock.w * 0.32, rock.y + rock.h * 0.6);
-        c.lineTo(rock.x + rock.w * 0.40, rock.y + rock.h - 3);
-
-        c.moveTo(rock.x + rock.w * 0.70, rock.y + 2);
-        c.lineTo(rock.x + rock.w * 0.65, rock.y + rock.h * 0.5);
-        c.lineTo(rock.x + rock.w * 0.75, rock.y + rock.h - 3);
-        c.stroke();
-
-        // 5. Qaya Kənarlarında Neon Kiber Qeyd
-        c.fillStyle = '#38bdf8';
-        c.shadowColor = '#38bdf8';
-        c.shadowBlur = 8;
-        c.beginPath();
-        c.arc(rock.x + 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
-        c.arc(rock.x + rock.w - 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
-        c.fill();
-
-        c.restore();
+            // 4. Parlaq xəbərdarlıq qeydi
+            c.save();
+            c.font = '900 11px Orbitron, sans-serif';
+            c.fillStyle = '#ffedd5';
+            c.shadowColor = '#ea580c';
+            c.shadowBlur = 12;
+            c.textAlign = 'center';
+            c.fillText('🔥 LAVA', fall.x + fall.w / 2, fall.y + 18);
+            c.restore();
+        } else {
+            // Ehtiyat Fallback
+            c.save();
+            c.shadowColor = '#f97316';
+            c.shadowBlur = 25;
+            const lavaGrad = c.createLinearGradient(fall.x, fall.y, fall.x + fall.w, fall.y);
+            lavaGrad.addColorStop(0, '#7f1d1d');
+            lavaGrad.addColorStop(0.2, '#ef4444');
+            lavaGrad.addColorStop(0.5, '#facc15');
+            lavaGrad.addColorStop(0.8, '#ef4444');
+            lavaGrad.addColorStop(1, '#7f1d1d');
+            c.fillStyle = lavaGrad;
+            c.strokeStyle = '#fef08a';
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.roundRect(fall.x, fall.y, fall.w, fall.h, 6);
+            c.fill();
+            c.stroke();
+            c.restore();
+        }
     }
 
-    // B) ANIMASIYALI AXAN LAVA BÖLMƏLƏRİ (Flowing Magma Streams / Waterfalls)
-    for (const fall of currentLavaFalls) {
-        c.save();
-
-        // 1. Qaynar Alov Aurası
-        c.shadowColor = '#f97316';
-        c.shadowBlur = 25;
-
-        // 2. Axan Maye Qradiyenti (Animasiyalı axın üçün faza ilə)
-        const lavaGrad = c.createLinearGradient(fall.x, fall.y, fall.x + fall.w, fall.y);
-        lavaGrad.addColorStop(0, '#7f1d1d');
-        lavaGrad.addColorStop(0.2, '#ef4444');
-        lavaGrad.addColorStop(0.5, '#facc15'); // İsti mərkəz
-        lavaGrad.addColorStop(0.8, '#ef4444');
-        lavaGrad.addColorStop(1, '#7f1d1d');
-
-        c.fillStyle = lavaGrad;
-        c.strokeStyle = '#fef08a';
-        c.lineWidth = 1.5;
-        c.beginPath();
-        c.roundRect(fall.x, fall.y, fall.w, fall.h, 6);
-        c.fill();
-        c.stroke();
-
-        // 3. Axan Lava Şırnaqları (Flowing Wave Streaks)
-        c.strokeStyle = 'rgba(254, 240, 138, 0.65)';
-        c.lineWidth = 2.2;
-        c.setLineDash([14, 10]);
-        c.lineDashOffset = -lavaFlowOffset;
-
-        for (let s = 1; s <= 3; s++) {
-            const streakX = fall.x + (fall.w / 4) * s;
+    // B) QAYALAR (Rock Platforms - Təbii Obsidian / Qaya Blokları)
+    for (let i = 0; i < currentRocks.length; i++) {
+        const rock = currentRocks[i];
+        if (useEngine) {
+            LavaEngine.drawRockPlatform(c, rock.x, rock.y, rock.w, rock.h, t + i, { cyber: true });
+        } else {
+            c.save();
+            c.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            c.shadowBlur = 18;
+            c.shadowOffsetY = 8;
+            const rockGrad = c.createLinearGradient(rock.x, rock.y, rock.x, rock.y + rock.h);
+            rockGrad.addColorStop(0, '#334155');
+            rockGrad.addColorStop(0.35, '#1e293b');
+            rockGrad.addColorStop(1, '#0f172a');
+            c.fillStyle = rockGrad;
+            c.strokeStyle = '#475569';
+            c.lineWidth = 2.5;
             c.beginPath();
-            c.moveTo(streakX, fall.y + 4);
-            c.lineTo(streakX, fall.y + fall.h - 4);
+            c.roundRect(rock.x, rock.y, rock.w, rock.h, 8);
+            c.fill();
             c.stroke();
+            c.restore();
         }
-        c.setLineDash([]);
-
-        // 4. Təhlükə / Yanma Xəbərdarlıq Nişanı
-        c.font = '900 11px Orbitron, sans-serif';
-        c.fillStyle = '#450a0a';
-        c.textAlign = 'center';
-        c.fillText('🔥 LAVA', fall.x + fall.w / 2, fall.y + 16);
-
-        c.restore();
     }
 
     // C) DAMCILAYAN LAVA KÖZLƏRİ (Dripping Embers)
