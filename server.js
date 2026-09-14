@@ -141,6 +141,22 @@ const server = http.createServer((req, res) => {
     // API MARŞRUTLARI (GET)
     // ==========================================
     if (req.method === 'GET') {
+        // 0. Oyunçuların Siyahısı (Admin Generator üçün)
+        if (pathname === '/api/players/list') {
+            const players = readJson(PLAYERS_FILE, []);
+            const rows = players.map(p => ({
+                player_id: p.playerId,
+                username: p.username,
+                diamonds: p.diamonds || 0,
+                red_diamonds: p.redDiamonds || 0,
+                gold: p.gold || 0,
+                best_floor: p.bestFloor || 1,
+                last_login: p.lastLogin || p.createdAt,
+                created_at: p.createdAt
+            })).sort((a, b) => (new Date(b.last_login || 0) - new Date(a.last_login || 0)));
+            return sendJson({ success: true, players: rows });
+        }
+
         // 1. Liderlər Cədvəli
         if (pathname === '/api/leaderboard') {
             const players = readJson(PLAYERS_FILE, []);
@@ -513,6 +529,65 @@ const server = http.createServer((req, res) => {
                     message: 'Kod uğurla aktivləşdirildi!',
                     blueDiamonds: item.blueDiamonds || 0,
                     redDiamonds: item.redDiamonds || 0
+                });
+            }
+
+            // 8. Admin Hədiyyə Kodu Yaratmaq və Məktub Göndərmək (Generator üçün)
+            if (pathname === '/api/admin/send_gift') {
+                const targetType = (data.targetType || 'ALL').trim().toUpperCase();
+                const playerId = (data.playerId || 'ALL').trim();
+                const blue = Math.max(0, parseInt(data.blueDiamonds) || 0);
+                const red = Math.max(0, parseInt(data.redDiamonds) || 0);
+                const title = (data.title || '🎁 Xüsusi Admin Hədiyyəsi!').trim();
+                const note = (data.note || '').trim();
+                const expiresAt = data.expiresAt || null;
+
+                if (blue <= 0 && red <= 0) {
+                    return sendJson({ success: false, message: 'Ən azı 1 almaz daxil edilməlidir!' }, 400);
+                }
+
+                const token = data.token || generateRandomCode();
+                const allInbox = readJson(INBOX_FILE, []);
+                const nextId = allInbox.length > 0 ? (Math.max(...allInbox.map(m => m.id || 0)) + 1) : 1;
+
+                const newMsg = {
+                    id: nextId,
+                    target_type: targetType,
+                    player_id: playerId,
+                    title,
+                    note,
+                    gift_code: token,
+                    blue_diamonds: blue,
+                    red_diamonds: red,
+                    expires_at: expiresAt,
+                    created_at: new Date().toISOString(),
+                    claimed_by: [],
+                    is_claimed: 0
+                };
+
+                allInbox.push(newMsg);
+                writeJson(INBOX_FILE, allInbox);
+
+                const codes = readJson(CODES_FILE, []);
+                codes.push({
+                    code: token,
+                    target_type: targetType,
+                    target_player_id: playerId,
+                    blueDiamonds: blue,
+                    redDiamonds: red,
+                    expires_at: expiresAt,
+                    used: false,
+                    createdAt: new Date().toISOString()
+                });
+                writeJson(CODES_FILE, codes);
+
+                broadcastInbox(targetType, playerId, newMsg);
+
+                return sendJson({
+                    success: true,
+                    message: `Hədiyyə yaradıldı və ${targetType === 'ALL' ? 'hamıya' : playerId + ' oyunçusuna'} göndərildi!`,
+                    code: token,
+                    messageId: nextId
                 });
             }
 

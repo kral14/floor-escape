@@ -61,7 +61,35 @@ def verify_signed_gift_code(token):
     except Exception as e:
         return False, f"Kodu oxumaq mümkün olmadı: {str(e)}"
 
-def get_all_players_from_db():
+import urllib.request
+
+DEFAULT_SERVER_URL = os.environ.get('GAME_SERVER_URL', 'http://132.145.76.194:8082')
+CURRENT_SERVER_URL = DEFAULT_SERVER_URL
+
+def set_current_server_url(url):
+    global CURRENT_SERVER_URL
+    CURRENT_SERVER_URL = (url or DEFAULT_SERVER_URL).strip().rstrip('/')
+
+def get_current_server_url():
+    return CURRENT_SERVER_URL
+
+def get_all_players_from_db(server_url=None):
+    url = (server_url or get_current_server_url()).strip().rstrip('/')
+    # 1. Uzaq VM Serverindən API ilə oxumaq
+    if url:
+        for endpoint in ['/api/players/list', '/api/leaderboard']:
+            try:
+                req = urllib.request.Request(f"{url}{endpoint}", headers={'User-Agent': 'FloorEscapeAdmin/1.0'})
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    if data.get('success'):
+                        players = data.get('players') or data.get('leaderboard')
+                        if players is not None:
+                            return players
+            except Exception:
+                continue
+
+    # 2. Lokal SQLite bazasından oxumaq (Fallback)
     try:
         if not os.path.exists(DB_FILE):
             return []
@@ -77,7 +105,7 @@ def get_all_players_from_db():
         print(f"Oyunçuları oxuyarkən xəta: {e}")
         return []
 
-def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, expires_hours=None):
+def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, expires_hours=None, server_url=None):
     token, _ = create_signed_gift_code(blue, red)
     
     expires_at = None
@@ -85,6 +113,31 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
         exp_dt = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
         expires_at = exp_dt.isoformat()
 
+    url = (server_url or get_current_server_url()).strip().rstrip('/')
+
+    sent_to_vm = False
+    if url:
+        try:
+            payload = json.dumps({
+                'targetType': target_type,
+                'playerId': player_id,
+                'blueDiamonds': blue,
+                'redDiamonds': red,
+                'title': title,
+                'note': note,
+                'expiresAt': expires_at,
+                'token': token
+            }).encode('utf-8')
+            req = urllib.request.Request(f"{url}/api/admin/send_gift", data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'FloorEscapeAdmin/1.0'})
+            with urllib.request.urlopen(req, timeout=4.5) as resp:
+                res_data = json.loads(resp.read().decode('utf-8'))
+                if res_data.get('success'):
+                    print(f"  [✔] Hədiyyə və məktub birbaşa uzaq VM serverinə ({url}) göndərildi!")
+                    return token, expires_at, True
+        except Exception as e:
+            print(f"  [!] Uzaq VM-ə göndərmə xətası: {e}. Lokal bazaya yazılır...")
+
+    # 2. Lokal SQLite bazası (Əgər VM serveri əlçatmazdırsa)
     with get_db() as conn:
         cursor = conn.cursor()
         
@@ -128,34 +181,9 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
             INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
         ''', (target_type, player_id, title, note, token, blue, red, expires_at))
-        new_msg_id = cursor.lastrowid
-
         conn.commit()
 
-    # ⚡ Real-Time WebSocket serverinə dərhal xəbər veririk ki brauzerlərə canlı çatdırsın
-    try:
-        import urllib.request
-        notify_payload = json.dumps({
-            'targetType': target_type,
-            'playerId': player_id,
-            'message': {
-                'id': new_msg_id,
-                'title': title,
-                'note': note,
-                'gift_code': token,
-                'blue_diamonds': blue,
-                'red_diamonds': red,
-                'expires_at': expires_at,
-                'created_at': datetime.now(timezone.utc).isoformat(),
-                'is_claimed': 0
-            }
-        }).encode('utf-8')
-        req = urllib.request.Request('http://localhost:4000/api/inbox/notify', data=notify_payload, headers={'Content-Type': 'application/json'})
-        urllib.request.urlopen(req, timeout=1.5)
-    except Exception:
-        pass
-
-    return token, expires_at
+    return token, expires_at, False
 
 # ============================================================================
 # 🖥️ TKINTER ULTRA-MÜASİR KİBER ADMİN GUI PƏNCƏRƏSİ
@@ -211,6 +239,22 @@ def launch_gui():
     lbl_title.pack(anchor="w")
     lbl_desc = ttk.Label(header_frame, text="İstifadəçiləri seçin, almaz miqdarını və vaxtını təyin edin. Birbaşa oyunçu poçtuna məktub kimi göndərilir.", style="SubHeader.TLabel")
     lbl_desc.pack(anchor="w")
+
+    # 🌐 Uzaq VM Server Qoşulma Paneli
+    server_bar = tk.Frame(header_frame, bg="#0f172a", padx=10, pady=6, highlightthickness=1, highlightbackground="#1e293b")
+    server_bar.pack(fill=tk.X, pady=(8, 0))
+
+    tk.Label(server_bar, text="🌐 Server URL (VM):", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+    server_url_var = tk.StringVar(value=get_current_server_url())
+    ent_server_url = tk.Entry(server_bar, textvariable=server_url_var, bg="#1e293b", fg="#ffffff", font=("Segoe UI", 9), width=32, insertbackground="#ffffff")
+    ent_server_url.pack(side=tk.LEFT, padx=(0, 10))
+
+    btn_ping = tk.Button(server_bar, text="⚡ Qoşulmanı Yoxla", bg="#0284c7", fg="#ffffff", font=("Segoe UI", 8, "bold"), cursor="hand2", padx=8, pady=2, relief=tk.FLAT)
+    btn_ping.pack(side=tk.LEFT, padx=(0, 12))
+
+    status_var = tk.StringVar(value="🟡 Yoxlanılır...")
+    lbl_status = tk.Label(server_bar, textvariable=status_var, bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"))
+    lbl_status.pack(side=tk.LEFT)
 
     # 2. Üst Bölmə: Oyunçu Seçimi və Cədvəl
     player_box = tk.LabelFrame(main_frame, text=" 👥 1. HƏDƏF SEÇİMİ VƏ QEYDİYYATLI OYUNÇULAR ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 10, "bold"), padx=12, pady=8)
@@ -280,7 +324,32 @@ def launch_gui():
 
     def populate_players():
         nonlocal all_players_cache
-        all_players_cache = get_all_players_from_db()
+        cur_url = server_url_var.get().strip()
+        set_current_server_url(cur_url)
+        all_players_cache = get_all_players_from_db(cur_url)
+        
+        # Statusu yoxlamaq
+        if cur_url:
+            try:
+                test_req = urllib.request.Request(f"{cur_url}/api/leaderboard", headers={'User-Agent': 'FloorEscapeAdmin/1.0'})
+                with urllib.request.urlopen(test_req, timeout=2.5) as r:
+                    if r.status == 200:
+                        status_var.set(f"🟢 Uzaq VM Serverinə Bağlandı ({len(all_players_cache)} oyunçu)")
+                        lbl_status.config(fg="#10b981")
+                    else:
+                        status_var.set(f"🟡 Server cavab verdi ({r.status})")
+                        lbl_status.config(fg="#f59e0b")
+            except Exception:
+                if all_players_cache:
+                    status_var.set(f"🟡 VM Oflayn - Lokal Baza ({len(all_players_cache)} oyunçu)")
+                    lbl_status.config(fg="#f59e0b")
+                else:
+                    status_var.set("🔴 Server Oflayn və Baza Boş")
+                    lbl_status.config(fg="#ef4444")
+        else:
+            status_var.set(f"💾 Lokal SQLite Bazası ({len(all_players_cache)} oyunçu)")
+            lbl_status.config(fg="#94a3b8")
+
         filter_players()
 
     def filter_players(*args):
@@ -313,6 +382,7 @@ def launch_gui():
     tree.bind("<<TreeviewSelect>>", on_tree_select)
     search_var.trace_add("write", filter_players)
     btn_refresh.config(command=populate_players)
+    btn_ping.config(command=populate_players)
 
     # 3. Alt Bölmə: Hədiyyə və Məktub Parametrləri
     bottom_frame = tk.Frame(main_frame, bg="#0b1120")
@@ -403,24 +473,28 @@ def launch_gui():
         title = title_var.get().strip() or "🎁 Xüsusi Admin Hədiyyəsi!"
         note = txt_note.get("1.0", tk.END).strip()
 
+        cur_url = server_url_var.get().strip()
         try:
-            token, exp_at = send_gift_code_and_inbox(
+            token, exp_at, is_vm = send_gift_code_and_inbox(
                 target_type=target_type,
                 player_id=pid if target_type == "SINGLE" else "ALL",
                 blue=blue,
                 red=red,
                 title=title,
                 note=note,
-                expires_hours=hours
+                expires_hours=hours,
+                server_url=cur_url
             )
 
             res_code_var.set(token)
             target_str = f"ID: {pid}" if target_type == "SINGLE" else "BÜTÜN OYUNÇULAR"
             exp_str = f"{hours} saat" if hours else "Limitsiz"
+            baza_str = f"🌐 Uzaq VM Serverinə ({cur_url})" if is_vm else "💾 Lokal SQLite Bazasına"
             
             messagebox.showinfo(
                 "Uğurlu Əməliyyat", 
                 f"✅ Hədiyyə Kodu Yaradıldı və Məktub Göndərildi!\n\n"
+                f"📡 Baza Məkanı: {baza_str}\n"
                 f"🎯 Hədəf: {target_str}\n"
                 f"💎 Mavi: {blue} | 💎🔴 Qırmızı: {red}\n"
                 f"⏳ Vaxt: {exp_str}\n"
@@ -463,6 +537,7 @@ def launch_gui():
 def main_console():
     print("=" * 65)
     print("🎁 FLOOR ESCAPE - ADMİN HƏDİYYƏ VƏ MƏKTUB GENERATORU")
+    print(f"🌐 Cari Server: {get_current_server_url()}")
     print("=" * 65)
     
     players = get_all_players_from_db()
@@ -492,10 +567,12 @@ def main_console():
         title = input("✉️ Məktub başlığı (boş = standart): ").strip() or "🎁 Xüsusi Admin Hədiyyəsi!"
         note = input("📝 Qeyd / Mesaj: ").strip() or "Sistem tərəfindən sizə xüsusi almaz hədiyyəsi təqdim edildi."
 
-        token, exp_at = send_gift_code_and_inbox(target_type, target_id, blue, red, title, note, hours)
+        token, exp_at, is_vm = send_gift_code_and_inbox(target_type, target_id, blue, red, title, note, hours)
+        dest_str = f"🌐 Uzaq VM Serverinə ({get_current_server_url()})" if is_vm else "💾 Lokal SQLite Bazasına"
         
         print("\n" + "=" * 65)
         print("✅ HƏDİYYƏ KODU VƏ MƏKTUB UĞURLA GÖNDƏRİLDİ!")
+        print(f"📡 Baza: {dest_str}")
         print(f"🔑 Kod: {token}")
         print(f"🎯 Hədəf: {target_id}")
         print(f"💎 Hədiyyə: +{blue} Mavi | +{red} Qırmızı")
