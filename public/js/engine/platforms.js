@@ -346,10 +346,9 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
             const distToLeft = hitX - hitRock.x;
             const distToRight = (hitRock.x + hitRock.w) - hitX;
 
-            // Qayanın sol tərəfinə dəyibsə -> SAĞA axır!
-            // Qayanın sağ tərəfinə dəyibsə -> SOLA axır!
-            // Beləliklə platformanın digər tərəfi və ALTI oyunçunun keçidi üçün TƏHLÜKƏSİZ qalır!
-            const goRight = (distToLeft < distToRight);
+            // Qayanın ən yaxın kənarından süzülür (sağa yaxındırsa sağdan, sola yaxındırsa soldan)
+            // Beləliklə platformanın BÖYÜK QALAN HİSSƏSİ (80%-i) və ALTI tamamilə quru və təhlükəsiz qalır!
+            const goRight = (distToRight < distToLeft);
             const outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
 
             path.shelves.push({
