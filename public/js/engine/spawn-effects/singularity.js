@@ -11,12 +11,13 @@
             this.ctx = null;
         }
         init() {
+            if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
             if (!this.ctx) {
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                 if (AudioContextClass) this.ctx = new AudioContextClass();
             }
             if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume();
+                this.ctx.resume().catch(() => {});
             }
         }
         playSpark() {
@@ -801,6 +802,7 @@
             // 1. PHASE 01: Microscopic Initial Spark Birth (t < 1.8s)
             if (!isIngame && forcedAssemblyRatio === null && this.timeline < 1.8) {
                 const sparkFade = 1.0 - MathUtils.smooth(1.4, 1.8, this.timeline);
+                ctx.globalAlpha *= sparkFade;
                 const pulse = (Math.sin(nowSec * 16) * 0.5 + 0.5) * 6;
                 ctx.save();
                 ctx.shadowColor = pal.glow;
@@ -835,7 +837,8 @@
             CyberRingRenderer.renderSystem(ctx, nowSec, this.rot3D, this.speedFactor, this.ringAngles, ringAssembleRatio, this.themeKey);
 
             // 4. 3D Depth Sorted Particles (Acquires true orbit around the bezel)
-            if (this.orbitParticles.length > 0) {
+            const orbitReveal = (isIngame || forcedAssemblyRatio !== null) ? 1 : MathUtils.smooth(1.6, 3.6, this.timeline);
+            if (this.orbitParticles.length > 0 && orbitReveal > 0) {
                 const sorted = [];
                 for (const p of this.orbitParticles) {
                     const lx = Math.cos(p.angle) * p.radius;
@@ -850,7 +853,7 @@
                     const { p, proj } = item;
                     const depthRatio = Math.max(0.3, Math.min(1.4, proj.k));
                     ctx.save();
-                    ctx.fillStyle = `hsla(${p.hue}, 95%, 68%, ${p.alpha * depthRatio})`;
+                    ctx.fillStyle = `hsla(${p.hue}, 95%, 68%, ${p.alpha * depthRatio * orbitReveal})`;
                     ctx.shadowColor = pal.glow;
                     ctx.shadowBlur = 6 * depthRatio;
                     ctx.beginPath();

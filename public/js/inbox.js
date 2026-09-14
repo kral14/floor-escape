@@ -8,6 +8,8 @@
     let unreadCount = 0;
     let ws = null;
     let wsReconnectTimeout = null;
+    let wsConfigPending = false;
+    let wsConfig = null;
 
     function getCurrentPlayerId() {
         try {
@@ -59,17 +61,28 @@
     // ============================================================================
     // ⚡ WEBSOCKET CANLI BAĞLANTI (REAL-TIME NOTIFICATION CLIENT)
     // ============================================================================
-    function initWebSocket() {
+    async function initWebSocket() {
+        if (wsConfigPending) return;
         if (typeof WebSocket === 'undefined') return;
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
 
         try {
-            // Eyni port və ünvan istifadə edilir (ayrıca 4001 portuna ehtiyac yoxdur)
-            const host = window.location.host || 'localhost:8082';
-            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${proto}//${host}`;
+            if (!wsConfig) {
+                wsConfigPending = true;
+                try {
+                    const response = await fetch('/api/realtime-config');
+                    if (!response.ok) throw new Error('Realtime configuration unavailable');
+                    wsConfig = await response.json();
+                } finally {
+                    wsConfigPending = false;
+                }
+            }
+            const endpoint = new URL(window.location.origin);
+            endpoint.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            if (wsConfig.port) endpoint.port = String(wsConfig.port);
+            const wsUrl = endpoint.href;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {

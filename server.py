@@ -5,7 +5,7 @@ import sys
 from urllib.parse import urlparse
 
 from server.db import init_db
-from server.ws import init_ws
+from server.ws import init_ws, WS_PORT
 from server.handlers import handle_get, handle_post
 
 # Windows konsol kodlaşdırma xətasının qarşısını almaq
@@ -48,6 +48,10 @@ class GameHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == '/api/realtime-config':
+            self.send_json({'port': WS_PORT})
+            return
 
         # Favicon
         if parsed.path == '/favicon.ico':

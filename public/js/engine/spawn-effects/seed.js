@@ -568,7 +568,7 @@ const SeedSpawnEffect = {
 function drawIngameLifeFlowers(c, player, time, front) {
     if (!player) return;
     const isEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
-    if (!isEquipped && !player.hasLifeFlower && player.lifeFlowerState !== 'withering') return;
+    if (!isEquipped) return;
 
     const decay = (player.lifeFlowerState === 'withering') ? Math.min(1, (player.lifeFlowerWitherAge || 0) / 2.8) : (player.hasLifeFlower ? 0 : 1);
     if (decay >= 1) return; // Tam solub yox olub

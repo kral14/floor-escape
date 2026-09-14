@@ -638,7 +638,7 @@ function loadActiveRun() {
                 gameState.dashInvulnerable = 90; // Yüklənərkən 1.5s təhlükəsizlik
                 player.hasShield = !!saved.playerHasShield;
                 player.hasHyperJump = !!saved.playerHasHyperJump;
-                if (saved.playerLifeFlowers !== undefined) {
+                if (permUpgrades.equippedSpawnAnim === 'seed' && saved.playerLifeFlowers !== undefined) {
                     player.lifeFlowers = parseInt(saved.playerLifeFlowers, 10);
                     player.maxLifeFlowers = parseInt(saved.playerMaxLifeFlowers || 1, 10);
                     player.lifeFlowerState = saved.playerLifeFlowerState || (player.lifeFlowers > 0 ? 'active' : 'none');
@@ -662,7 +662,7 @@ function loadActiveRun() {
 
             // Gücləndiriciləri (Power-Up) bərpa edirik (Əgər götürülübsə BOŞ QALIR, əlavə yaranmır!)
             if (typeof PowerUp !== 'undefined' && saved.powerUps && Array.isArray(saved.powerUps)) {
-                powerUps = saved.powerUps.map(p => {
+                powerUps = saved.powerUps.filter(p => p.type !== 'lifeFlower' || permUpgrades.equippedSpawnAnim === 'seed').map(p => {
                     const pup = new PowerUp(p.x, p.y, p.type);
                     if (p.lifeTime !== undefined) pup.lifeTime = p.lifeTime;
                     if (p.maxLifeTime !== undefined) pup.maxLifeTime = p.maxLifeTime;

@@ -72,7 +72,7 @@ class Player {
         const maxCapacity = (typeof getMaxLifeFlowers === 'function') ? getMaxLifeFlowers() : ((permUpgrades && permUpgrades.seedLifeLvl) || 1);
         this.maxLifeFlowers = Math.max(1, Math.min(3, maxCapacity));
 
-        if (isNewRun) {
+        if (isNewRun || !isSeedEquipped) {
             // Yalnız yeni oyunda tam bərpa olunur
             this.lifeFlowers = isSeedEquipped ? this.maxLifeFlowers : 0;
             this.hasLifeFlower = this.lifeFlowers > 0;

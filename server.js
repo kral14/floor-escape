@@ -141,6 +141,7 @@ const server = http.createServer((req, res) => {
     // API MARŞRUTLARI (GET)
     // ==========================================
     if (req.method === 'GET') {
+        if (pathname === '/api/realtime-config') return sendJson({ port: null });
         // 0. Oyunçuların Siyahısı (Admin Generator üçün)
         if (pathname === '/api/players/list') {
             const players = readJson(PLAYERS_FILE, []);

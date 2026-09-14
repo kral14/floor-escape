@@ -434,44 +434,13 @@ function updatePhysicsStep() {
 // 2. RENDERING ADDIMI
 function renderGame() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    drawArenaBackground(ctx, canvasWidth, canvasHeight, cameraY, gameState.floor, performance.now() / 1000);
 
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
 
     // ==================== A) DÜNYA MƏKANI (WORLD SPACE TRANSLATED BY -cameraY) ====================
     ctx.save();
     ctx.translate(0, -Math.round(cameraY));
-
-    // 1. Qrid Xətləri (Dünya hündürlüyü boyu)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvasWidth; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, worldH);
-        ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.moveTo(canvasWidth, 0);
-    ctx.lineTo(canvasWidth, worldH);
-    ctx.stroke();
-
-    for (let y = 0; y < worldH; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvasWidth, y);
-        ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.moveTo(0, worldH);
-    ctx.lineTo(canvasWidth, worldH);
-    ctx.stroke();
-
-    // 2. Mərkəzi Qat Nişanı
-    ctx.fillStyle = 'rgba(255,255,255,0.025)';
-    ctx.font = '120px Orbitron';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(gameState.floor, canvasWidth / 2, worldH / 2);
 
     // 3. 🏔️ Qayalar və Animasiyalı Axan Lava Blokları
     if (typeof drawPlatforms === 'function') {
@@ -935,14 +904,23 @@ if (hasLoadedRun) {
     }
 }
 
-// Oyuna daxil olduqda və ya səhifə açılanda həmişə Kvant Doğuluş Animasiyası ilə başla
+// Doğuluş yalnız açıq başlanğıc istəyi və ya yeni oyun üçün göstərilir.
+let shouldPlayIntro = !hasLoadedRun;
 try {
-    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('floor_escape_play_intro');
+    if (typeof sessionStorage !== 'undefined') {
+        shouldPlayIntro = sessionStorage.getItem('floor_escape_play_intro') === 'true' || !hasLoadedRun;
+        sessionStorage.removeItem('floor_escape_play_intro');
+    }
     if (typeof permUpgrades !== 'undefined' && (!permUpgrades.equippedSpawnAnim || permUpgrades.equippedSpawnAnim === 'portal')) {
         permUpgrades.equippedSpawnAnim = 'singularity';
     }
 } catch (e) {}
-playSummonIntro();
+if (shouldPlayIntro) {
+    playSummonIntro();
+} else {
+    gameState.isIntroPlaying = false;
+    initIngameQuantumTheme();
+}
 
 gameState.paused = false;
 if (window.audio && typeof audio.setFloor === 'function') {

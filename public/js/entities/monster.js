@@ -1203,9 +1203,7 @@ class Monster {
                 showToast(`🎉 BOSS ${waveNum}/${totalWaves} MƏHV EDİLDİ! (+1 Almaz 💎, +${goldReward} Qızıl 🪙)`, 'success');
             }
 
-            // Lava xeyli aşağı itələnir
-            const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
-            this.y = worldH + 150;
+            // Növbəti boss məğlub olan bossun mövqeyindən davam edir.
             this.wallTimer = 180; // Təhlükəsizlik barrikadası
 
             this.currentBossWave++;

@@ -10,7 +10,14 @@
   "dependencies": {
     "ws": "^8.18.0"
   },
-  "keywords": ["game", "arcade", "api"],
+  "keywords": [
+    "game",
+    "arcade",
+    "api"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
 }

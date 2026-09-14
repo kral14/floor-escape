@@ -13,8 +13,7 @@ class PowerUp {
         const weights = [0.30 + extraShield, 0.25, 0.25, 0.20]; // Qalxan çıxma şansı artır
 
         // 🌸 Yaşam Çiçəyi animasiyası aktivdirsə, arenada bərpaedici çiçək peyda ola bilər
-        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed') ||
-                               (typeof player !== 'undefined' && player && player.maxLifeFlowers > 0);
+        const isSeedEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'seed');
         if (isSeedEquipped) {
             types.push('lifeFlower');
             const missingLife = (typeof player !== 'undefined' && player) ? ((player.lifeFlowers || 0) < (player.maxLifeFlowers || 1)) : true;

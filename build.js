@@ -1,3 +1,5 @@
+const { execFileSync } = require('child_process');
+execFileSync(process.execPath, [require.resolve('tailwindcss/lib/cli.js'), '-c', 'tailwind.config.cjs', '-i', 'public/css/tailwind-input.css', '-o', 'public/css/tailwind.css', '--minify'], { cwd: __dirname, stdio: 'inherit' });
 const fs = require('fs');
 const path = require('path');
 

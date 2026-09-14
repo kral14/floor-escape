@@ -53,6 +53,20 @@ class AudioEngine {
     }
 
     init() {
+        if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+            if (!this._waitingForGesture) {
+                this._waitingForGesture = true;
+                const activate = () => {
+                    window.removeEventListener('pointerdown', activate);
+                    window.removeEventListener('keydown', activate);
+                    this._waitingForGesture = false;
+                    this.init();
+                };
+                window.addEventListener('pointerdown', activate);
+                window.addEventListener('keydown', activate);
+            }
+            return;
+        }
         if (this.ctx && this.ctx.state === 'running' && this.unlocked) {
             return;
         }

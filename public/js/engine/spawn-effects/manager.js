@@ -160,19 +160,19 @@ class MonsSpawnEffect {
                 this.engine = singModule.getActiveEngine(this.animType);
                 this.engine.reset(); // TAM SIFIRDAN BAŞLANĞIC (timeline = 0)
                 if (this.mode === 'out') {
-                    this.engine.timeline = 6.0;
+                    this.engine.timeline = 6.2;
                 }
             }
         }
 
         const fxModule = SpawnEffectRegistry.get(this.animType);
-        if (fxModule && typeof fxModule.resetFlight === 'function') {
+        if (!this.engine && fxModule && typeof fxModule.resetFlight === 'function') {
             fxModule.interactive = false;
             fxModule.resetFlight();
         }
         this.maxAnimTime = (fxModule && fxModule.duration) ? fxModule.duration : 7.0;
         // 🌀 Tam ardıcıl sıfırdan doğuluş animasiyası (İstifadəçinin tam kodu: 5.6s tam onlayn)
-        this.duration = (this.mode === 'out') ? 1.4 : 5.6;
+        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : 5.6);
         this.finished = false;
         this.scale = 0.56; // İKİNCİ ŞƏKİLDƏKİ REAL OYUNÇU ÖLÇÜSÜ
         this._burstPlayed = false;
@@ -189,7 +189,7 @@ class MonsSpawnEffect {
 
         if (this.engine) {
             if (this.mode === 'out') {
-                this.engine.timeline = Math.max(0, 6.0 - (this.time / this.duration) * 6.0);
+                this.engine.timeline = Math.max(0, 6.2 - (this.time / this.duration) * 6.2);
             } else {
                 this.engine.step(dt);
             }
@@ -220,7 +220,7 @@ class MonsSpawnEffect {
         this.finished = true;
 
         const fxModule = SpawnEffectRegistry.get(this.animType);
-        if (fxModule && typeof fxModule.resetFlight === 'function') {
+        if (!this.engine && fxModule && typeof fxModule.resetFlight === 'function') {
             fxModule.interactive = false;
             fxModule.resetFlight();
         }
@@ -249,7 +249,10 @@ class MonsSpawnEffect {
         if (this.engine) {
             const drawMonster = (ctx, t, alpha) => {
                 if (typeof drawSkinModel === 'function') {
-                    drawSkinModel(ctx, 0, 0, 16, this.skinId, 0, t * 3, false);
+                    ctx.save();
+                    ctx.globalAlpha *= alpha;
+                    drawSkinModel(ctx, 0, 0, 16 / 0.54, this.skinId, 0, t * 3, false);
+                    ctx.restore();
                 } else if (typeof MonsCharacterRenderer !== 'undefined' && MonsCharacterRenderer.drawDefaultMons) {
                     MonsCharacterRenderer.drawDefaultMons(ctx, t, alpha);
                 }
@@ -259,7 +262,7 @@ class MonsSpawnEffect {
                 this.engine.render(c, canvasWidth / 2, canvasHeight / 2, Math.max(0.42, stageScale), drawMonster);
             } else {
                 const curY = (this.targetY !== undefined) ? this.targetY : this.y;
-                this.engine.render(c, this.x, curY, 0.54, drawMonster, true);
+                this.engine.render(c, this.x, curY, 0.54, drawMonster, false);
             }
             return;
         }
@@ -298,7 +301,7 @@ const resolvedEffects = (typeof window !== 'undefined' && window.SingularityEffe
 const singModule = (typeof SingularitySpawnEffect !== 'undefined' ? SingularitySpawnEffect : (typeof window !== 'undefined' ? window.SingularitySpawnEffect : null));
 if (resolvedEffects && singModule) {
     Object.keys(resolvedEffects).forEach(id => {
-        SpawnEffectRegistry.register(id, singModule);
+        SpawnEffectRegistry.register(id, resolvedEffects[id]);
     });
 }
 
