@@ -322,15 +322,36 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
                 }
             }
 
+            // 🎯 Əgər istifadəçi Track Studio-da axını havada (iki platformanın ortasında) sonlandırıbsa:
+            let effectiveBottomY = minHitY;
+            let isMidAir = false;
+            const customCutY = src.endY || src.customBottomY;
+            if (customCutY && customCutY > currY + 15 && customCutY < minHitY) {
+                effectiveBottomY = customCutY;
+                isMidAir = true;
+            }
+
             // 1. Şaquli şəlalə axını
-            const fallH = Math.max(10, minHitY - currY);
+            const fallH = Math.max(10, effectiveBottomY - currY);
             path.falls.push({
                 x: currX,
                 y: currY,
                 w: currW,
                 h: fallH,
-                seed: seed + d
+                seed: seed + d,
+                isMidAir: isMidAir,
+                bottomY: effectiveBottomY
             });
+
+            if (isMidAir) {
+                path.terminated = true;
+                path.midAirTermination = {
+                    x: currX,
+                    y: effectiveBottomY,
+                    w: currW
+                };
+                break;
+            }
 
             // Əgər qaya yoxdursa və ya canavara çatdısa, axın canavara tökülüb bitir!
             if (!hitRock || minHitY >= monsterY) {
@@ -425,10 +446,14 @@ function drawPlatforms(ctx) {
             const fall = path.falls[fIdx];
             const isLastFall = (fIdx === path.falls.length - 1);
             const isTerminatedFall = !!(path.terminated && isLastFall);
+            const isMidAir = !!fall.isMidAir;
 
             if (useEngine) {
-                LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h, isTerminatedFall);
-                if (fIdx > 0) {
+                LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h, isTerminatedFall, isMidAir);
+                if (isMidAir && typeof LavaEngine.drawMidAirLavaTip === 'function') {
+                    LavaEngine.drawMidAirLavaTip(c, t, fall.x, fall.bottomY, fall.w);
+                }
+                if (fIdx > 0 && !isMidAir) {
                     LavaEngine.drawSpillwayLip(c, fall.x, fall.w, fall.y + 2);
                 }
             }

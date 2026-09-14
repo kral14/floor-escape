@@ -13,29 +13,37 @@
     'use strict';
 
     // 1. TƏBİİ ŞƏLALƏ AXINI (İstifadəçinin tam dəqiq alqoritmi)
-    // 1. TƏBİİ ŞƏLALƏ AXINI (Yumşaq, orqanik axan və qayanın üstünə yayılan magma)
-    function drawPlatformWaterfall(c, t, x, y, width, height, isTerminated = false) {
+    // 1. TƏBİİ ŞƏLALƏ AXINI (Yumşaq, orqanik axan və qayanın üstünə yayılan və ya havada damcılayan magma)
+    function drawPlatformWaterfall(c, t, x, y, width, height, isTerminated = false, isMidAir = false) {
         if (!c || width <= 0 || height <= 0) return;
         c.save();
 
         const flareAmount = isTerminated ? 18 : 6;
         const flow = (u, p) => {
             const baseWobble = (Math.sin(p * 15 - t * 3 + u * 9) * 5 + Math.sin(p * 31 - t * 5 + u * 22) * 2) * Math.sin(p * 2.3);
-            // Alt uca çatdıqda kənarlara doğru təbii yayılma (kəsik xətti ləğv edir)
-            let flare = 0;
-            if (p > 0.72) {
+            let offset = 0;
+
+            if (isMidAir) {
+                // Havada sonlanma: Alt uca yaxınlaşdıqda axın daralır və damcı/stalaktit forması alır!
+                if (p > 0.60) {
+                    const tp = (p - 0.60) / 0.40;
+                    // Mərkəzə (u = 0.5) doğru kəskin sıxılma
+                    offset = (0.5 - u) * width * (tp * 0.78);
+                }
+            } else if (p > 0.72) {
+                // Qayaya dəyən axın: Kənarlara doğru təbii yayılma
                 const fp = (p - 0.72) / 0.28;
-                flare = (u - 0.5) * 2 * (fp * fp) * flareAmount;
+                offset = (u - 0.5) * 2 * (fp * fp) * flareAmount;
             }
-            return x + u * width + baseWobble + flare;
+            return x + u * width + baseWobble + offset;
         };
 
-        const grad = c.createLinearGradient(0, y, 0, y + height + 6);
+        const grad = c.createLinearGradient(0, y, 0, y + height + 10);
         grad.addColorStop(0, '#ffcc4b');
         grad.addColorStop(0.12, '#fa6514');
         grad.addColorStop(0.65, '#bf2708');
-        grad.addColorStop(0.92, '#ff7815');
-        grad.addColorStop(1, '#ffce55');
+        grad.addColorStop(0.90, '#ff7815');
+        grad.addColorStop(1, isMidAir ? '#ffe066' : '#ffce55');
 
         c.beginPath();
         c.moveTo(flow(0, 0), y);
@@ -44,12 +52,21 @@
             let p = i / 45;
             c.lineTo(flow(0, p), y + p * height);
         }
-        // Alt ucu: DÜZ KƏSİK YOX, qayanın üstünə yayılan qabarıq təbii qövs!
+
+        // Alt ucu: DÜZ KƏSİK QƏTİYYƏN YOXDUR!
         const rightBottomX = flow(1, 1);
         const leftBottomX = flow(0, 1);
         const midBottomX = (rightBottomX + leftBottomX) * 0.5;
-        const bottomDrop = isTerminated ? 8 : 4;
-        c.quadraticCurveTo(midBottomX, y + height + bottomDrop, rightBottomX, y + height);
+
+        if (isMidAir) {
+            // Havada sonlananda qabarıq damcı ucluq (teardrop tip)
+            const dropHang = 14 + Math.sin(t * 5) * 2.5;
+            c.quadraticCurveTo(midBottomX, y + height + dropHang, rightBottomX, y + height);
+        } else {
+            // Qayanın üstünə yayılan qabarıq təbii qövs
+            const bottomDrop = isTerminated ? 8 : 4;
+            c.quadraticCurveTo(midBottomX, y + height + bottomDrop, rightBottomX, y + height);
+        }
 
         // Sağ tərəf yuxarı
         for (let i = 45; i >= 0; i--) {
@@ -419,12 +436,55 @@
         c.restore();
     }
 
+    // 6. HAVADA SONLANAN DAMCILAYAN LAVA UCLUĞU (Düz kəsik olmadan, damcılayan ucluq)
+    function drawMidAirLavaTip(c, t, x, y, width = 24) {
+        if (!c) return;
+        c.save();
+
+        const midX = x + width * 0.5;
+
+        // Qızmar aura
+        c.shadowColor = '#ff5500';
+        c.shadowBlur = 18;
+
+        // Qabarıq damcı ucu
+        const tipGrad = c.createRadialGradient(midX, y + 4, 2, midX, y + 6, 16);
+        tipGrad.addColorStop(0, '#ffffff');
+        tipGrad.addColorStop(0.3, '#ffcc00');
+        tipGrad.addColorStop(0.7, '#ff5500');
+        tipGrad.addColorStop(1, 'rgba(150, 20, 0, 0)');
+
+        c.fillStyle = tipGrad;
+        c.beginPath();
+        c.arc(midX, y + 6, 12, 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+
+        // Havaya damcılayan közlər (Dripping droplets falling below)
+        for (let i = 0; i < 6; i++) {
+            const progress = (t * 1.4 + i * 0.22) % 1;
+            const dropY = y + 10 + progress * 55;
+            const dropX = midX + Math.sin(i * 9 + t * 2) * 4;
+            const size = Math.max(1, (1 - progress) * 3.5);
+            const alpha = Math.sin(progress * Math.PI);
+
+            c.globalAlpha = alpha;
+            c.fillStyle = (i % 2 === 0) ? '#ffea75' : '#ff7a1a';
+            c.beginPath();
+            c.ellipse(dropX, dropY, size * 0.8, size * 1.5, 0, 0, Math.PI * 2);
+            c.fill();
+        }
+
+        c.restore();
+    }
+
     global.LavaEngine = {
         drawPlatformWaterfall,
         drawLavaSourceRock,
         drawCascadeShelf,
         drawSpillwayLip,
-        drawTerminatedLavaPool
+        drawTerminatedLavaPool,
+        drawMidAirLavaTip
     };
 
 })(typeof window !== 'undefined' ? window : this);

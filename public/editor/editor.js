@@ -38,6 +38,7 @@
     const btnToggleTerminate = document.getElementById('btn-toggle-terminate');
     const textTerminateStatus = document.getElementById('text-terminate-status');
     const iconTerminateStatus = document.getElementById('icon-terminate-status');
+    const btnResetCut = document.getElementById('btn-reset-cut');
 
     const statRocksCount = document.getElementById('stat-rocks-count');
     const statLavaCount = document.getElementById('stat-lava-count');
@@ -59,11 +60,13 @@
     let hoveredType = null;
     let hoveredIndex = -1;
 
-    // Sürükləmə (Drag, Resize & Direction Gizmo)
+    // Sürükləmə (Drag, Resize, Direction & Mid-Air Height Gizmo)
     let isDragging = false;
     let isResizing = false;
     let isDraggingLavaDir = false;
     let activeLavaHandle = null;
+    let isDraggingMidAirCut = false;
+    let activeMidAirHandle = null;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
 
@@ -213,25 +216,44 @@
             btnDirRight.classList.toggle('active', dir === 'right');
             btnDirLeft.classList.toggle('active', dir === 'left');
 
-            // Platformada sonlanma statusu
-            updateTerminateUI(!!lava.stopOnHit);
+            // Platformada və ya havada sonlanma statusu
+            updateTerminateUI(lava);
         }
     }
 
-    function updateTerminateUI(isTerminated) {
+    function updateTerminateUI(lava) {
         if (!btnToggleTerminate || !textTerminateStatus) return;
-        if (isTerminated) {
+        if (!lava) {
+            textTerminateStatus.textContent = '⬇️ Tam Aşağı Axır';
+            iconTerminateStatus.className = 'fa-solid fa-water text-cyan';
+            btnToggleTerminate.style.background = 'rgba(30, 41, 59, 0.9)';
+            btnToggleTerminate.style.borderColor = '#475569';
+            btnToggleTerminate.style.color = '#94a3b8';
+            if (btnResetCut) btnResetCut.classList.add('hidden');
+            return;
+        }
+
+        if (lava.endY) {
+            textTerminateStatus.textContent = `🛑 Havada Sonlanır (Y: ${Math.round(lava.endY)})`;
+            iconTerminateStatus.className = 'fa-solid fa-arrows-down-to-line text-orange';
+            btnToggleTerminate.style.background = 'rgba(239, 68, 68, 0.25)';
+            btnToggleTerminate.style.borderColor = '#ef4444';
+            btnToggleTerminate.style.color = '#ff6b6b';
+            if (btnResetCut) btnResetCut.classList.remove('hidden');
+        } else if (lava.stopOnHit) {
             textTerminateStatus.textContent = '🛑 Platformada Sonlanır';
             iconTerminateStatus.className = 'fa-solid fa-hand text-orange';
             btnToggleTerminate.style.background = 'rgba(239, 68, 68, 0.25)';
             btnToggleTerminate.style.borderColor = '#ef4444';
             btnToggleTerminate.style.color = '#ff6b6b';
+            if (btnResetCut) btnResetCut.classList.remove('hidden');
         } else {
             textTerminateStatus.textContent = '⬇️ Tam Aşağı Axır';
             iconTerminateStatus.className = 'fa-solid fa-water text-cyan';
             btnToggleTerminate.style.background = 'rgba(30, 41, 59, 0.9)';
             btnToggleTerminate.style.borderColor = '#475569';
             btnToggleTerminate.style.color = '#94a3b8';
+            if (btnResetCut) btnResetCut.classList.add('hidden');
         }
     }
 
@@ -277,13 +299,37 @@
                     }
                 }
 
-                const fallH = Math.max(10, minHitY - currY);
+                // 🎯 İstifadəçi istənilən yerdə (iki platformanın ortasında) sonlandırıbsa (endY və ya customBottomY):
+                let effectiveBottomY = minHitY;
+                let isMidAir = false;
+
+                const customCutY = src.endY || src.customBottomY;
+                if (customCutY && customCutY > currY + 15 && customCutY < minHitY) {
+                    effectiveBottomY = customCutY;
+                    isMidAir = true;
+                }
+
+                const fallH = Math.max(10, effectiveBottomY - currY);
                 path.falls.push({
                     x: currX,
                     y: currY,
                     w: currW,
-                    h: fallH
+                    h: fallH,
+                    isMidAir: isMidAir,
+                    bottomY: effectiveBottomY
                 });
+
+                if (isMidAir) {
+                    // Havada istənilən nöqtədə sonlandı! Aşağıya daha heç bir şey getmir!
+                    path.terminated = true;
+                    path.midAirTermination = {
+                        sourceIndex: sIdx,
+                        x: currX,
+                        y: effectiveBottomY,
+                        w: currW
+                    };
+                    break;
+                }
 
                 if (!hitRock || minHitY >= monsterY) {
                     path.monsterImpact = { x: streamCenter, y: monsterY };
@@ -377,14 +423,48 @@
                 const fall = p.falls[fIdx];
                 const isLastFall = (fIdx === p.falls.length - 1);
                 const isTerminatedFall = !!(p.terminated && isLastFall);
+                const isMidAir = !!fall.isMidAir;
 
                 if (typeof LavaEngine !== 'undefined') {
-                    LavaEngine.drawPlatformWaterfall(ctx, animTime + fIdx * 0.7, fall.x, fall.y, fall.w, fall.h, isTerminatedFall);
-                    if (fIdx > 0) LavaEngine.drawSpillwayLip(ctx, fall.x, fall.w, fall.y + 2);
+                    LavaEngine.drawPlatformWaterfall(ctx, animTime + fIdx * 0.7, fall.x, fall.y, fall.w, fall.h, isTerminatedFall, isMidAir);
+                    if (isMidAir && typeof LavaEngine.drawMidAirLavaTip === 'function') {
+                        LavaEngine.drawMidAirLavaTip(ctx, animTime, fall.x, fall.bottomY, fall.w);
+                    }
+                    if (fIdx > 0 && !fall.isMidAir) LavaEngine.drawSpillwayLip(ctx, fall.x, fall.w, fall.y + 2);
                 } else {
                     ctx.fillStyle = 'rgba(255, 100, 0, 0.85)';
                     ctx.fillRect(fall.x, fall.y, fall.w, fall.h);
                 }
+            }
+
+            // 🎯 Havada Sonlanma Tutacağı (Mid-Air Termination Gizmo)
+            if (p.midAirTermination) {
+                const mat = p.midAirTermination;
+                const isSelectedLava = (selectedType === 'lava' && selectedIndex === mat.sourceIndex);
+
+                ctx.save();
+                ctx.shadowColor = '#ff3b00';
+                ctx.shadowBlur = 16;
+                ctx.fillStyle = isSelectedLava ? '#ff3b00' : 'rgba(239, 68, 68, 0.85)';
+                ctx.beginPath();
+                ctx.arc(mat.x + mat.w * 0.5, mat.y + 6, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('↕', mat.x + mat.w * 0.5, mat.y + 6);
+
+                // Yanındakı zərif etiket
+                ctx.fillStyle = '#ff9999';
+                ctx.font = 'bold 10px Orbitron, monospace';
+                ctx.fillText(`🛑 SONLANMA (Y:${Math.round(mat.y)})`, mat.x + mat.w * 0.5, mat.y - 12);
+                ctx.restore();
             }
         }
 
@@ -811,18 +891,34 @@
             }
         }
 
-        // 🛑 Platformada Sonlandırma Düyməsi
+        // 🛑 Platformada və ya Havada Sonlandırma Düyməsi
         if (btnToggleTerminate) {
             btnToggleTerminate.addEventListener('click', () => {
                 if (selectedType === 'lava' && currentTrack.lavaSources[selectedIndex]) {
                     const lava = currentTrack.lavaSources[selectedIndex];
-                    lava.stopOnHit = !lava.stopOnHit;
-                    updateTerminateUI(lava.stopOnHit);
-                    showToast(lava.stopOnHit 
-                        ? '🛑 Lava platformada sonlandırıldı! Aşağı dəhliz tam açıqdır.' 
-                        : '⬇️ Lava yenidən aşağı axır.', 
-                        lava.stopOnHit ? 'warning' : 'info'
-                    );
+                    if (lava.endY || lava.stopOnHit) {
+                        delete lava.endY;
+                        lava.stopOnHit = false;
+                        updateTerminateUI(lava);
+                        showToast('⬇️ Lava axını tam aşağıya bərpa edildi.', 'info');
+                    } else {
+                        lava.stopOnHit = true;
+                        updateTerminateUI(lava);
+                        showToast('🛑 Lava platformada sonlandırıldı! İki platformanın ortasında kəsmək üçün kətanda şəlalənin üzərinə klikləyin.', 'success');
+                    }
+                }
+            });
+        }
+
+        // 🔄 Sonlanmanı Sıfırla (Tam Axıt)
+        if (btnResetCut) {
+            btnResetCut.addEventListener('click', () => {
+                if (selectedType === 'lava' && currentTrack.lavaSources[selectedIndex]) {
+                    const lava = currentTrack.lavaSources[selectedIndex];
+                    delete lava.endY;
+                    lava.stopOnHit = false;
+                    updateTerminateUI(lava);
+                    showToast('⬇️ Sonlanma ləğv edildi, lava tam aşağı axır!', 'info');
                 }
             });
         }
@@ -890,9 +986,21 @@
                 canvas.style.cursor = 'grabbing';
                 return;
             }
-            if (isResizing) {
-                canvas.style.cursor = 'ew-resize';
+            if (isDraggingMidAirCut) {
+                canvas.style.cursor = 'ns-resize';
                 return;
+            }
+
+            // Mid-Air sonlanma tutacağını yoxla
+            const cascadePathsHover = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
+            for (const p of cascadePathsHover) {
+                if (p.midAirTermination) {
+                    const mat = p.midAirTermination;
+                    if (Math.hypot(mouseX - (mat.x + mat.w * 0.5), mouseY - (mat.y + 6)) < 18) {
+                        canvas.style.cursor = 'ns-resize';
+                        return;
+                    }
+                }
             }
 
             // Resize tutacağını yoxla
@@ -939,11 +1047,22 @@
 
         // Siçanla Seçim, İstiqamət Dəyişmə və Sürükləməyə Başlama
         canvas.addEventListener('mousedown', (e) => {
-            if (isTestMode) return;
-            const { mouseX, mouseY } = getCanvasMouseCoords(e);
+            // 0. Havada Sonlanma Tutacağını (↕ Mid-Air Gizmo) yoxla
+            const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
+            for (const p of cascadePaths) {
+                if (p.midAirTermination) {
+                    const mat = p.midAirTermination;
+                    if (Math.hypot(mouseX - (mat.x + mat.w * 0.5), mouseY - (mat.y + 6)) < 22) {
+                        isDraggingMidAirCut = true;
+                        activeMidAirHandle = mat.sourceIndex;
+                        selectElement('lava', mat.sourceIndex);
+                        canvas.style.cursor = 'ns-resize';
+                        return;
+                    }
+                }
+            }
 
             // 1. Qaya üstündəki Lava Tökülmə / İstiqamət Tutacağını (Spillway Gizmo) və ya Sonlandırma Nişanını yoxla
-            const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
             for (const path of cascadePaths) {
                 for (const shelf of path.shelves) {
                     if (shelf.terminated) {
@@ -1038,14 +1157,42 @@
                 }
             }
 
+            // 6. Şəlalənin Üzərinə Klikləmə (İki platformanın ortasında və ya istənilən Y hündürlüyündə birbaşa sonlandır!)
+            for (const p of cascadePaths) {
+                for (const fall of p.falls) {
+                    if (mouseX >= fall.x - 22 && mouseX <= fall.x + fall.w + 22 &&
+                        mouseY >= fall.y + 12 && mouseY <= fall.y + fall.h + 20) {
+                        selectElement('lava', p.sourceIndex);
+                        const lava = currentTrack.lavaSources[p.sourceIndex];
+                        lava.endY = Math.round(mouseY);
+                        delete lava.stopOnHit;
+                        updateTerminateUI(lava);
+                        showToast(`🛑 Lava Y:${lava.endY} nöqtəsində sonlandırıldı! (↕ Tutacaqla dəyişə bilərsiniz)`, 'success');
+                        return;
+                    }
+                }
+            }
+
             // Boş sahəyə klikləndisə seçimi ləğv et
             deselect();
         });
 
         // Sürükləmə Hərəkəti (Pəncərə boyu qüsursuz işləyir)
         window.addEventListener('mousemove', (e) => {
-            if (!isDragging && !isResizing && !isDraggingLavaDir) return;
+            if (!isDragging && !isResizing && !isDraggingLavaDir && !isDraggingMidAirCut) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
+
+            // 🎯 Havada Sonlanma Hündürlüyünü (endY) Siçanla Yuxarı-Aşağı Çəkmək!
+            if (isDraggingMidAirCut && activeMidAirHandle !== null) {
+                const lava = currentTrack.lavaSources[activeMidAirHandle];
+                if (lava) {
+                    lava.endY = Math.max(lava.y + 35, Math.min(1750, mouseY));
+                    delete lava.stopOnHit;
+                    updateTerminateUI(lava);
+                    coordDisplay.textContent = `Lava Sonlanma: Y = ${Math.round(lava.endY)}`;
+                }
+                return;
+            }
 
             // 🎯 Lavanın Platformadakı Tökülmə Yerini (outX) Siçanla Tutub İstənilən Yerə Çəkmək!
             if (isDraggingLavaDir && activeLavaHandle) {
@@ -1090,11 +1237,13 @@
 
         // Sürükləmənin Bitməsi
         window.addEventListener('mouseup', () => {
-            if (isDragging || isResizing || isDraggingLavaDir) {
+            if (isDragging || isResizing || isDraggingLavaDir || isDraggingMidAirCut) {
                 isDragging = false;
                 isResizing = false;
                 isDraggingLavaDir = false;
+                isDraggingMidAirCut = false;
                 activeLavaHandle = null;
+                activeMidAirHandle = null;
                 canvas.style.cursor = 'default';
             }
         });
