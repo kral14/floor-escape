@@ -53,6 +53,8 @@
     let currentTrack = null;
     let selectedType = null; // 'rock' | 'lava' | null
     let selectedIndex = -1;
+    let hoveredType = null;
+    let hoveredIndex = -1;
 
     // Sürükləmə (Drag & Resize)
     let isDragging = false;
@@ -717,9 +719,6 @@
             const mouseY = Math.round((e.clientY - rect.top) * scaleY);
             return { mouseX, mouseY };
         }
-
-        let hoveredType = null;
-        let hoveredIndex = -1;
 
         // Siçanla Kətan Üzərində Gezinti və Kursor Dəyişimi
         canvas.addEventListener('mousemove', (e) => {
