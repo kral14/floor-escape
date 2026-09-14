@@ -15,7 +15,7 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
-PORT = 4000
+PORT = int(os.environ.get('PORT', 4000))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PUBLIC_DIR = os.path.join(BASE_DIR, 'public')
 

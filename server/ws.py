@@ -3,7 +3,8 @@ import asyncio
 import threading
 import websockets
 
-WS_PORT = 4001
+import os
+WS_PORT = int(os.environ.get('WS_PORT', 4001))
 ws_clients = set()
 ws_player_map = {}
 ws_loop = None
