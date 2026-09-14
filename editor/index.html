@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floor Escape - Yol Redaktoru və Kaskad Simulyatoru</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+    <div id="editor-container">
+        <!-- ÜST İDARƏETMƏ PANENİ -->
+        <header id="top-bar">
+            <div class="brand">
+                <i class="fa-solid fa-volcano logo-icon"></i>
+                <div class="brand-text">
+                    <h1>FLOOR ESCAPE <span>TRACK STUDIO</span></h1>
+                    <p>Fiziki Kaskad və Platforma Simulyatoru</p>
+                </div>
+            </div>
+
+            <!-- YOL SEÇİMİ VƏ ADI -->
+            <div class="track-selector-group">
+                <label for="track-select">Sınaq Yolu:</label>
+                <select id="track-select">
+                    <!-- 1-30 JS tərəfindən doldurulacaq -->
+                </select>
+                <input type="text" id="track-name-input" placeholder="Yolun adını daxil edin..." />
+            </div>
+
+            <!-- ƏMƏLİYYAT DÜYMƏLƏRİ -->
+            <div class="action-buttons">
+                <button id="btn-mode-test" class="btn btn-mode" title="W, A, S, D ilə sınaqdan keçir">
+                    <i class="fa-solid fa-gamepad"></i> <span id="mode-text">Sınaq Rejimi</span>
+                </button>
+                <button id="btn-save" class="btn btn-primary" title="Faylı yadda saxla">
+                    <i class="fa-solid fa-floppy-disk"></i> Yolu Yadda Saxla
+                </button>
+                <button id="btn-export" class="btn btn-secondary" title="JSON faylı kimi yüklə">
+                    <i class="fa-solid fa-file-export"></i> JSON
+                </button>
+                <a href="../game.html" class="btn btn-outline" title="Oyuna qayıt">
+                    <i class="fa-solid fa-play"></i> Oyuna Keç
+                </a>
+            </div>
+        </header>
+
+        <!-- ƏSAS İŞ SAHƏSİ -->
+        <div id="workspace">
+            <!-- SOL ALƏTLƏR PANENİ -->
+            <aside id="toolbox">
+                <div class="tool-section">
+                    <h3><i class="fa-solid fa-screwdriver-wrench"></i> Element Əlavə Et</h3>
+                    <button id="btn-add-rock" class="tool-btn">
+                        <i class="fa-solid fa-cubes-stacked text-cyan"></i>
+                        <span>+ Platforma Qoy</span>
+                    </button>
+                    <button id="btn-add-lava" class="tool-btn">
+                        <i class="fa-solid fa-fire-flame-curved text-orange"></i>
+                        <span>+ Lava Mənbəyi Qoy</span>
+                    </button>
+                </div>
+
+                <div class="tool-section" id="selected-properties">
+                    <h3><i class="fa-solid fa-sliders"></i> Seçilmiş Element</h3>
+                    <div id="no-selection-hint">Kətanda bir element seçin</div>
+                    
+                    <div id="rock-props" class="props-group hidden">
+                        <label>En (Width): <span id="val-rock-w">240</span>px</label>
+                        <input type="range" id="input-rock-w" min="100" max="500" step="10" value="240" />
+                        
+                        <label>Qalınlıq: <span id="val-rock-h">42</span>px</label>
+                        <input type="range" id="input-rock-h" min="30" max="60" step="2" value="42" />
+
+                        <div class="btn-row">
+                            <button id="btn-center-rock" class="btn-sub"><i class="fa-solid fa-align-center"></i> Ortala</button>
+                            <button id="btn-delete-element" class="btn-sub btn-danger"><i class="fa-solid fa-trash"></i> Sil</button>
+                        </div>
+                    </div>
+
+                    <div id="lava-props" class="props-group hidden">
+                        <label>Axın Eni: <span id="val-lava-w">24</span>px</label>
+                        <input type="range" id="input-lava-w" min="16" max="40" step="2" value="24" />
+                        
+                        <label>Axma İstiqaməti:</label>
+                        <div class="dir-buttons">
+                            <button id="btn-dir-auto" class="btn-dir active">Ən Yaxın Kənar</button>
+                            <button id="btn-dir-right" class="btn-dir">Sağa Meylli</button>
+                            <button id="btn-dir-left" class="btn-dir">Sola Meylli</button>
+                        </div>
+
+                        <div class="btn-row" style="margin-top:12px;">
+                            <button id="btn-delete-lava" class="btn-sub btn-danger"><i class="fa-solid fa-trash"></i> Lavayı Sil</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tool-section">
+                    <h3><i class="fa-solid fa-camera"></i> Baxış & Miqyas</h3>
+                    <div class="btn-row">
+                        <button id="btn-zoom-in" class="btn-sub"><i class="fa-solid fa-magnifying-glass-plus"></i> +</button>
+                        <button id="btn-zoom-out" class="btn-sub"><i class="fa-solid fa-magnifying-glass-minus"></i> -</button>
+                        <button id="btn-zoom-reset" class="btn-sub">100%</button>
+                    </div>
+                    <label style="margin-top: 8px;">Kamera Şaquli Sürüşdürmə:</label>
+                    <input type="range" id="input-cam-scroll" min="0" max="1200" value="600" />
+                </div>
+
+                <div class="tool-section info-stats">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Statistika</h3>
+                    <p>Platformalar: <strong id="stat-rocks-count">0</strong></p>
+                    <p>Lava Axınları: <strong id="stat-lava-count">0</strong></p>
+                    <p>Açıq Keçid Dəhlizi: <strong id="stat-clearance" class="text-green">BƏLİ (100%)</strong></p>
+                </div>
+            </aside>
+
+            <!-- CANVAS VƏ SİMULYATUR GÖRÜNTÜSÜ -->
+            <main id="canvas-viewport">
+                <div id="viewport-header">
+                    <span><i class="fa-solid fa-flag-checkered text-green"></i> YUXARI PORTAL (ÇIXIŞ: y = 160px)</span>
+                    <span id="coord-display">X: 0 | Y: 0</span>
+                </div>
+
+                <div id="canvas-wrapper">
+                    <canvas id="editorCanvas" width="800" height="1800"></canvas>
+                </div>
+
+                <div id="viewport-footer">
+                    <span><i class="fa-solid fa-dragon text-orange"></i> AŞAĞI: LAVA CANAVARI (y = 1750px)</span>
+                    <span>Oyunçunun Doğuluş Yeri: X=400, Y=1600</span>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- BİLDİRİŞ TOASTLARI -->
+    <div id="editor-toast" class="hidden"></div>
+
+    <!-- JSON EXPORT MODALI -->
+    <div id="json-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code"></i> Yolun JSON Məlumatı</h3>
+                <button id="btn-close-modal" class="close-btn">&times;</button>
+            </div>
+            <textarea id="json-output" readonly></textarea>
+            <div class="modal-footer">
+                <button id="btn-copy-json" class="btn btn-primary"><i class="fa-solid fa-copy"></i> Kopyala</button>
+                <button id="btn-download-json" class="btn btn-secondary"><i class="fa-solid fa-download"></i> Fayl kimi Yüklə</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ƏSAS SCRIPTLƏR -->
+    <script src="../js/data/floor_patterns.js"></script>
+    <script src="../js/engine/lava-waterfall.js"></script>
+    <script src="editor.js"></script>
+</body>
+</html>

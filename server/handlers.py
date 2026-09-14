@@ -439,6 +439,28 @@ def handle_post(req, parsed, data):
         req.send_json({'success': True, 'message': 'WebSocket bildirişi yayımlandı!'})
         return True
 
+    # 🗺️ API: Track Studio Yolunu Yadda Saxlamaq
+    if parsed.path == '/api/tracks/save':
+        track = data.get('track') or {}
+        all_tracks = data.get('allTracks') or []
+        json_path = os.path.join(BASE_DIR, 'public', 'data', 'floor_patterns.json')
+        js_path = os.path.join(BASE_DIR, 'public', 'js', 'data', 'floor_patterns.js')
+
+        payload = {
+            'totalTracks': len(all_tracks),
+            'description': 'Floor Escape 30 ədəd sınaq yolu. Track Studio tərəfindən idarə olunur.',
+            'tracks': all_tracks
+        }
+        try:
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+            with open(js_path, 'w', encoding='utf-8') as f:
+                f.write(f"// Avtomatik yenilənmiş Floor Escape Sınaq Yolları\nwindow.FLOOR_PATTERNS = {json.dumps(payload, indent=2, ensure_ascii=False)};\n")
+            req.send_json({'success': True, 'message': f"Yol {track.get('id', '')} uğurla yadda saxlandı!"})
+        except Exception as e:
+            req.send_json({'success': False, 'message': str(e)}, 500)
+        return True
+
     # 8. API: Məktubdakı Hədiyyəni Qəbul Etmək (Claim & Verify)
     if parsed.path == '/api/inbox/claim':
         player_id = (data.get('playerId') or '').strip()

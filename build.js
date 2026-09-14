@@ -47,4 +47,18 @@ if (fs.existsSync(publicLava)) {
     console.log('✓ Root lava-preview.html sinxronlaşdırıldı.');
 }
 
+// 6. Root editor qovluğu
+const publicEditor = path.join(publicDir, 'editor');
+const rootEditor = path.join(__dirname, 'editor');
+if (fs.existsSync(publicEditor)) {
+    if (!fs.existsSync(rootEditor)) fs.mkdirSync(rootEditor, { recursive: true });
+    ['index.html', 'editor.js', 'editor.css'].forEach(f => {
+        const src = path.join(publicEditor, f);
+        if (fs.existsSync(src)) {
+            fs.copyFileSync(src, path.join(rootEditor, f));
+        }
+    });
+    console.log('✓ Root editor/ qovluğu sinxronlaşdırıldı.');
+}
+
 console.log('✓ Build prosesi uğurla tamamlandı!');

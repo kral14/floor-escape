@@ -592,6 +592,49 @@ const server = http.createServer((req, res) => {
                 });
             }
 
+            // ==========================================
+            // 🗺️ YOLUN YADDA SAXLANILMASI (TRACK STUDIO API)
+            // ==========================================
+            if (pathname === '/api/tracks/save') {
+                const track = data.track;
+                const allTracks = data.allTracks;
+
+                const jsonPath = path.join(PUBLIC_DIR, 'data', 'floor_patterns.json');
+                const jsPath = path.join(PUBLIC_DIR, 'js', 'data', 'floor_patterns.js');
+
+                let targetTracks = allTracks;
+                if (!targetTracks || !Array.isArray(targetTracks)) {
+                    const currentData = readJson(jsonPath, { tracks: [] });
+                    targetTracks = currentData.tracks || [];
+                    if (track && track.id) {
+                        const idx = targetTracks.findIndex(t => t.id === track.id);
+                        if (idx >= 0) targetTracks[idx] = track;
+                        else targetTracks.push(track);
+                    }
+                }
+
+                const payload = {
+                    totalTracks: targetTracks.length,
+                    description: "Floor Escape 30 ədəd sınaq yolu. Track Studio tərəfindən idarə olunur.",
+                    tracks: targetTracks
+                };
+
+                // JSON və JS fayllarını yazırıq
+                writeJson(jsonPath, payload);
+                try {
+                    const jsContent = `// Avtomatik yenilənmiş Floor Escape Sınaq Yolları\nwindow.FLOOR_PATTERNS = ${JSON.stringify(payload, null, 2)};\n`;
+                    fs.writeFileSync(jsPath, jsContent, 'utf-8');
+                } catch (e) {
+                    console.error('JS faylı yazılarkən xəta:', e.message);
+                }
+
+                return sendJson({
+                    success: true,
+                    message: `Yol ${track ? track.id : ''} uğurla yadda saxlandı!`,
+                    trackId: track ? track.id : 1
+                });
+            }
+
             // Əgər heç bir POST marşrutuna uyğun gəlmirsə
             return sendJson({ success: false, message: 'Marşrut tapılmadı' }, 404);
         });
