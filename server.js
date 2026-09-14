@@ -176,7 +176,7 @@ const server = http.createServer((req, res) => {
             }
             const allInbox = readJson(INBOX_FILE, []);
             const rows = allInbox
-                .filter(m => m.target_type === 'ALL' || m.player_id === playerId)
+                .filter(m => (m.target_type === 'ALL' || m.player_id === playerId) && !(Array.isArray(m.deleted_by) && m.deleted_by.includes(playerId)))
                 .map(m => {
                     const claimedList = Array.isArray(m.claimed_by) ? m.claimed_by : (m.claimed_by ? [m.claimed_by] : []);
                     const isClaimed = claimedList.includes(playerId) || m.is_claimed === 1;
@@ -425,6 +425,27 @@ const server = http.createServer((req, res) => {
                     blueDiamonds: blue,
                     redDiamonds: red
                 });
+            }
+
+            // 5.1 İnbox Məktubunu Silmək (Delete)
+            if (pathname === '/api/inbox/delete') {
+                const msgId = parseInt(data.messageId || data.message_id, 10);
+                const playerId = (data.playerId || data.player_id || '').trim();
+
+                const allInbox = readJson(INBOX_FILE, []);
+                const msgIdx = allInbox.findIndex(m => m.id === msgId);
+                if (msgIdx !== -1) {
+                    const msg = allInbox[msgIdx];
+                    if (msg.player_id === playerId) {
+                        allInbox.splice(msgIdx, 1);
+                    } else {
+                        if (!Array.isArray(msg.deleted_by)) msg.deleted_by = [];
+                        if (!msg.deleted_by.includes(playerId)) msg.deleted_by.push(playerId);
+                    }
+                    writeJson(INBOX_FILE, allInbox);
+                }
+
+                return sendJson({ success: true, message: 'Məktub uğurla silindi!' });
             }
 
             // 6. Hədiyyə Kodu Yaratmaq (Admin)

@@ -732,4 +732,19 @@ def handle_post(req, parsed, data):
         })
         return True
 
+    # 10. API: İnbox Məktubunu Silmək (Delete)
+    if parsed.path == '/api/inbox/delete':
+        msg_id = data.get('messageId') or data.get('message_id')
+        player_id = (data.get('playerId') or data.get('player_id') or '').strip()
+        if msg_id and player_id:
+            try:
+                with get_db() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute('DELETE FROM inbox_messages WHERE id = ? AND player_id = ?', (msg_id, player_id))
+                    conn.commit()
+            except Exception:
+                pass
+        req.send_json({'success': True, 'message': 'Məktub silindi!'})
+        return True
+
     return False
