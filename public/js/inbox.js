@@ -67,7 +67,8 @@
 
         try {
             const host = window.location.hostname || 'localhost';
-            const wsUrl = `ws://${host}:4001`;
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${proto}//${host}:4001`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {

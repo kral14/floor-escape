@@ -1,0 +1,10 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+backup
+baxis_tarixce.bat
+chat_history.html
+push_to_github.py

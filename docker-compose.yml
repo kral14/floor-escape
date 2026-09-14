@@ -1,0 +1,12 @@
+services:
+  floor-escape:
+    build: .
+    container_name: floor_escape
+    restart: always
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
