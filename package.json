@@ -2,10 +2,13 @@
   "name": "floor-escape-server",
   "version": "1.0.0",
   "description": "Floor Escape Game and Gift Code API Server",
-  "main": "server.py",
+  "main": "server.js",
   "scripts": {
-    "start": "python3 server.py || python server.py || node server.js",
+    "start": "python3 server.py 2>/dev/null || python server.py 2>/dev/null || node server.js",
     "build": "node build.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   },
   "keywords": ["game", "arcade", "api"],
   "author": "",
