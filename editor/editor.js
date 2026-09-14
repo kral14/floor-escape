@@ -1047,6 +1047,9 @@
 
         // Siçanla Seçim, İstiqamət Dəyişmə və Sürükləməyə Başlama
         canvas.addEventListener('mousedown', (e) => {
+            if (isTestMode) return;
+            const { mouseX, mouseY } = getCanvasMouseCoords(e);
+
             // 0. Havada Sonlanma Tutacağını (↕ Mid-Air Gizmo) yoxla
             const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
             for (const p of cascadePaths) {
