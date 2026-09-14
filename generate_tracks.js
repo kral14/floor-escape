@@ -16,20 +16,23 @@ function makeTrack(id, name, rocks, lavaSources, notes = "") {
     };
 }
 
-// 1. Yol 1: "Klassik Sağa Meylli Kaskad"
-// Yuxarıdan sol tərəfə tökülən lava qayaya dəyir, sağa meyillənir. Sol və alt təhlükəsizdir.
-patterns.push(makeTrack(1, "Yol 1: Klassik Sağa Meylli Kaskad", [
-    { x: 100, y: 1360, w: 240, h: 42 },
-    { x: 460, y: 1360, w: 240, h: 42 },
-    { x: 140, y: 1080, w: 320, h: 42 },
-    { x: 380, y: 800,  w: 300, h: 42 },
-    { x: 100, y: 520,  w: 260, h: 42 },
-    { x: 440, y: 520,  w: 260, h: 42 },
-    { x: 250, y: 260,  w: 300, h: 42 }
+// 1. Yol 1: "Pilləli Üç Səviyyəli Kaskad (Yuxarı, Orta, Aşağı)"
+// Lavalar müxtəlif hündürlüklərdən tökülür: Biri yuxarıdan (y: 260), biri ortadan (y: 740), biri aşağıdan (y: 1180).
+patterns.push(makeTrack(1, "Yol 1: Pilləli Üç Səviyyəli Kaskad", [
+    { x: 100, y: 1380, w: 260, h: 42 },
+    { x: 460, y: 1380, w: 240, h: 42 },
+    { x: 260, y: 1140, w: 280, h: 42 },
+    { x: 80,  y: 900,  w: 260, h: 42 },
+    { x: 440, y: 900,  w: 280, h: 42 },
+    { x: 220, y: 640,  w: 360, h: 42 },
+    { x: 120, y: 420,  w: 260, h: 42 },
+    { x: 460, y: 420,  w: 240, h: 42 },
+    { x: 250, y: 220,  w: 300, h: 42 }
 ], [
-    { x: 160, y: 280, w: 24 },
-    { x: 620, y: 380, w: 24 }
-], "Lava 1-ci qayanın soluna dəyib sağa axır, sol tərəf və qayanın altı tam sərbəst keçiddir."));
+    { x: 150, y: 260,  w: 24 }, // Yuxarıdan tökülən lava
+    { x: 580, y: 740,  w: 24 }, // Ortadan tökülən lava
+    { x: 180, y: 1180, w: 24 }  // Aşağıdan tökülən lava
+], "Lavalar 3 fərqli hündürlükdən tökülür: yuxarı (y:260), orta (y:740), aşağı (y:1180). Hər birinin altında təhlükəsiz keçid dəhlizi var."));
 
 // 2. Yol 2: "Klassik Sola Meylli Kaskad"
 patterns.push(makeTrack(2, "Yol 2: Klassik Sola Meylli Kaskad", [
