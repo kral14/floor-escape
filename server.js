@@ -320,10 +320,10 @@ const server = http.createServer((req, res) => {
                 const player = players.find(p => p.username.toLowerCase() === loginKey.toLowerCase() || p.playerId === loginKey);
 
                 if (!player) {
-                    return sendJson({ success: false, message: 'Bu adda oyunçu tapılmadı!' }, 404);
+                    return sendJson({ success: false, message: 'Bu adda və ya ID-də oyunçu tapılmadı! Əgər ilk dəfə daxil olursunuzsa, zəhmət olmasa Qeydiyyatdan keçin.' }, 400);
                 }
                 if (player.pinHash !== hashPin(pin)) {
-                    return sendJson({ success: false, message: 'PIN şifrə yanlışdır!' }, 401);
+                    return sendJson({ success: false, message: 'PIN şifrə yanlışdır!' }, 400);
                 }
 
                 player.lastLogin = new Date().toISOString();
@@ -633,12 +633,11 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('======================================================');
 });
 
-// Könüllü WebSocket Serveri (Əgər 'ws' paketi varsa avtomatik aktivləşir)
+// Könüllü WebSocket Serveri (Əsas HTTP server üzərində eyni portda işləyir)
 try {
     const WebSocket = require('ws');
-    const wss = new WebSocket.Server({ port: WS_PORT, host: '0.0.0.0' }, () => {
-        console.log(`  ⚡ WebSocket Real-Time Serveri Aktivdir: ws://0.0.0.0:${WS_PORT}`);
-    });
+    const wss = new WebSocket.Server({ server });
+    console.log(`  ⚡ WebSocket Real-Time Serveri Eyni Portda Aktivdir (Port: ${PORT})`);
 
     wss.on('connection', (ws) => {
         wsClients.add(ws);

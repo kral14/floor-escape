@@ -137,6 +137,147 @@
         abyssal:     { glow: '#2dd4bf', core: '#14b8a6', base: 'rgba(20, 184, 166, 0.7)', accent: '#f0fdfa', trail: '#0f766e' }
     };
 
+    const ReferenceRingFX = {
+      draw3DRing(ctx, radius, rx, ry, rz, color, glow, lineWidth, dash = [], alpha = 1, segments = 56) {
+        const pts = [];
+        for (let i = 0; i <= segments; i++) {
+          const a = (i / segments) * Math.PI * 2;
+          const px = Math.cos(a) * radius;
+          const py = Math.sin(a) * radius;
+          pts.push(Math3D.project(px, py, 0, rx, ry, rz));
+        }
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = lineWidth;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        if (dash.length) ctx.setLineDash(dash);
+
+        ctx.beginPath();
+        pts.forEach((p, idx) => {
+          if (idx === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+      },
+
+      drawRings(ctx, time, config, speedFactor = 0, ringAngles = null, rot3D = { rx: 0, ry: 0, rz: 0 }) {
+        ctx.save();
+        const { baseColor, glowColor, accentColor } = config;
+        const speed = Math.max(0, Math.min(1.2, speedFactor));
+        const { rx, ry, rz } = rot3D;
+
+        const rAngle1 = ringAngles ? ringAngles.r1 : time * 0.5;
+        const rAngle2 = ringAngles ? ringAngles.r2 : -time * 0.35;
+        const rAngle3 = ringAngles ? ringAngles.r3 : time * 0.2;
+
+        const glowBoost = speed * 24;
+        const extraW = speed * 1.5;
+
+        // Dynamic 3D Flight Wingtips (projects in true 3D to show orientation)
+        const leftWingTip = Math3D.project(-180 - speed * 20, 0, 0, rx, ry, rz);
+        const leftWingBase = Math3D.project(-135, 0, 0, rx, ry, rz);
+        const rightWingTip = Math3D.project(180 + speed * 20, 0, 0, rx, ry, rz);
+        const rightWingBase = Math3D.project(135, 0, 0, rx, ry, rz);
+        const noseVector = Math3D.project(0, -165, 0, rx, ry, rz);
+
+        ctx.save();
+        ctx.strokeStyle = accentColor || '#ffffff';
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 8 + glowBoost;
+        ctx.lineWidth = (2 + extraW) * leftWingTip.k;
+        ctx.globalAlpha = Math.min(0.95, 0.45 + speed * 0.4);
+
+        ctx.beginPath();
+        ctx.moveTo(leftWingTip.x, leftWingTip.y);
+        ctx.lineTo(leftWingBase.x, leftWingBase.y);
+        ctx.stroke();
+
+        ctx.lineWidth = (2 + extraW) * rightWingTip.k;
+        ctx.beginPath();
+        ctx.moveTo(rightWingTip.x, rightWingTip.y);
+        ctx.lineTo(rightWingBase.x, rightWingBase.y);
+        ctx.stroke();
+
+        ctx.fillStyle = glowColor;
+        ctx.beginPath();
+        ctx.arc(noseVector.x, noseVector.y, (3.5 + speed * 2) * noseVector.k, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 1. Inner fast-spinning 3D notched telemetry ring
+        this.draw3DRing(ctx, 54, rx, ry, rz + rAngle1, baseColor, glowColor, (1.4 + extraW), [8, 6, 2, 6], 0.65 + speed * 0.3);
+
+        // 8 Radial tick marks in 3D
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4 + rAngle1;
+          const p1 = Math3D.project(Math.cos(a) * 50, Math.sin(a) * 50, 0, rx, ry, rz);
+          const p2 = Math3D.project(Math.cos(a) * (58 + speed * 5), Math.sin(a) * (58 + speed * 5), 0, rx, ry, rz);
+          ctx.save();
+          ctx.strokeStyle = baseColor;
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = 4 + glowBoost * 0.5;
+          ctx.lineWidth = (1.5 + extraW) * p1.k;
+          ctx.globalAlpha = Math.min(1, 0.75 + speed * 0.25);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 2. Mid-orbit 3D counter-rotating segmented compass ring
+        this.draw3DRing(ctx, 105, rx, ry, rz + rAngle2, glowColor, glowColor, (1.8 + extraW), [28, 14, 8, 14], 0.7 + speed * 0.3);
+
+        // 4 Cardinal 3D Diamond Beads
+        const beadSize = (6.5 + speed * 3.5);
+        for (let j = 0; j < 4; j++) {
+          const a = (j * Math.PI) / 2 + rAngle2;
+          const bead = Math3D.project(Math.cos(a) * 105, Math.sin(a) * 105, 0, rx, ry, rz);
+          ctx.save();
+          ctx.fillStyle = accentColor || '#ffffff';
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = 12 + glowBoost;
+          ctx.globalAlpha = Math.min(1, 0.8 + speed * 0.2);
+          ctx.beginPath();
+          const sz = beadSize * bead.k;
+          ctx.moveTo(bead.x, bead.y - sz);
+          ctx.lineTo(bead.x + sz, bead.y);
+          ctx.lineTo(bead.x, bead.y + sz);
+          ctx.lineTo(bead.x - sz, bead.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 3. Outer delicate 3D celestial coordinate ring
+        this.draw3DRing(ctx, 162, rx, ry, rz + rAngle3, baseColor, glowColor, (1.0 + extraW * 0.6), [48, 14, 14, 14], 0.45 + speed * 0.35);
+
+        // 24 perimeter dials projected in 3D
+        for (let k = 0; k < 24; k++) {
+          const a = (k * Math.PI) / 12 + rAngle3;
+          const isMajor = k % 6 === 0;
+          const len = (isMajor ? 8 : 4) + speed * 3;
+          const p1 = Math3D.project(Math.cos(a) * (162 - len), Math.sin(a) * (162 - len), 0, rx, ry, rz);
+          const p2 = Math3D.project(Math.cos(a) * (162 + len), Math.sin(a) * (162 + len), 0, rx, ry, rz);
+          ctx.save();
+          ctx.strokeStyle = baseColor;
+          ctx.lineWidth = (1 + extraW * 0.4) * p1.k;
+          ctx.globalAlpha = Math.min(0.9, 0.4 + speed * 0.4);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+    };
+
     const CyberRingRenderer = {
         draw3DPolyline(ctx, pts, color, glow, lineWidth, dash = [], alpha = 1) {
             if (!pts || !pts.length) return;
@@ -168,117 +309,23 @@
         },
 
         renderSystem(ctx, t, rot3D, speedFactor, ringAngles, assemblyRatio, themeKey = 'singularity') {
-            const { rx, ry, rz } = rot3D;
             const pal = THEME_PALETTES[themeKey] || THEME_PALETTES.singularity;
-            const glowColor = pal.glow;
-            const baseColor = pal.base;
-            const accentColor = pal.accent;
-            const extraW = speedFactor * 1.6;
-            const glowBoost = speedFactor * 22;
-
-            // Assembly progress scales the completion of arcs
-            const ringProgress = MathUtils.clamp(assemblyRatio, 0, 1);
-            if (ringProgress <= 0) return;
-
-            // 1. Aerodynamic 3D Wings (appear as system comes online)
-            if (ringProgress > 0.6) {
-                const wingFade = MathUtils.smooth(0.6, 1.0, ringProgress);
-                const leftWingTip = Math3D.project(-180 - speedFactor * 25, 0, 0, rx, ry, rz);
-                const leftWingBase = Math3D.project(-135, 0, 0, rx, ry, rz);
-                const rightWingTip = Math3D.project(180 + speedFactor * 25, 0, 0, rx, ry, rz);
-                const rightWingBase = Math3D.project(135, 0, 0, rx, ry, rz);
-
-                ctx.save();
-                ctx.strokeStyle = accentColor;
-                ctx.shadowColor = glowColor;
-                ctx.shadowBlur = 8 + glowBoost;
-                ctx.lineWidth = (2 + extraW) * leftWingTip.k;
-                ctx.globalAlpha = wingFade * (0.5 + speedFactor * 0.4);
-
-                ctx.beginPath();
-                ctx.moveTo(leftWingTip.x, leftWingTip.y);
-                ctx.lineTo(leftWingBase.x, leftWingBase.y);
-                ctx.stroke();
-
-                ctx.lineWidth = (2 + extraW) * rightWingTip.k;
-                ctx.beginPath();
-                ctx.moveTo(rightWingTip.x, rightWingTip.y);
-                ctx.lineTo(rightWingBase.x, rightWingBase.y);
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            // 2. THE HOLLOW CENTRAL MONS FRAME (As seen in user photo!)
-            // Clean hollow circle: interior is NOT painted, allowing Mons inside to shine through clearly!
-            const centralRadius = 46;
-            const mainArcSpan = Math.PI * 2 * ringProgress;
-            this.draw3DRingArc(ctx, centralRadius, rx, ry, rz, 0, mainArcSpan, pal.glow, pal.core, 3.8 + extraW, [], 0.95, 48);
-
-            // Thin interior accent ring inside the cyber bezel
-            if (ringProgress > 0.4) {
-                this.draw3DRingArc(ctx, centralRadius - 5, rx, ry, rz, 0, Math.PI * 2 * MathUtils.smooth(0.4, 1.0, ringProgress), 'rgba(224, 242, 254, 0.4)', glowColor, 1.2, [4, 4], 0.6);
-            }
-
-            // 3. Inner Fast-Spinning Telemetry Notch Ring (Radius = 72)
-            if (ringProgress > 0.2) {
-                const r1Progress = MathUtils.smooth(0.2, 0.9, ringProgress);
-                const rAngle1 = ringAngles.r1;
-                this.draw3DRingArc(ctx, 72, rx, ry, rz + rAngle1, 0, Math.PI * 2 * r1Progress, baseColor, glowColor, 1.4 + extraW, [8, 6, 2, 6], 0.75 + speedFactor * 0.25);
-
-                // 8 Micro Ticks in 3D
-                for (let i = 0; i < 8; i++) {
-                    if (i / 8 > r1Progress) continue;
-                    const a = (i * Math.PI) / 4 + rAngle1;
-                    const p1 = Math3D.project(Math.cos(a) * 66, Math.sin(a) * 66, 0, rx, ry, rz);
-                    const p2 = Math3D.project(Math.cos(a) * (78 + speedFactor * 6), Math.sin(a) * (78 + speedFactor * 6), 0, rx, ry, rz);
-                    this.draw3DPolyline(ctx, [p1, p2], baseColor, glowColor, 1.5 * p1.k, [], 0.8);
-                }
-            }
-
-            // 4. Mid-Orbit 3D Segmented Compass Ring (Radius = 118)
-            if (ringProgress > 0.5) {
-                const r2Progress = MathUtils.smooth(0.5, 1.0, ringProgress);
-                const rAngle2 = ringAngles.r2;
-                this.draw3DRingArc(ctx, 118, rx, ry, rz + rAngle2, 0, Math.PI * 2 * r2Progress, glowColor, glowColor, 1.8 + extraW, [26, 12, 6, 12], 0.7 + speedFactor * 0.3);
-
-                // 4 Cardinal Diamond Crystals
-                for (let j = 0; j < 4; j++) {
-                    if (j / 4 > r2Progress) continue;
-                    const a = (j * Math.PI) / 2 + rAngle2;
-                    const bead = Math3D.project(Math.cos(a) * 118, Math.sin(a) * 118, 0, rx, ry, rz);
-                    const beadSize = (6.0 + speedFactor * 3.5) * bead.k;
-                    ctx.save();
-                    ctx.fillStyle = accentColor;
-                    ctx.shadowColor = glowColor;
-                    ctx.shadowBlur = 10 + glowBoost;
-                    ctx.globalAlpha = 0.9;
-                    ctx.beginPath();
-                    ctx.moveTo(bead.x, bead.y - beadSize);
-                    ctx.lineTo(bead.x + beadSize, bead.y);
-                    ctx.lineTo(bead.x, bead.y + beadSize);
-                    ctx.lineTo(bead.x - beadSize, bead.y);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-
-            // 5. Outer Delicate Celestial Coordinate Ring (Radius = 168)
-            if (ringProgress > 0.7) {
-                const r3Progress = MathUtils.smooth(0.7, 1.0, ringProgress);
-                const rAngle3 = ringAngles.r3;
-                this.draw3DRingArc(ctx, 168, rx, ry, rz + rAngle3, 0, Math.PI * 2 * r3Progress, baseColor, glowColor, 1.0 + extraW * 0.5, [44, 14, 12, 14], 0.55);
-
-                // Outer tick dials
-                for (let k = 0; k < 20; k++) {
-                    if (k / 20 > r3Progress) continue;
-                    const a = (k * Math.PI) / 10 + rAngle3;
-                    const len = 6 + speedFactor * 3;
-                    const p1 = Math3D.project(Math.cos(a) * (168 - len), Math.sin(a) * (168 - len), 0, rx, ry, rz);
-                    const p2 = Math3D.project(Math.cos(a) * (168 + len), Math.sin(a) * (168 + len), 0, rx, ry, rz);
-                    this.draw3DPolyline(ctx, [p1, p2], baseColor, glowColor, 1.0 * p1.k, [], 0.45);
-                }
-            }
+            const progress = MathUtils.clamp(assemblyRatio, 0, 1);
+            if (progress <= 0) return;
+            ctx.save();
+            ctx.scale(progress, progress);
+            ReferenceRingFX.drawRings(ctx, t, {
+                baseColor: pal.base, glowColor: pal.glow, accentColor: pal.accent
+            }, speedFactor, ringAngles, rot3D);
+            // Keep the reference photon ring hollow so the equipped skin stays visible.
+            ctx.beginPath();
+            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.strokeStyle = pal.glow;
+            ctx.shadowColor = pal.glow;
+            ctx.shadowBlur = 18;
+            ctx.lineWidth = 3.5;
+            ctx.stroke();
+            ctx.restore();
         }
     };
 
@@ -298,7 +345,7 @@
             this.autoDropTimer = MathUtils.randomRange(1.8, 2.8);
         }
 
-        launchStarFromOrbit(cx, cy, rot3D, orbitParticles, themeKey = 'singularity', isIngame = false) {
+        launchStarFromOrbit(cx, cy, rot3D, orbitParticles, themeKey = 'singularity', isIngame = false, scale = 1) {
             // Əgər animasiyanın orbitində hissəcik yoxdursa, KƏNARDAN ATILA BİLMƏZ!
             if (!orbitParticles || orbitParticles.length === 0) {
                 return false;
@@ -313,7 +360,7 @@
             const ly = Math.sin(p.angle) * (p.radius * 0.42);
             const lz = p.z || 0;
             const proj = Math3D.project(lx, ly, lz, rot3D.rx, rot3D.ry, rot3D.rz);
-            const origin = { x: cx + proj.x, y: cy + proj.y };
+            const origin = { x: cx + proj.x * scale, y: cy + proj.y * scale };
 
             const pal = THEME_PALETTES[themeKey] || THEME_PALETTES.singularity;
 
@@ -343,7 +390,8 @@
                 colorCore: '#f0fdfa',
                 colorGlow: pal.glow,
                 colorTrail: pal.trail,
-                isIngame
+                isIngame,
+                themeKey
             });
 
             cyberAudio.init();
@@ -407,7 +455,7 @@
                 if (s.isIngame && activeMonster && typeof activeMonster.y === 'number') {
                     const lavaY = (typeof activeMonster.surface === 'function') ? activeMonster.surface(s.x, activeMonster.y) : activeMonster.y;
                     if (s.y >= lavaY - 20) {
-                        this.triggerFloorShatter(s.x, Math.min(s.y, lavaY));
+                        this.triggerFloorShatter(s.x, Math.min(s.y, lavaY), s.themeKey);
                         activeMonster.y = Math.min(worldH + 60, activeMonster.y + 50);
                         if (typeof activeMonster.takeDamage === 'function') {
                             activeMonster.takeDamage(300, 'ice', s.x, lavaY);
@@ -422,7 +470,7 @@
 
                 // Impact on floor/stage bottom
                 if (s.y >= floorY) {
-                    this.triggerFloorShatter(s.x, floorY);
+                    this.triggerFloorShatter(s.x, floorY, s.themeKey);
                     this.stars.splice(i, 1);
                     continue;
                 }
@@ -908,8 +956,7 @@
             const eng = this.getActiveEngine(themeKey);
 
             // Oyunçunun real hərəkət sürəti və bucaqları ötürülür
-            const dt = 1 / 60;
-            eng.step(dt, player.vx || 0, player.vy || 0, true);
+            // Simulation advances in updateInGame, never in the render pass.
 
             // Oyunçu bədəninin arxasında çəkilir (Mons içində maneəsiz görünür)
             // scale 0.54 oyunçunun radiusu ilə (24px) 46px-lik mərkəzi halqanı mükəmməl uzlaşdırır
@@ -936,7 +983,7 @@
             }
 
             // Animasiya daxilində fırlanan real hissəcik orbitdən qoparılır və lavaya şığıyır
-            const fired = eng.stellarSystem.launchStarFromOrbit(player.x, player.y, eng.rot3D, eng.orbitParticles, themeKey, true);
+            const fired = eng.stellarSystem.launchStarFromOrbit(player.x, player.y, eng.rot3D, eng.orbitParticles, themeKey, true, 0.54);
             if (fired) {
                 // Atdıqca hissəciklər real olaraq azalır və ulduz sayı qalan hissəcik sayına bərabər olur
                 if (typeof permUpgrades !== 'undefined') {
@@ -961,6 +1008,11 @@
 
         // Oyundaxili ulduzların hərəkəti və lavaya zərəri
         updateInGame(dt, player) {
+            if (player) {
+                const chosen = player.equippedSpawnAnim || (typeof permUpgrades !== 'undefined' ? permUpgrades.equippedSpawnAnim : null);
+                // Player physics stores velocity in pixels per 60 Hz tick; FX uses pixels/second.
+                this.getActiveEngine(chosen).step(dt, (player.vx || 0) * 60, (player.vy || 0) * 60, true);
+            }
             const worldH = (typeof getFloorWorldHeight === 'function' && typeof gameState !== 'undefined') 
                 ? getFloorWorldHeight(gameState.floor || 1) 
                 : 2200;
@@ -1034,7 +1086,7 @@
         window.SingularityEffects = SingularityEffects;
         if (window.SpawnEffectRegistry) {
             Object.keys(SingularityEffects).forEach(id => {
-                window.SpawnEffectRegistry.register(id, SingularitySpawnEffect);
+                window.SpawnEffectRegistry.register(id, SingularityEffects[id]);
             });
         }
     }

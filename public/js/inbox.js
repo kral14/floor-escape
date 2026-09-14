@@ -66,9 +66,10 @@
         }
 
         try {
-            const host = window.location.hostname || 'localhost';
+            // Eyni port və ünvan istifadə edilir (ayrıca 4001 portuna ehtiyac yoxdur)
+            const host = window.location.host || 'localhost:8082';
             const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${proto}//${host}:4001`;
+            const wsUrl = `${proto}//${host}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -92,15 +93,17 @@
 
             ws.onclose = () => {
                 if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
-                wsReconnectTimeout = setTimeout(initWebSocket, 3000);
+                // WebSocket ayrılarsa, hər 10 saniyədən bir təkrar yoxlanılır
+                wsReconnectTimeout = setTimeout(initWebSocket, 10000);
             };
 
             ws.onerror = () => {
+                // Səssiz xəta rejimi - arxa planda HTTP polling aktivdir
                 try { ws.close(); } catch (e) {}
             };
         } catch (err) {
             if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
-            wsReconnectTimeout = setTimeout(initWebSocket, 4000);
+            wsReconnectTimeout = setTimeout(initWebSocket, 10000);
         }
     }
 

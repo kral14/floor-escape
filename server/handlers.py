@@ -219,7 +219,7 @@ def handle_post(req, parsed, data):
                 row = cursor.fetchone()
 
                 if not row:
-                    req.send_json({'success': False, 'message': 'Bu adda və ya ID-də oyunçu tapılmadı!'}, 404)
+                    req.send_json({'success': False, 'message': 'Bu adda və ya ID-də oyunçu tapılmadı! Əgər ilk dəfə daxil olursunuzsa, zəhmət olmasa Qeydiyyatdan keçin.'}, 400)
                     return True
 
                 if row['pin_hash'] != hash_pin(pin):
