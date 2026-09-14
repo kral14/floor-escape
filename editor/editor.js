@@ -273,14 +273,21 @@
                 const distToRight = (hitRock.x + hitRock.w) - hitX;
 
                 // İstiqamət: İstifadəçi xüsusi seçibsə ona uyğunlaşır, əks halda ən yaxın kənara
-                let goRight = (distToRight < distToLeft);
-                if (src.direction === 'right') goRight = true;
-                if (src.direction === 'left') goRight = false;
+                let outX;
+                const savedOutX = (src.shelfOffsets && src.shelfOffsets[d] !== undefined)
+                    ? src.shelfOffsets[d]
+                    : (d === 0 ? src.customOutX : undefined);
 
-                const outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
+                if (savedOutX !== undefined) {
+                    outX = Math.max(hitRock.x + 10, Math.min(hitRock.x + hitRock.w - 10, savedOutX));
+                    goRight = (outX >= hitX);
+                } else {
+                    outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
+                }
 
                 path.shelves.push({
                     sourceIndex: sIdx,
+                    step: d,
                     rock: hitRock,
                     hitX: hitX,
                     outX: outX,
@@ -406,24 +413,29 @@
                         ctx.fill();
                         ctx.restore();
 
-                        // 🎯 Lavanın İstiqamət Tutacağı (Gizmo Handle - Siçanla tutub istiqaməti dəyişin!)
+                        // 🎯 Lavanın Platformadakı Tökülmə Tutacağı (Spillway Gizmo Handle)
                         ctx.save();
-                        ctx.shadowColor = '#f97316';
-                        ctx.shadowBlur = 12;
-                        ctx.fillStyle = '#f97316';
+                        ctx.shadowColor = '#ff6600';
+                        ctx.shadowBlur = 14;
+                        ctx.fillStyle = '#ff6600';
                         ctx.beginPath();
-                        ctx.arc(shelf.outX, rock.y + 2, 9, 0, Math.PI * 2);
+                        ctx.arc(shelf.outX, rock.y + 2, 11, 0, Math.PI * 2);
                         ctx.fill();
 
                         ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 2;
+                        ctx.lineWidth = 2.5;
                         ctx.stroke();
 
                         ctx.fillStyle = '#ffffff';
                         ctx.font = 'bold 11px sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.fillText(shelf.goRight ? '▶' : '◀', shelf.outX, rock.y + 2);
+                        ctx.fillText('↔', shelf.outX, rock.y + 2);
+
+                        // Qayanın üstündə tökülmə nöqtəsi yazısı
+                        ctx.fillStyle = '#ffd567';
+                        ctx.font = 'bold 10px Orbitron, monospace';
+                        ctx.fillText(`TÖKÜLMƏ X:${Math.round(shelf.outX)}`, shelf.outX, rock.y - 10);
                         ctx.restore();
                     }
                 }
@@ -835,25 +847,21 @@
             if (isTestMode) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
 
-            // 1. Qaya üstündəki Lava İstiqamət Tutacağını (Gizmo Handle) yoxla
+            // 1. Qaya üstündəki Lava Tökülmə / İstiqamət Tutacağını (Spillway Gizmo) yoxla
             const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
             for (const path of cascadePaths) {
                 for (const shelf of path.shelves) {
                     const distHandle = Math.hypot(mouseX - shelf.outX, mouseY - (shelf.rock.y + 2));
-                    if (distHandle < 18) {
+                    if (distHandle < 20) {
                         isDraggingLavaDir = true;
                         activeLavaHandle = {
                             sourceIndex: shelf.sourceIndex,
+                            step: shelf.step || 0,
                             rock: shelf.rock,
                             hitX: shelf.hitX
                         };
                         selectElement('lava', shelf.sourceIndex);
-
-                        // Klikləndikdə dərhal istiqaməti tərsinə çevir
-                        const currentDir = currentTrack.lavaSources[shelf.sourceIndex].direction || (shelf.goRight ? 'right' : 'left');
-                        const toggledDir = (currentDir === 'right') ? 'left' : 'right';
-                        setLavaDir(toggledDir);
-                        showToast(`Lavanın istiqaməti dəyişdirildi: ${toggledDir === 'right' ? 'Sağa ▶' : 'Sola ◀'}`, 'info');
+                        canvas.style.cursor = 'ew-resize';
                         return;
                     }
                 }
@@ -932,15 +940,19 @@
             if (!isDragging && !isResizing && !isDraggingLavaDir) return;
             const { mouseX, mouseY } = getCanvasMouseCoords(e);
 
-            // 🎯 Lavanın İstiqamətini Siçanla Sağa/Sola Çəkərək Yönləndirmək
+            // 🎯 Lavanın Platformadakı Tökülmə Yerini (outX) Siçanla Tutub İstənilən Yerə Çəkmək!
             if (isDraggingLavaDir && activeLavaHandle) {
                 const src = currentTrack.lavaSources[activeLavaHandle.sourceIndex];
-                if (src) {
-                    if (mouseX > activeLavaHandle.hitX + 12) {
-                        if (src.direction !== 'right') setLavaDir('right');
-                    } else if (mouseX < activeLavaHandle.hitX - 12) {
-                        if (src.direction !== 'left') setLavaDir('left');
-                    }
+                const rock = activeLavaHandle.rock;
+                if (src && rock) {
+                    // Qayanın hüdudları daxilində sərbəst hərəkət (istədiyiniz yerə çəkin!)
+                    const newOutX = Math.max(rock.x + 10, Math.min(rock.x + rock.w - 10, mouseX));
+                    src.shelfOffsets = src.shelfOffsets || {};
+                    src.shelfOffsets[activeLavaHandle.step || 0] = newOutX;
+                    src.customOutX = newOutX;
+                    src.direction = (newOutX >= activeLavaHandle.hitX) ? 'right' : 'left';
+                    setLavaDir(src.direction);
+                    coordDisplay.textContent = `Tökülmə Nöqtəsi: X = ${Math.round(newOutX)}`;
                 }
                 return;
             }

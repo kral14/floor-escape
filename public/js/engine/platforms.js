@@ -346,10 +346,22 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
             const distToLeft = hitX - hitRock.x;
             const distToRight = (hitRock.x + hitRock.w) - hitX;
 
-            // Qayanın ən yaxın kənarından süzülür (sağa yaxındırsa sağdan, sola yaxındırsa soldan)
-            // Beləliklə platformanın BÖYÜK QALAN HİSSƏSİ (80%-i) və ALTI tamamilə quru və təhlükəsiz qalır!
-            const goRight = (distToRight < distToLeft);
-            const outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
+            // Əgər istifadəçi Track Studio-da xüsusi tökülmə yeri (customOutX) təyin edibsə:
+            let outX;
+            const savedOutX = (src.shelfOffsets && src.shelfOffsets[d] !== undefined)
+                ? src.shelfOffsets[d]
+                : (d === 0 ? src.customOutX : undefined);
+
+            let goRight;
+            if (savedOutX !== undefined) {
+                outX = Math.max(hitRock.x + 10, Math.min(hitRock.x + hitRock.w - 10, savedOutX));
+                goRight = (outX >= hitX);
+            } else {
+                goRight = (distToRight < distToLeft);
+                if (src.direction === 'right') goRight = true;
+                if (src.direction === 'left') goRight = false;
+                outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
+            }
 
             path.shelves.push({
                 rock: hitRock,
