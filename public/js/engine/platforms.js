@@ -1,26 +1,28 @@
 // ============================================================================
-// 🏔️ PLATFORMALAR, QAYALAR VƏ AĞILLI KASKAD LAVA SİSTEMİ (PROCEDURAL & SOLVABLE)
-// 1. Hər qatda və hər oyunda platformaların və lavanın axma yerləri prosedur olaraq dəyişir.
-// 2. Dərin kaskad alqoritmi: Yuxarıdan axan lava platformaya dəyir, yönünü dəyişib
-//    sağa və ya sola axır. Platformanın altında və yön dəyişən hissəsində oyunçunun
-//    sağa/sola rahatlıqla keçə biləcəyi "TƏHLÜKƏSİZ KEÇİD DƏHLİZİ" (Lava Shadow) açılır!
-// 3. Ən altda isə bütün axınlar birbaşa aşağıdakı LAVA CANAVARINA tökülür.
+// 🏔️ PLATFORMALAR, QAYALAR VƏ AĞILLI KASKAD LAVA SİSTEMİ (PROSEDURAL & KEÇİLƏBİLƏN)
+// ============================================================================
+// 1. Hər qatda və hər yeni oyunda platformalar və lavalar dinamik dəyişir.
+// 2. Ağıllı kaskad: Yuxarıdan tökülən lava platformaya dəyib istiqamətini dəyişir (sağa/sola).
+//    Platformanın altında və yön dəyişdiyi zonada oyunçunun sağa və ya sola rahatlıqla
+//    keçə biləcəyi "TƏHLÜKƏSİZ KEÇİD DƏHLİZİ" (Lava Shelter) yaranır.
+// 3. Heç vaxt çıxılmaz vəziyyət (dead-end) yaranmır; bütün axınlar ən altda birbaşa
+//    LAVA CANAVARINA tökülür.
 // ============================================================================
 
-let currentWorldHeight = 1800; // Qat 1 üçün baza hündürlük
-let currentRocks = [];         // Prosedural qaya maneələri
-let initialLavaSources = [];   // Prosedural lava axını mənbələri
-let activeLavaHazardBoxes = []; // Toqquşma üçün aktiv lava qutuları
-let lavaFlowOffset = 0;        // Animasiya zamanı (saniyə ilə)
+let currentWorldHeight = 1800;
+let currentRocks = [];         // Prosedural üzən qaya adacıqları
+let initialLavaSources = [];   // Prosedural lava mənbələri
+let activeLavaHazardBoxes = []; // Dəqiq və ədalətli toqquşma zonaları
+let lavaFlowOffset = 0;        // Animasiya zamanı (saniyə)
 let lavaDripParticles = [];    // Lavadan damcılayan közlər
 
-// 1. Qat hündürlüyünün hesablanması (Hər qat getdikcə daha uzun olur)
+// 1. Qat hündürlüyü
 function getFloorWorldHeight(floor = 1) {
     return 1400 + floor * 500;
 }
 window.getFloorWorldHeight = getFloorWorldHeight;
 
-// 2. Hər dəfə dəyişən prosedural platforma və ağıllı lava generasiyası
+// 2. Hər dəfə unikal, amma 100% KEÇİLƏ BİLƏN platforma və lava xəritəsi
 function initFloorPlatforms(floor = 1) {
     currentWorldHeight = getFloorWorldHeight(floor);
     currentRocks = [];
@@ -35,94 +37,82 @@ function initFloorPlatforms(floor = 1) {
     const endY = 220;
     const heightSpan = startY - endY;
 
-    // Hər oyunda / qatda unikal dinamika təmin edən təsadüfi toxum (run seed)
+    // Hər oyunda / qatda fərqli layout təmin edən unikal toxum
     const runSeed = Math.floor(Math.random() * 10000);
 
     // ========================================================================
-    // A) PROSEDURAL QAYA PLATFORMALARI (HƏR DƏFƏ MÜXTƏLİF DÜZÜLÜŞ)
+    // A) PROSEDURAL QAYA ADACIQLARI (GENİŞ KEÇİD BOŞLUQLARI İLƏ)
     // ========================================================================
-    const rowHeight = 220;
-    const numRows = Math.floor(heightSpan / rowHeight);
+    // Mərtəbələr arası 220-250px məsafə saxlayırıq ki, oyunçu rahat süzə bilsin
+    const rowSpacing = 230;
+    const numRows = Math.floor(heightSpan / rowSpacing);
 
     for (let r = 0; r < numRows; r++) {
-        const rowY = startY - (r * rowHeight) - (Math.random() * 32);
-        // Hər qat və mərtəbə üçün 5 müxtəlif həndəsi naxış növü
-        const randChoice = (r + floor + runSeed) % 5;
+        const rowY = startY - (r * rowSpacing) - (Math.random() * 25);
+        const pattern = (r + floor + runSeed) % 4;
 
-        if (randChoice === 0) {
-            // Sol qaya və Sağ qaya (Mərkəzdə şaquli keçid dəhlizi)
-            const gap = 180 + Math.random() * 40;
-            const leftW = Math.max(160, (w - gap) / 2 - 20 + (Math.random() - 0.5) * 35);
-            const rightW = w - (leftW + gap) - 50;
-            currentRocks.push({ x: 25, y: rowY, w: leftW, h: 42, type: 'rock' });
-            currentRocks.push({ x: w - 25 - rightW, y: rowY, w: rightW, h: 42, type: 'rock' });
-        } else if (randChoice === 1) {
-            // Nəhəng Mərkəzi Qaya (Kənarlarda sərbəst sıçrayış zonaları)
-            const rockW = 280 + Math.random() * 80;
-            const rockX = (w - rockW) / 2 + (Math.random() - 0.5) * 40;
-            currentRocks.push({ x: rockX, y: rowY, w: rockW, h: 44, type: 'rock' });
-        } else if (randChoice === 2) {
-            // Pilləli sola meylli ziqzaq adacıqları
-            const plat1W = 220 + Math.random() * 50;
-            const plat2W = 230 + Math.random() * 50;
-            currentRocks.push({ x: 45, y: rowY + 25, w: plat1W, h: 42, type: 'rock' });
-            currentRocks.push({ x: w - 45 - plat2W, y: rowY - 25, w: plat2W, h: 42, type: 'rock' });
-        } else if (randChoice === 3) {
-            // 3 Kiçik Adacıq (Sol, Orta, Sağ)
-            const colW = (w - 140) / 3;
-            currentRocks.push({ x: 40, y: rowY, w: colW, h: 40, type: 'rock' });
-            currentRocks.push({ x: 40 + colW + 30, y: rowY - 18, w: colW, h: 40, type: 'rock' });
-            currentRocks.push({ x: w - 40 - colW, y: rowY, w: colW, h: 40, type: 'rock' });
+        if (pattern === 0) {
+            // Sol qaya və Sağ qaya (Ortada 240px geniş sərbəst dəhliz)
+            const leftW = 160 + Math.random() * 40;
+            const rightW = 160 + Math.random() * 40;
+            currentRocks.push({ x: 30, y: rowY, w: leftW, h: 40, type: 'rock' });
+            currentRocks.push({ x: w - 30 - rightW, y: rowY, w: rightW, h: 40, type: 'rock' });
+        } else if (pattern === 1) {
+            // Mərkəzi Qaya (Həm solunda, həm sağında 180px+ geniş keçid yolu)
+            const centerW = 200 + Math.random() * 60;
+            const centerX = (w - centerW) / 2 + (Math.random() - 0.5) * 40;
+            currentRocks.push({ x: centerX, y: rowY, w: centerW, h: 42, type: 'rock' });
+        } else if (pattern === 2) {
+            // Sola meylli qaya (Sağ tərəfdə 300px nəhəng sərbəst zona)
+            const rockW = 210 + Math.random() * 50;
+            currentRocks.push({ x: 40, y: rowY, w: rockW, h: 40, type: 'rock' });
         } else {
-            // Balanslaşdırılmış Asimmetrik Platforma
-            const isLeftWide = (r % 2 === 0);
-            if (isLeftWide) {
-                currentRocks.push({ x: 35, y: rowY, w: 290, h: 42, type: 'rock' });
-                currentRocks.push({ x: w - 210, y: rowY - 15, w: 175, h: 42, type: 'rock' });
-            } else {
-                currentRocks.push({ x: 35, y: rowY - 15, w: 175, h: 42, type: 'rock' });
-                currentRocks.push({ x: w - 325, y: rowY, w: 290, h: 42, type: 'rock' });
-            }
+            // Sağa meylli qaya (Sol tərəfdə 300px nəhəng sərbəst zona)
+            const rockW = 210 + Math.random() * 50;
+            currentRocks.push({ x: w - 40 - rockW, y: rowY, w: rockW, h: 40, type: 'rock' });
         }
     }
 
     // ========================================================================
-    // B) AĞILLI LAVA MƏNBƏLƏRİNİN YARADILMASI (SOLVABLE CASCADE PUZZLE)
+    // B) AĞILLI KASKAD LAVA MƏNBƏLƏRİ (SOLVABLE DEFLECTION PUZZLE)
     // ========================================================================
-    // Qayda: Lava mənbələri elə yerləşdirilir ki, yuxarıdan axan axın mütləq
-    // altındakı platformaya dəysin və platforma tərəfindən sağa/sola yönləndirilsin.
-    // Platformanın altında və yön dəyişən tərəfində oyunçu üçün sağa-sola
-    // maneəsiz keçid sahəsi (Safe Passageway) açılır!
-    const numSources = Math.min(5, 3 + Math.floor(floor / 2));
-    const stepSpan = heightSpan / (numSources + 1);
+    // Qayda: Lava axınları elə hədəflənir ki, yuxarıdan tökülən lava mütləq
+    // qayanın bir kənarına dəysin, qayanın üstü ilə digər kənara axsın.
+    // Nəticədə:
+    // - Həmin qayanın ALTINDA və qarşı tərəfində TƏMİZ VƏ TƏHLÜKƏSİZ keçid yaranır.
+    // - Oyunçu həmin sığınacaqdan istifadə edərək sağa və ya sola maneəsiz keçir!
+    const numSources = Math.min(4, 2 + Math.floor(floor / 2));
+    const tierSpan = heightSpan / (numSources + 1);
 
     for (let i = 0; i < numSources; i++) {
-        const sourceApproxY = endY + 60 + i * stepSpan + (Math.random() - 0.5) * 40;
+        const approxY = endY + 70 + i * tierSpan + (Math.random() - 0.5) * 35;
 
-        // Bu mənbənin altında yerləşən ilk platformaları tapırıq
-        const candidateRocks = currentRocks.filter(rk => rk.y > sourceApproxY + 40 && rk.y < sourceApproxY + 280);
+        // Bu hündürlükdən aşağıda yerləşən ən yaxın qayaları tapırıq
+        const rocksBelow = currentRocks.filter(rk => rk.y > approxY + 30 && rk.y < approxY + 280);
 
         let sourceX = 0;
-        const sourceW = 28;
+        const sourceW = 26;
 
-        if (candidateRocks.length > 0) {
-            const targetRock = candidateRocks[Math.floor(Math.random() * candidateRocks.length)];
-            // Qayanın sol və ya sağ 1/3 hissəsinə tökülür ki, qayanın qalan 2/3 hissəsi
-            // təhlükəsiz quru daş zonası olsun və oyunçu rahat ayaq basa bilsin!
+        if (rocksBelow.length > 0) {
+            // Qayaya yönəldirik
+            const targetRock = rocksBelow[Math.floor(Math.random() * rocksBelow.length)];
+            // Qayanın sol və ya sağ 25%-lik kənarına yönəldirik
             const hitLeft = (i % 2 === 0);
             if (hitLeft) {
-                sourceX = targetRock.x + 22 + Math.random() * 20;
+                // Sola dəyəcək -> sağa yönələcək (altında soldan sağa keçid açılır!)
+                sourceX = targetRock.x + 18 + Math.random() * 14;
             } else {
-                sourceX = targetRock.x + targetRock.w - 48 - Math.random() * 20;
+                // Sağa dəyəcək -> sola yönələcək (altında sağdan sola keçid açılır!)
+                sourceX = targetRock.x + targetRock.w - 38 - Math.random() * 14;
             }
         } else {
-            // Əgər qaya yoxdursa divara yaxın axın yaradırıq (orta keçid açıq qalır)
-            sourceX = (i % 2 === 0) ? (45 + Math.random() * 30) : (w - 75 - Math.random() * 30);
+            // Əgər qaya yoxdursa, divara bitişik tökülür (ortadan keçid tam açıqdır)
+            sourceX = (i % 2 === 0) ? (35 + Math.random() * 20) : (w - 60 - Math.random() * 20);
         }
 
         initialLavaSources.push({
             x: Math.max(25, Math.min(w - 55, sourceX)),
-            y: sourceApproxY,
+            y: approxY,
             w: sourceW,
             seed: i + runSeed
         });
@@ -130,7 +120,7 @@ function initFloorPlatforms(floor = 1) {
 }
 window.initFloorPlatforms = initFloorPlatforms;
 
-// 3. Toqquşma və Yanma Fizikası
+// 3. Toqquşma və Süzülmə Fizikası (Oyunçunun ilişib qalmasının qarşısını alan hamar fizika)
 function updatePlatformsPhysics(player, dt = 0.016) {
     if (!player) return;
 
@@ -139,47 +129,38 @@ function updatePlatformsPhysics(player, dt = 0.016) {
     const pr = player.radius || 16;
     const prSq = pr * pr;
 
-    // A) QAYALARLA TOQQUŞMA (Solid Rock Collision & Landing)
+    // A) QAYALARLA HAMAR DAİRƏVİ İTƏLƏMƏ (Smooth Obstacle Glide - İlişmə yoxdur!)
     for (const rock of currentRocks) {
-        const pLeft = player.x - pr;
-        const pRight = player.x + pr;
-        const pTop = player.y - pr;
-        const pBottom = player.y + pr;
+        const closestX = Math.max(rock.x, Math.min(player.x, rock.x + rock.w));
+        const closestY = Math.max(rock.y, Math.min(player.y, rock.y + rock.h));
 
-        const rLeft = rock.x;
-        const rRight = rock.x + rock.w;
-        const rTop = rock.y;
-        const rBottom = rock.y + rock.h;
+        const distX = player.x - closestX;
+        const distY = player.y - closestY;
+        const distSq = distX * distX + distY * distY;
 
-        if (pRight > rLeft && pLeft < rRight && pBottom > rTop && pTop < rBottom) {
-            const overlapLeft = pRight - rLeft;
-            const overlapRight = rRight - pLeft;
-            const overlapTop = pBottom - rTop;
-            const overlapBottom = rBottom - pTop;
+        if (distSq < prSq && distSq > 0.001) {
+            const dist = Math.sqrt(distSq);
+            const overlap = pr - dist;
+            const nx = distX / dist;
+            const ny = distY / dist;
 
-            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+            // Oyunçunu yumşaq şəkildə qayanın kənarına sürüşdürür
+            player.x += nx * overlap;
+            player.y += ny * overlap;
 
-            if (minOverlap === overlapTop && player.vy >= 0) {
-                // Qayanın üstünə düşdü
-                player.y = rTop - pr;
-                player.vy = 0;
-                player.isGrounded = true;
-                player.jumpCount = 0;
-            } else if (minOverlap === overlapBottom && player.vy <= 0) {
-                // Aşağıdan qayaya dəydi
-                player.y = rBottom + pr;
-                player.vy = 20;
-            } else if (minOverlap === overlapLeft) {
-                player.x = rLeft - pr;
-                player.vx = 0;
-            } else if (minOverlap === overlapRight) {
-                player.x = rRight + pr;
-                player.vx = 0;
+            // Hərəkət vektorunu qayanın səthinə uyğun düzəldir
+            if (player.vx !== undefined && player.vy !== undefined) {
+                const dot = player.vx * nx + player.vy * ny;
+                if (dot < 0) {
+                    player.vx -= dot * nx;
+                    player.vy -= dot * ny;
+                }
             }
         }
     }
 
-    // B) AXAN VƏ TÖKÜLƏN LAVAYA TOXUNMA (Lava dəysə yanırıq)
+    // B) AXAN VƏ TÖKÜLƏN LAVAYA TOXUNMA
+    // Yalnız faktiki axan şaquli şəlaləyə və ya qayanın üstündəki dar qızmar kanala toxunanda yanır!
     if (typeof gameState !== 'undefined' && !gameState.transitioning && gameState.dashInvulnerable <= 0) {
         for (const fall of activeLavaHazardBoxes) {
             const cX = Math.max(fall.x, Math.min(player.x, fall.x + fall.w));
@@ -187,7 +168,8 @@ function updatePlatformsPhysics(player, dt = 0.016) {
             const dX = player.x - cX;
             const dY = player.y - cY;
 
-            if (dX * dX + dY * dY < prSq * 0.72) {
+            // Ədalətli toqquşma (Oyunçu radiusunun 65%-i)
+            if (dX * dX + dY * dY < prSq * 0.65) {
                 handleLavaBurn(player);
                 break;
             }
@@ -200,10 +182,10 @@ function updatePlatformsPhysics(player, dt = 0.016) {
         lavaDripParticles.push({
             x: rndFall.x + Math.random() * rndFall.w,
             y: rndFall.y + rndFall.h - 4,
-            vy: 80 + Math.random() * 90,
-            size: 2.2 + Math.random() * 2.5,
-            life: 0.8,
-            maxLife: 0.8
+            vy: 75 + Math.random() * 85,
+            size: 2.0 + Math.random() * 2.2,
+            life: 0.75,
+            maxLife: 0.75
         });
     }
 
@@ -229,12 +211,12 @@ function handleLavaBurn(player) {
     }
 
     if (typeof particles !== 'undefined') {
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = 60 + Math.random() * 160;
-            const pColor = i % 2 === 0 ? '#facc15' : '#ef4444';
+            const speed = 50 + Math.random() * 150;
+            const pColor = (i % 2 === 0) ? '#facc15' : '#ef4444';
             if (typeof Particle !== 'undefined') {
-                const p = new Particle(player.x, player.y, pColor, 3.8);
+                const p = new Particle(player.x, player.y, pColor, 3.5);
                 p.vx = Math.cos(angle) * speed;
                 p.vy = Math.sin(angle) * speed;
                 particles.push(p);
@@ -281,7 +263,7 @@ function handleLavaBurn(player) {
 }
 window.handleLavaBurn = handleLavaBurn;
 
-// 5. ŞÜA İZLƏMƏ: Lavanın qaya platformalarına dəyib yön dəyişməsi və canavara tökülməsi
+// 5. AĞILLI ŞÜA İZLƏMƏ: Lavanın qaya platformalarına dəyib yön dəyişməsi və canavara tökülməsi
 function traceLavaCascadePaths(sources, rocks, monsterY) {
     const paths = [];
 
@@ -298,7 +280,7 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
             shelves: []
         };
 
-        const maxDeflections = 5;
+        const maxDeflections = 4;
         for (let d = 0; d < maxDeflections; d++) {
             const streamCenter = currX + currW * 0.5;
 
@@ -307,7 +289,7 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
             let minHitY = monsterY;
 
             for (const rock of rocks) {
-                if (rock.y > currY + 10 && rock.y < minHitY) {
+                if (rock.y > currY + 12 && rock.y < minHitY) {
                     if (streamCenter >= rock.x - 2 && streamCenter <= rock.x + rock.w + 2) {
                         hitRock = rock;
                         minHitY = rock.y;
@@ -315,8 +297,8 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
                 }
             }
 
-            // 1. Şaquli şəlalə (currY -> minHitY)
-            const fallH = Math.max(12, minHitY - currY);
+            // 1. Şaquli şəlalə axını
+            const fallH = Math.max(10, minHitY - currY);
             path.falls.push({
                 x: currX,
                 y: currY,
@@ -325,7 +307,7 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
                 seed: seed + d
             });
 
-            // Əgər heç bir qayaya dəymədisə və ya canavara çatdısa, axın canavara tökülüb bitir!
+            // Əgər qaya yoxdursa və ya canavara çatdısa, axın canavara tökülüb bitir!
             if (!hitRock || minHitY >= monsterY) {
                 path.monsterImpact = {
                     x: streamCenter,
@@ -335,19 +317,14 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
             }
 
             // 2. QAYAYA DƏYDİ! Lavanın qaya üzərində sağa və ya sola axması
-            // Dəydiyi nöqtə
-            const hitX = Math.max(hitRock.x + 12, Math.min(hitRock.x + hitRock.w - 12, streamCenter));
-            
-            // YÖNÜN TƏYİN EDİLMƏSİ (Sağa və ya sola axma istiqaməti)
-            // İstifadəçinin istəyi: Lava töküldükdən sonra yönünü dəyişir (məsələn, sola dəyibsə sağa axır,
-            // və ya sağa dəyibsə sola axır) və kənardan yenidən aşağı tökülür!
-            // Qayanın digər tərəfi və qayanın ALTI isə oyunçunun sağa-sola keçməsi üçün TƏMİZ VƏ TƏHLÜKƏSİZ qalır!
+            const hitX = Math.max(hitRock.x + 10, Math.min(hitRock.x + hitRock.w - 10, streamCenter));
             const distToLeft = hitX - hitRock.x;
             const distToRight = (hitRock.x + hitRock.w) - hitX;
-            
-            // Əgər soldadırsa -> sağa doğru axır (outX = rock.x + rock.w - 14)
-            // Əgər sağdadırsa -> sola doğru axır (outX = rock.x + 14)
-            const goRight = distToLeft < distToRight;
+
+            // Qayanın sol tərəfinə dəyibsə -> SAĞA axır!
+            // Qayanın sağ tərəfinə dəyibsə -> SOLA axır!
+            // Beləliklə platformanın digər tərəfi və ALTI oyunçunun keçidi üçün TƏHLÜKƏSİZ qalır!
+            const goRight = (distToLeft < distToRight);
             const outX = goRight ? (hitRock.x + hitRock.w - 14) : (hitRock.x + 14);
 
             path.shelves.push({
@@ -358,8 +335,8 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
                 d: d
             });
 
-            // Növbəti şəlalə bu qayanın alt dodağından tökülməyə başlayır!
-            currW = Math.min(currW, 28);
+            // Növbəti şəlalə bu qayanın alt dodağından yenidən aşağı tökülür!
+            currW = Math.min(currW, 26);
             currX = outX - currW * 0.5;
             currY = hitRock.y + hitRock.h - 2;
         }
@@ -370,7 +347,7 @@ function traceLavaCascadePaths(sources, rocks, monsterY) {
     return paths;
 }
 
-// 6. ƏSAS RENDER: KASKAD LAVA VƏ PROSEDURAL PLATFORMALAR
+// 6. ƏSAS RENDER: KASKAD LAVA VƏ PLATFORMALAR
 function drawPlatforms(ctx) {
     const c = ctx || (typeof window !== 'undefined' ? window.ctx : null);
     if (!c) return;
@@ -385,7 +362,7 @@ function drawPlatforms(ctx) {
 
     const useEngine = (typeof LavaEngine !== 'undefined' && LavaEngine);
 
-    // Bütün lava cərəyanlarının platformalarla toqquşma və kaskad xəritəsini hesablayırıq
+    // Kaskad şüalarını hesablayırıq
     const cascadePaths = traceLavaCascadePaths(initialLavaSources, currentRocks, monsterBottomY);
 
     // ========================================================================
@@ -394,7 +371,7 @@ function drawPlatforms(ctx) {
     for (let pIdx = 0; pIdx < cascadePaths.length; pIdx++) {
         const path = cascadePaths[pIdx];
 
-        // Mənbə oyuqu (Vulkanik qaya çıxışı)
+        // Mənbə oyuqu
         if (useEngine) {
             LavaEngine.drawLavaSourceRock(c, path.source.x, path.source.y, path.source.w, path.source.seed, t);
         }
@@ -409,16 +386,16 @@ function drawPlatforms(ctx) {
                 }
             }
 
-            // Aktiv şaquli təhlükə zonası (Lava şəlaləsi)
+            // Şaquli lava şəlaləsinin faktiki zərər zonası (ədalətli dar hitbox)
             activeLavaHazardBoxes.push({
-                x: fall.x + 3,
+                x: fall.x + 4,
                 y: fall.y,
-                w: fall.w - 6,
+                w: Math.max(12, fall.w - 8),
                 h: fall.h
             });
         }
 
-        // Canavara tökülən nöqtədə zərbə qaynaması
+        // Canavara tökülən nöqtədə qaynayan dalğa
         if (path.monsterImpact && useEngine) {
             c.save();
             c.fillStyle = '#ffd567';
@@ -430,7 +407,7 @@ function drawPlatforms(ctx) {
     }
 
     // ========================================================================
-    // B) QAYA PLATFORMALARI (Cyber Obsidian Dizaynı)
+    // B) QAYA PLATFORMALARI (Obsidian Dizaynı)
     // ========================================================================
     for (const rock of currentRocks) {
         c.save();
@@ -440,7 +417,7 @@ function drawPlatforms(ctx) {
         c.shadowBlur = 18;
         c.shadowOffsetY = 8;
 
-        // 2. Əsas Qaya Gövdəsi (Teksturalı Tünd Qaya)
+        // 2. Əsas Qaya Gövdəsi
         const rockGrad = c.createLinearGradient(rock.x, rock.y, rock.x, rock.y + rock.h);
         rockGrad.addColorStop(0, '#334155');
         rockGrad.addColorStop(0.35, '#1e293b');
@@ -455,7 +432,7 @@ function drawPlatforms(ctx) {
         c.stroke();
         c.shadowBlur = 0;
 
-        // 3. Qayanın üst kənar işıqlanması (Bevel highlight)
+        // 3. Üst kənar parlaqlığı
         c.strokeStyle = '#94a3b8';
         c.lineWidth = 2;
         c.beginPath();
@@ -463,7 +440,7 @@ function drawPlatforms(ctx) {
         c.lineTo(rock.x + rock.w - 8, rock.y + 2);
         c.stroke();
 
-        // 4. Qaya Çatları və Həndəsi Cizgilər
+        // 4. Çatlar
         c.strokeStyle = 'rgba(15, 23, 42, 0.75)';
         c.lineWidth = 1.6;
         c.beginPath();
@@ -476,7 +453,7 @@ function drawPlatforms(ctx) {
         c.lineTo(rock.x + rock.w * 0.75, rock.y + rock.h - 3);
         c.stroke();
 
-        // 5. Qaya Kənarlarında Neon Kiber Qeyd
+        // 5. Kiber işıqlar
         c.fillStyle = '#38bdf8';
         c.shadowColor = '#38bdf8';
         c.shadowBlur = 8;
@@ -489,13 +466,13 @@ function drawPlatforms(ctx) {
 
         // ====================================================================
         // C) ƏGƏR LAVANIN BU QAYAYA DƏYMƏSİ VARSA: ÜZƏRİNDƏN AXAN QIZMAR MAYE
-        // (Platformanın qalan hissəsi və ALTI isə oyunçunun keçidi üçün təhlükəsizdir!)
+        // (Platformanın qalan hissəsi və ALTI isə oyunçunun keçidi üçün TƏHLÜKƏSİZDİR!)
         // ====================================================================
         for (const path of cascadePaths) {
             for (const shelf of path.shelves) {
                 if (shelf.rock === rock) {
-                    const startX = Math.min(shelf.hitX, shelf.outX) - 6;
-                    const endX = Math.max(shelf.hitX, shelf.outX) + 6;
+                    const startX = Math.min(shelf.hitX, shelf.outX) - 4;
+                    const endX = Math.max(shelf.hitX, shelf.outX) + 4;
 
                     c.save();
                     let surface = c.createLinearGradient(0, rock.y - 6, 0, rock.y + 8);
@@ -512,11 +489,11 @@ function drawPlatforms(ctx) {
                     c.fillStyle = surface;
                     c.fill();
 
-                    // Sağa və ya sola axan maye zolaqları
+                    // Maye zolaqları
                     for (let j = 0; j < 14; j++) {
                         let q = (t * 0.48 + j / 14) % 1;
                         let xx = shelf.hitX + (shelf.outX - shelf.hitX) * q;
-                        c.strokeStyle = j % 3 ? '#ffb532' : '#ffe28a';
+                        c.strokeStyle = (j % 3 === 0) ? '#ffb532' : '#ffe28a';
                         c.lineWidth = 1.2;
                         c.beginPath();
                         c.moveTo(xx, rock.y + 1 + (j % 3) * 1.5);
@@ -524,7 +501,7 @@ function drawPlatforms(ctx) {
                         c.stroke();
                     }
 
-                    // Zərbə nöqtəsi və sıçrayışlar
+                    // Zərbə nöqtəsi
                     c.fillStyle = '#ffd567';
                     c.beginPath();
                     c.ellipse(shelf.hitX, rock.y - 1, 14, 3, 0, 0, Math.PI * 2);
@@ -532,7 +509,7 @@ function drawPlatforms(ctx) {
 
                     for (let j = 0; j < 12; j++) {
                         let q = (t * 1.2 + j * 0.163) % 1;
-                        let side = j % 2 ? 1 : -1;
+                        let side = (j % 2 === 0) ? 1 : -1;
                         let xx = shelf.hitX + side * q * (12 + (j % 4) * 4);
                         let yy = rock.y - 3 - 32 * q * (1 - q);
                         c.globalAlpha = 1 - q;
@@ -543,33 +520,15 @@ function drawPlatforms(ctx) {
                     }
                     c.globalAlpha = 1;
 
-                    // Qapalı tərəfdə qoruyucu sahil divarı (Retaining bank)
-                    const closedX = shelf.goRight ? rock.x : (rock.x + rock.w);
-                    c.fillStyle = '#353239';
-                    c.beginPath();
-                    if (shelf.goRight) {
-                        c.moveTo(shelf.hitX - 8, rock.y + 8);
-                        c.lineTo(shelf.hitX - 7, rock.y - 8);
-                        c.lineTo(shelf.hitX + 3, rock.y - 10);
-                        c.lineTo(shelf.hitX + 6, rock.y + 8);
-                    } else {
-                        c.moveTo(shelf.hitX - 6, rock.y + 8);
-                        c.lineTo(shelf.hitX - 3, rock.y - 10);
-                        c.lineTo(shelf.hitX + 7, rock.y - 8);
-                        c.lineTo(shelf.hitX + 8, rock.y + 8);
-                    }
-                    c.closePath();
-                    c.fill();
-
                     c.restore();
 
-                    // Yalnız qayanın üstündəki qızmar maye kanalı oyunçunu yandırır
-                    // Qayanın digər tərəfi və platformanın ALTI isə TƏMİZ VƏ TƏHLÜKƏSİZDİR!
+                    // Yalnız qayanın üstündəki qızmar kanal zərər vurur
+                    // Platformanın altı və quru tərəfi 100% təhlükəsizdir!
                     activeLavaHazardBoxes.push({
                         x: startX,
-                        y: rock.y - 3,
-                        w: Math.max(20, endX - startX),
-                        h: 10
+                        y: rock.y - 2,
+                        w: Math.max(16, endX - startX),
+                        h: 8
                     });
                 }
             }
@@ -577,7 +536,7 @@ function drawPlatforms(ctx) {
     }
 
     // ========================================================================
-    // D) DAMCILAYAN LAVA KÖZLƏRİ (Dripping Embers)
+    // D) DAMCILAYAN LAVA KÖZLƏRİ
     // ========================================================================
     for (const dp of lavaDripParticles) {
         c.save();
@@ -594,7 +553,7 @@ function drawPlatforms(ctx) {
 }
 window.drawPlatforms = drawPlatforms;
 
-// 7. Şaquli Hündürlük Tərəqqisi İndikatoru (Minimap / Height Bar on HUD)
+// 7. Mini-xəritə
 function drawHeightMinimap(ctx, player, worldHeight) {
     if (!player) return;
     const c = ctx || (typeof window !== 'undefined' ? window.ctx : null);
