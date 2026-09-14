@@ -402,19 +402,32 @@
                     }
                 }
             }
+            // Sürüklənərkən və ya seçilərkən canlı koordinat etiketi
+            if (isSelected || (hoveredType === 'rock' && hoveredIndex === rIdx)) {
+                ctx.save();
+                ctx.fillStyle = isSelected ? '#38bdf8' : '#94a3b8';
+                ctx.font = 'bold 11px Orbitron, monospace';
+                ctx.fillText(`🧱 X:${rock.x} Y:${rock.y} (W:${rock.w})`, rock.x, rock.y - 8);
+                ctx.restore();
+            }
         }
 
         // 3. LAVA MƏNBƏYİ SEÇİM İNDİKATORU
         for (let lIdx = 0; lIdx < currentTrack.lavaSources.length; lIdx++) {
             const lava = currentTrack.lavaSources[lIdx];
             const isSelected = (selectedType === 'lava' && selectedIndex === lIdx);
+            const isHovered = (hoveredType === 'lava' && hoveredIndex === lIdx);
 
-            if (isSelected) {
+            if (isSelected || isHovered) {
                 ctx.save();
-                ctx.strokeStyle = '#f97316';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([4, 4]);
-                ctx.strokeRect(lava.x - 10, lava.y - 22, (lava.w || 24) + 20, 30);
+                ctx.strokeStyle = isSelected ? '#f97316' : '#fdba74';
+                ctx.lineWidth = isSelected ? 2.5 : 1.5;
+                ctx.setLineDash([5, 4]);
+                ctx.strokeRect(lava.x - 14, lava.y - 24, (lava.w || 24) + 28, 36);
+
+                ctx.fillStyle = '#f97316';
+                ctx.font = 'bold 11px Orbitron, monospace';
+                ctx.fillText(`🔥 LAVA X:${lava.x} Y:${lava.y}`, lava.x - 12, lava.y - 30);
                 ctx.restore();
             }
         }
@@ -695,38 +708,113 @@
             URL.revokeObjectURL(url);
         });
 
-        // Siçanla Seçim və Sürükləmə
-        canvas.addEventListener('mousedown', (e) => {
-            if (isTestMode) return;
+        // Dəqiq Kətan Koordinatlarını Hesablamaq (Miqyas və Zoom nəzərə alınmaqla)
+        function getCanvasMouseCoords(e) {
             const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = Math.round((e.clientX - rect.left) * scaleX);
+            const mouseY = Math.round((e.clientY - rect.top) * scaleY);
+            return { mouseX, mouseY };
+        }
 
-            // Əvvəlcə Resize tutacağını yoxla
+        let hoveredType = null;
+        let hoveredIndex = -1;
+
+        // Siçanla Kətan Üzərində Gezinti və Kursor Dəyişimi
+        canvas.addEventListener('mousemove', (e) => {
+            if (isTestMode) return;
+            const { mouseX, mouseY } = getCanvasMouseCoords(e);
+
+            if (mouseX >= 0 && mouseX <= canvas.width && mouseY >= 0 && mouseY <= canvas.height) {
+                coordDisplay.textContent = `X: ${mouseX} | Y: ${mouseY}`;
+            }
+
+            if (isDragging) {
+                canvas.style.cursor = 'grabbing';
+                return;
+            }
+            if (isResizing) {
+                canvas.style.cursor = 'ew-resize';
+                return;
+            }
+
+            // Resize tutacağını yoxla
             if (selectedType === 'rock' && selectedIndex >= 0) {
                 const rock = currentTrack.rocks[selectedIndex];
-                const handleX = rock.x + rock.w;
-                const handleY = rock.y + rock.h / 2;
-                if (Math.hypot(mouseX - handleX, mouseY - handleY) < 14) {
-                    isResizing = true;
+                if (rock) {
+                    const handleX = rock.x + rock.w;
+                    const handleY = rock.y + rock.h / 2;
+                    if (Math.hypot(mouseX - handleX, mouseY - handleY) < 18) {
+                        canvas.style.cursor = 'ew-resize';
+                        return;
+                    }
+                }
+            }
+
+            // Lava mənbələrini yoxla (Genişləndirilmiş tutma sahəsi)
+            for (let i = currentTrack.lavaSources.length - 1; i >= 0; i--) {
+                const lava = currentTrack.lavaSources[i];
+                if (mouseX >= lava.x - 25 && mouseX <= lava.x + (lava.w || 24) + 25 &&
+                    mouseY >= lava.y - 30 && mouseY <= lava.y + 25) {
+                    canvas.style.cursor = 'grab';
+                    hoveredType = 'lava';
+                    hoveredIndex = i;
                     return;
                 }
             }
 
-            // Lava mənbələrini yoxla
+            // Platformaları yoxla
+            for (let i = currentTrack.rocks.length - 1; i >= 0; i--) {
+                const rock = currentTrack.rocks[i];
+                if (mouseX >= rock.x && mouseX <= rock.x + rock.w &&
+                    mouseY >= rock.y && mouseY <= rock.y + rock.h) {
+                    canvas.style.cursor = 'grab';
+                    hoveredType = 'rock';
+                    hoveredIndex = i;
+                    return;
+                }
+            }
+
+            hoveredType = null;
+            hoveredIndex = -1;
+            canvas.style.cursor = 'default';
+        });
+
+        // Siçanla Seçim və Sürükləməyə Başlama
+        canvas.addEventListener('mousedown', (e) => {
+            if (isTestMode) return;
+            const { mouseX, mouseY } = getCanvasMouseCoords(e);
+
+            // 1. Resize tutacağını yoxla
+            if (selectedType === 'rock' && selectedIndex >= 0) {
+                const rock = currentTrack.rocks[selectedIndex];
+                if (rock) {
+                    const handleX = rock.x + rock.w;
+                    const handleY = rock.y + rock.h / 2;
+                    if (Math.hypot(mouseX - handleX, mouseY - handleY) < 18) {
+                        isResizing = true;
+                        canvas.style.cursor = 'ew-resize';
+                        return;
+                    }
+                }
+            }
+
+            // 2. Lava mənbələrini yoxla (Geniş tutma sahəsi)
             for (let i = currentTrack.lavaSources.length - 1; i >= 0; i--) {
                 const lava = currentTrack.lavaSources[i];
-                if (mouseX >= lava.x - 14 && mouseX <= lava.x + (lava.w || 24) + 14 &&
-                    mouseY >= lava.y - 24 && mouseY <= lava.y + 12) {
+                if (mouseX >= lava.x - 25 && mouseX <= lava.x + (lava.w || 24) + 25 &&
+                    mouseY >= lava.y - 30 && mouseY <= lava.y + 25) {
                     selectElement('lava', i);
                     isDragging = true;
                     dragOffsetX = mouseX - lava.x;
                     dragOffsetY = mouseY - lava.y;
+                    canvas.style.cursor = 'grabbing';
                     return;
                 }
             }
 
-            // Qayaları yoxla
+            // 3. Platformaları (Qayaları) yoxla
             for (let i = currentTrack.rocks.length - 1; i >= 0; i--) {
                 const rock = currentTrack.rocks[i];
                 if (mouseX >= rock.x && mouseX <= rock.x + rock.w &&
@@ -735,53 +823,51 @@
                     isDragging = true;
                     dragOffsetX = mouseX - rock.x;
                     dragOffsetY = mouseY - rock.y;
+                    canvas.style.cursor = 'grabbing';
                     return;
                 }
             }
 
-            // Boş yerə klikləndisə
+            // Boş sahəyə klikləndisə seçimi ləğv et
             deselect();
         });
 
+        // Sürükləmə Hərəkəti (Pəncərə boyu qüsursuz işləyir)
         window.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = Math.round(e.clientX - rect.left);
-            const mouseY = Math.round(e.clientY - rect.top);
+            if (!isDragging && !isResizing) return;
+            const { mouseX, mouseY } = getCanvasMouseCoords(e);
 
-            if (mouseX >= 0 && mouseX <= canvas.width && mouseY >= 0 && mouseY <= canvas.height) {
-                coordDisplay.textContent = `X: ${mouseX} | Y: ${mouseY}`;
-            }
-
+            // Ölçü dəyişimi
             if (isResizing && selectedType === 'rock' && currentTrack.rocks[selectedIndex]) {
                 const rock = currentTrack.rocks[selectedIndex];
-                const newW = Math.max(100, Math.min(500, mouseX - rock.x));
-                rock.w = Math.round(newW / 10) * 10;
+                const newW = Math.max(80, Math.min(600, mouseX - rock.x));
+                rock.w = Math.round(newW);
                 inputRockW.value = rock.w;
                 valRockW.textContent = rock.w;
                 return;
             }
 
+            // Sürükləmə (İstədiyiniz hər pikselə sərbəst çəkin!)
             if (isDragging) {
                 if (selectedType === 'rock' && currentTrack.rocks[selectedIndex]) {
                     const rock = currentTrack.rocks[selectedIndex];
-                    rock.x = Math.max(20, Math.min(canvas.width - rock.w - 20, mouseX - dragOffsetX));
-                    rock.y = Math.max(150, Math.min(1700, mouseY - dragOffsetY));
-                    // 10px snap
-                    rock.x = Math.round(rock.x / 10) * 10;
-                    rock.y = Math.round(rock.y / 10) * 10;
+                    rock.x = Math.max(10, Math.min(canvas.width - rock.w - 10, mouseX - dragOffsetX));
+                    rock.y = Math.max(140, Math.min(1720, mouseY - dragOffsetY));
                 } else if (selectedType === 'lava' && currentTrack.lavaSources[selectedIndex]) {
                     const lava = currentTrack.lavaSources[selectedIndex];
-                    lava.x = Math.max(20, Math.min(canvas.width - 40, mouseX - dragOffsetX));
-                    lava.y = Math.max(120, Math.min(1600, mouseY - dragOffsetY));
-                    lava.x = Math.round(lava.x / 5) * 5;
-                    lava.y = Math.round(lava.y / 10) * 10;
+                    lava.x = Math.max(20, Math.min(canvas.width - 45, mouseX - dragOffsetX));
+                    lava.y = Math.max(120, Math.min(1650, mouseY - dragOffsetY));
                 }
             }
         });
 
+        // Sürükləmənin Bitməsi
         window.addEventListener('mouseup', () => {
-            isDragging = false;
-            isResizing = false;
+            if (isDragging || isResizing) {
+                isDragging = false;
+                isResizing = false;
+                canvas.style.cursor = 'default';
+            }
         });
 
         // Klaviatura (Test Rejimi)
