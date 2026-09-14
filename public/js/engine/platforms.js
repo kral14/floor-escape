@@ -423,8 +423,11 @@ function drawPlatforms(ctx) {
         // Bütün şaquli şəlalə axınları (Pillələr arası və ən altda canavara tökülən)
         for (let fIdx = 0; fIdx < path.falls.length; fIdx++) {
             const fall = path.falls[fIdx];
+            const isLastFall = (fIdx === path.falls.length - 1);
+            const isTerminatedFall = !!(path.terminated && isLastFall);
+
             if (useEngine) {
-                LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h);
+                LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h, isTerminatedFall);
                 if (fIdx > 0) {
                     LavaEngine.drawSpillwayLip(c, fall.x, fall.w, fall.y + 2);
                 }
@@ -515,8 +518,23 @@ function drawPlatforms(ctx) {
         for (const path of cascadePaths) {
             for (const shelf of path.shelves) {
                 if (shelf.rock === rock) {
-                    const startX = shelf.terminated ? (shelf.hitX - 18) : (Math.min(shelf.hitX, shelf.outX) - 4);
-                    const endX = shelf.terminated ? (shelf.hitX + 18) : (Math.max(shelf.hitX, shelf.outX) + 4);
+                    if (shelf.terminated) {
+                        // 🛑 Platformada sonlanmış orqanik qaynayan gölməçə (Düz kəsik olmadan!)
+                        if (useEngine && typeof LavaEngine.drawTerminatedLavaPool === 'function') {
+                            LavaEngine.drawTerminatedLavaPool(c, t, shelf.hitX, rock.y, 24);
+                        }
+                        // Dar təbii zərər qutusu
+                        activeLavaHazardBoxes.push({
+                            x: shelf.hitX - 16,
+                            y: rock.y - 4,
+                            w: 32,
+                            h: 10
+                        });
+                        continue;
+                    }
+
+                    const startX = Math.min(shelf.hitX, shelf.outX) - 4;
+                    const endX = Math.max(shelf.hitX, shelf.outX) + 4;
 
                     c.save();
                     let surface = c.createLinearGradient(0, rock.y - 6, 0, rock.y + 8);

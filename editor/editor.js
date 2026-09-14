@@ -375,8 +375,11 @@
             // Şaquli axınlar
             for (let fIdx = 0; fIdx < p.falls.length; fIdx++) {
                 const fall = p.falls[fIdx];
+                const isLastFall = (fIdx === p.falls.length - 1);
+                const isTerminatedFall = !!(p.terminated && isLastFall);
+
                 if (typeof LavaEngine !== 'undefined') {
-                    LavaEngine.drawPlatformWaterfall(ctx, animTime + fIdx * 0.7, fall.x, fall.y, fall.w, fall.h);
+                    LavaEngine.drawPlatformWaterfall(ctx, animTime + fIdx * 0.7, fall.x, fall.y, fall.w, fall.h, isTerminatedFall);
                     if (fIdx > 0) LavaEngine.drawSpillwayLip(ctx, fall.x, fall.w, fall.y + 2);
                 } else {
                     ctx.fillStyle = 'rgba(255, 100, 0, 0.85)';
@@ -434,46 +437,60 @@
             for (const path of cascadePaths) {
                 for (const shelf of path.shelves) {
                     if (shelf.rock === rock) {
-                        const startX = Math.min(shelf.hitX, shelf.outX) - 2;
-                        const endX = Math.max(shelf.hitX, shelf.outX) + 2;
-
-                        ctx.save();
-                        let surface = ctx.createLinearGradient(0, rock.y - 4, 0, rock.y + 6);
-                        surface.addColorStop(0, '#ffce55');
-                        surface.addColorStop(0.5, '#fa7b16');
-                        surface.addColorStop(1, '#98210a');
-                        ctx.fillStyle = surface;
-                        ctx.beginPath();
-                        ctx.roundRect(startX, rock.y - 2, Math.max(16, endX - startX), 7, 2);
-                        ctx.fill();
-                        ctx.restore();
-
                         if (shelf.terminated) {
-                            // 🛑 Platformada Sonlanmış Qızmar Gölməçə və Stop Nişanı
+                            // 🛑 Platformada Sonlanmış ORQANİK QAYNAR LAVA GÖLMƏÇƏSİ (Düz kəsik yoxdur, təbii yayılır!)
+                            if (typeof LavaEngine !== 'undefined' && typeof LavaEngine.drawTerminatedLavaPool === 'function') {
+                                LavaEngine.drawTerminatedLavaPool(ctx, animTime, shelf.hitX, rock.y, 24);
+                            } else {
+                                ctx.save();
+                                ctx.shadowColor = '#ff5500';
+                                ctx.shadowBlur = 18;
+                                ctx.fillStyle = '#ff6a00';
+                                ctx.beginPath();
+                                ctx.ellipse(shelf.hitX, rock.y + 2, 24, 7, 0, 0, Math.PI * 2);
+                                ctx.fill();
+                                ctx.restore();
+                            }
+
+                            // Zərif kliklənə bilən status nişanı (gölməçənin üstündə səliqəli və şıq)
                             ctx.save();
                             ctx.shadowColor = '#ef4444';
-                            ctx.shadowBlur = 18;
+                            ctx.shadowBlur = 12;
                             ctx.fillStyle = '#ef4444';
                             ctx.beginPath();
-                            ctx.arc(shelf.hitX, rock.y + 2, 13, 0, Math.PI * 2);
+                            ctx.arc(shelf.hitX, rock.y - 12, 10, 0, Math.PI * 2);
                             ctx.fill();
 
                             ctx.strokeStyle = '#ffffff';
-                            ctx.lineWidth = 2.5;
+                            ctx.lineWidth = 1.5;
                             ctx.stroke();
 
                             ctx.fillStyle = '#ffffff';
-                            ctx.font = 'bold 12px sans-serif';
+                            ctx.font = 'bold 10px sans-serif';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText('🛑', shelf.hitX, rock.y + 2);
+                            ctx.fillText('🛑', shelf.hitX, rock.y - 12);
 
-                            // Qayanın üstündə parlaq dayandı yazısı
-                            ctx.fillStyle = '#ff6b6b';
-                            ctx.font = 'bold 11px Orbitron, monospace';
-                            ctx.fillText(`🛑 SONLANDI (AŞAĞI AÇIQDIR)`, shelf.hitX, rock.y - 12);
+                            ctx.fillStyle = '#ff9999';
+                            ctx.font = 'bold 10px Orbitron, monospace';
+                            ctx.fillText('SONLANDI', shelf.hitX, rock.y - 26);
                             ctx.restore();
                         } else {
+                            // Normal axan lava səthi
+                            const startX = Math.min(shelf.hitX, shelf.outX) - 2;
+                            const endX = Math.max(shelf.hitX, shelf.outX) + 2;
+
+                            ctx.save();
+                            let surface = ctx.createLinearGradient(0, rock.y - 4, 0, rock.y + 6);
+                            surface.addColorStop(0, '#ffce55');
+                            surface.addColorStop(0.5, '#fa7b16');
+                            surface.addColorStop(1, '#98210a');
+                            ctx.fillStyle = surface;
+                            ctx.beginPath();
+                            ctx.roundRect(startX, rock.y - 2, Math.max(16, endX - startX), 7, 2);
+                            ctx.fill();
+                            ctx.restore();
+
                             // 🎯 Lavanın Platformadakı Tökülmə Tutacağı (Spillway Gizmo Handle)
                             ctx.save();
                             ctx.shadowColor = '#ff6600';

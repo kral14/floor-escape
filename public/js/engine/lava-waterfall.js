@@ -13,26 +13,48 @@
     'use strict';
 
     // 1. TƏBİİ ŞƏLALƏ AXINI (İstifadəçinin tam dəqiq alqoritmi)
-    function drawPlatformWaterfall(c, t, x, y, width, height) {
+    // 1. TƏBİİ ŞƏLALƏ AXINI (Yumşaq, orqanik axan və qayanın üstünə yayılan magma)
+    function drawPlatformWaterfall(c, t, x, y, width, height, isTerminated = false) {
         if (!c || width <= 0 || height <= 0) return;
         c.save();
 
-        const flow = (u, p) => x + u * width + (Math.sin(p * 15 - t * 3 + u * 9) * 5 + Math.sin(p * 31 - t * 5 + u * 22) * 2) * Math.sin(p * 2.3);
-        const grad = c.createLinearGradient(0, y, 0, y + height);
+        const flareAmount = isTerminated ? 18 : 6;
+        const flow = (u, p) => {
+            const baseWobble = (Math.sin(p * 15 - t * 3 + u * 9) * 5 + Math.sin(p * 31 - t * 5 + u * 22) * 2) * Math.sin(p * 2.3);
+            // Alt uca çatdıqda kənarlara doğru təbii yayılma (kəsik xətti ləğv edir)
+            let flare = 0;
+            if (p > 0.72) {
+                const fp = (p - 0.72) / 0.28;
+                flare = (u - 0.5) * 2 * (fp * fp) * flareAmount;
+            }
+            return x + u * width + baseWobble + flare;
+        };
+
+        const grad = c.createLinearGradient(0, y, 0, y + height + 6);
         grad.addColorStop(0, '#ffcc4b');
         grad.addColorStop(0.12, '#fa6514');
         grad.addColorStop(0.65, '#bf2708');
-        grad.addColorStop(1, '#ff7815');
+        grad.addColorStop(0.92, '#ff7815');
+        grad.addColorStop(1, '#ffce55');
 
         c.beginPath();
-        c.moveTo(x, y);
+        c.moveTo(flow(0, 0), y);
+        // Sol tərəf aşağı
         for (let i = 0; i <= 45; i++) {
             let p = i / 45;
-            c.lineTo(flow(0, p) + p * width * 0.12, y + p * height);
+            c.lineTo(flow(0, p), y + p * height);
         }
+        // Alt ucu: DÜZ KƏSİK YOX, qayanın üstünə yayılan qabarıq təbii qövs!
+        const rightBottomX = flow(1, 1);
+        const leftBottomX = flow(0, 1);
+        const midBottomX = (rightBottomX + leftBottomX) * 0.5;
+        const bottomDrop = isTerminated ? 8 : 4;
+        c.quadraticCurveTo(midBottomX, y + height + bottomDrop, rightBottomX, y + height);
+
+        // Sağ tərəf yuxarı
         for (let i = 45; i >= 0; i--) {
             let p = i / 45;
-            c.lineTo(flow(1, p) - p * width * 0.08, y + p * height);
+            c.lineTo(flow(1, p), y + p * height);
         }
         c.closePath();
         c.fillStyle = grad;
@@ -305,11 +327,104 @@
         c.restore();
     }
 
+    // 5. PLATFORMADA SONLANAN ORQANİK QAYNAR LAVA GÖLMƏÇƏSİ (Düz kəsik olmadan, təbii yayılma)
+    function drawTerminatedLavaPool(c, t, hitX, rockY, streamWidth = 24) {
+        if (!c) return;
+        c.save();
+
+        const poolW = Math.max(34, streamWidth * 1.7);
+        const pulse = Math.sin(t * 3.5) * 2;
+        const wave1 = Math.sin(t * 5) * 1.5;
+
+        // 1. Platformanın üzərinə yayılan qızmar obsidian-magma aurası
+        c.shadowColor = '#ff4500';
+        c.shadowBlur = 24;
+
+        const baseGrad = c.createRadialGradient(hitX, rockY + 2, 4, hitX, rockY + 3, poolW * 0.9);
+        baseGrad.addColorStop(0, '#ffec70');
+        baseGrad.addColorStop(0.35, '#ff6a00');
+        baseGrad.addColorStop(0.7, '#d92600');
+        baseGrad.addColorStop(1, 'rgba(74, 14, 5, 0)');
+
+        c.fillStyle = baseGrad;
+        c.beginPath();
+        c.ellipse(hitX, rockY + 3, poolW * 0.85 + pulse, 11 + wave1 * 0.5, 0, 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+
+        // 2. Qayanın səthinə axan dalğalı orqanik maqma qatı (düzbucaqlı deyil!)
+        const moltenGrad = c.createLinearGradient(0, rockY - 6, 0, rockY + 10);
+        moltenGrad.addColorStop(0, '#fff382');
+        moltenGrad.addColorStop(0.25, '#ff8a00');
+        moltenGrad.addColorStop(0.7, '#bc1d00');
+        moltenGrad.addColorStop(1, '#4a0500');
+
+        c.fillStyle = moltenGrad;
+        c.beginPath();
+        const startX = hitX - poolW * 0.75;
+        const endX = hitX + poolW * 0.75;
+        c.moveTo(startX, rockY + 4);
+        
+        // Dalğalı, canlı maye səthi
+        for (let xx = startX; xx <= endX; xx += 4) {
+            const norm = (xx - startX) / (endX - startX);
+            const dome = Math.sin(norm * Math.PI) * 4; // Mərkəzdə qabaran lava gümbəzi
+            const ripple = Math.sin(xx * 0.15 + t * 4) * 1.2;
+            c.lineTo(xx, rockY - 2 - dome + ripple);
+        }
+        c.quadraticCurveTo(endX + 4, rockY + 4, endX, rockY + 7);
+        c.quadraticCurveTo(hitX, rockY + 10, startX, rockY + 7);
+        c.quadraticCurveTo(startX - 4, rockY + 4, startX, rockY + 4);
+        c.closePath();
+        c.fill();
+
+        // 3. Qızmar liflər və qabaran cərəyanlar
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        for (let j = 0; j < 8; j++) {
+            const p = (t * 0.4 + j * 0.125) % 1;
+            const side = (j % 2 === 0) ? 1 : -1;
+            const lx = hitX + side * (p * poolW * 0.55);
+            const ly = rockY - 1 + Math.sin(j * 3 + t * 3) * 2;
+            c.strokeStyle = (j % 2 === 0) ? 'rgba(255, 235, 130, 0.9)' : 'rgba(255, 120, 30, 0.75)';
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.moveTo(lx - side * 4, ly);
+            c.quadraticCurveTo(lx, ly - 2, lx + side * 4, ly);
+            c.stroke();
+        }
+
+        // 4. Qaynayan və partlayan lava qabarcıqları (Lava Bubbles & Sparks)
+        for (let k = 0; k < 10; k++) {
+            const q = (t * 0.8 + k * 0.231) % 1;
+            const side = ((k % 3) - 1);
+            const bx = hitX + side * (poolW * 0.38 * (1 - q * 0.3));
+            const by = rockY - 1 - q * 18 + Math.sin(k * 7) * 2;
+            const bAlpha = Math.sin(q * Math.PI);
+
+            c.globalAlpha = Math.max(0, bAlpha);
+            c.fillStyle = (k % 2 === 0) ? '#ffec66' : '#ff7b1a';
+            c.beginPath();
+            c.arc(bx, by, 1.4 + (1 - q) * 1.6, 0, Math.PI * 2);
+            c.fill();
+        }
+        c.restore();
+
+        // 5. Ən parlaq mərkəzi nüvə (Plop Core)
+        c.fillStyle = '#ffffff';
+        c.beginPath();
+        c.ellipse(hitX, rockY - 2, Math.max(6, streamWidth * 0.3), 2.5, 0, 0, Math.PI * 2);
+        c.fill();
+
+        c.restore();
+    }
+
     global.LavaEngine = {
         drawPlatformWaterfall,
         drawLavaSourceRock,
         drawCascadeShelf,
-        drawSpillwayLip
+        drawSpillwayLip,
+        drawTerminatedLavaPool
     };
 
 })(typeof window !== 'undefined' ? window : this);
