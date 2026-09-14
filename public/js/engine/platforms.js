@@ -244,9 +244,24 @@ function handleLavaBurn(player) {
     }
 
     if (player.hasShield) {
-        player.breakShield();
-        if (typeof showToast === 'function') {
-            showToast('🔥 AXAN LAVAYA DƏYDİNİZ! Qalxanınız yandı və sizi xilas etdi!', 'warning');
+        const stillActive = (typeof player.damageShield === 'function')
+            ? player.damageShield(3, 'lava')
+            : (player.breakShield(), false);
+
+        if (stillActive) {
+            if (typeof addFloatingText === 'function') {
+                addFloatingText(player.x, player.y - 25, `🛡️ -3 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
+            }
+            if (typeof showToast === 'function') {
+                showToast(`🛡️ QALXAN LAVANI BLOKLADI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
+            }
+        } else {
+            if (typeof addFloatingText === 'function') {
+                addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
+            }
+            if (typeof showToast === 'function') {
+                showToast('🔥 AXAN LAVA QALXANINIZI PARÇALADI VƏ SİZİ XİLAS ETDİ!', 'warning');
+            }
         }
         return;
     }

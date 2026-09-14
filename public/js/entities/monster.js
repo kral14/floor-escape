@@ -883,8 +883,17 @@ class Monster {
                     m.landed = true;
                     m.y = m.targetY;
                     if (player.hasShield) {
-                        player.breakShield();
-                        if (typeof showToast === 'function') showToast('🛡️ METEOR DƏYDİ! Qalxanınız parçalandı!', 'warning');
+                        const stillActive = (typeof player.damageShield === 'function')
+                            ? player.damageShield(5, 'meteor')
+                            : (player.breakShield(), false);
+
+                        if (stillActive) {
+                            if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, `🛡️ -5 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
+                            if (typeof showToast === 'function') showToast(`🛡️ METEOR BLOKLANDI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
+                        } else {
+                            if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
+                            if (typeof showToast === 'function') showToast('🛡️ METEOR DƏYDİ! Qalxanınız parçalandı!', 'warning');
+                        }
                     } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
                         player.consumeLifeFlower();
                         if (typeof showToast === 'function') showToast('🌸 METEOR DƏYDİ! Yaşam Çiçəyi sizi qorudu!', 'warning');
@@ -927,8 +936,17 @@ class Monster {
                     const dist = Math.hypot(player.x - m.targetX, player.y - m.targetY);
                     if (dist < 48) {
                         if (player.hasShield) {
-                            player.breakShield();
-                            if (typeof showToast === 'function') showToast('🛡️ METEOR PARTLAYIŞI! Qalxanınız parçalandı!', 'warning');
+                            const stillActive = (typeof player.damageShield === 'function')
+                                ? player.damageShield(5, 'meteor')
+                                : (player.breakShield(), false);
+
+                            if (stillActive) {
+                                if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, `🛡️ -5 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
+                                if (typeof showToast === 'function') showToast(`🛡️ METEOR PARTLAYIŞI BLOKLANDI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
+                            } else {
+                                if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
+                                if (typeof showToast === 'function') showToast('🛡️ METEOR PARTLAYIŞI! Qalxanınız parçalandı!', 'warning');
+                            }
                         } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
                             player.consumeLifeFlower();
                             if (typeof showToast === 'function') showToast('🌸 METEOR PARTLAYIŞI! Yaşam Çiçəyi sizi qorudu!', 'warning');

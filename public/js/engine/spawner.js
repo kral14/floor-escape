@@ -173,9 +173,16 @@ function nextFloor() {
 
     // QATA QALXANLA BAŞLAMA ŞANSI
     if (typeof getShieldStartChance === 'function' && Math.random() < getShieldStartChance()) {
-        if (typeof player !== 'undefined') player.hasShield = true;
+        if (typeof player !== 'undefined') {
+            if (typeof player.restoreShield === 'function') {
+                player.restoreShield();
+            } else {
+                player.hasShield = true;
+                player.shieldDefense = 10;
+            }
+        }
         if (typeof showToast === 'function') {
-            showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR!', 'success');
+            showToast('🛡️ LABORATORİYA BONUSU: AEGIS QALXANI AKTİVDİR! [10/10 Defans]', 'success');
         }
     }
 

@@ -279,10 +279,15 @@ function updatePhysicsStep() {
             }
 
             if (p.type === 'shield') {
-                player.hasShield = true;
-                addFloatingText(player.x, player.y - 20, '🛡️ AEGIS SHIELD!', '#00f0ff', 15);
+                if (typeof player.restoreShield === 'function') {
+                    player.restoreShield();
+                } else {
+                    player.hasShield = true;
+                    player.shieldDefense = 10;
+                }
+                addFloatingText(player.x, player.y - 20, '🛡️ QALXAN AKTİV! [10/10 DEFANS]', '#00f0ff', 16);
                 if (typeof showToast === 'function') {
-                    showToast('🛡️ ENERJİ QALXANI AKTİVLƏŞDİ!', 'success');
+                    showToast('🛡️ ENERJİ QALXANI YENİLƏNDİ! (10 Defans)', 'success');
                 }
             } else if (p.type === 'chrono') {
                 gameState.chronoTimer = 240; // 4.0 saniyə (60fps)
@@ -409,7 +414,16 @@ function updatePhysicsStep() {
             if (typeof saveActiveRun === 'function') saveActiveRun();
         } else if (distToLava <= 0) {
             if (player.hasShield) {
-                player.breakShield();
+                // Lava canavarına dəyəndə 10 defans alır (qalxan 1 dəfəyə düşür)
+                if (typeof player.damageShield === 'function') {
+                    player.damageShield(10, 'monster');
+                } else {
+                    player.breakShield();
+                }
+                addFloatingText(player.x, player.y - 25, '💥 -10 DEFANS! QALXAN PARÇALANDI!', '#ef4444', 20);
+                if (typeof showToast === 'function') {
+                    showToast('🌋 LAVA CANAVARI QALXANINIZI 1 DƏFƏYƏ PARÇALADI!', 'warning');
+                }
                 if (typeof saveActiveRun === 'function') saveActiveRun();
             } else if (player.hasLifeFlower) {
                 player.consumeLifeFlower();

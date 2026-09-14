@@ -12,8 +12,9 @@ class Player {
         this.trail = [];
         this.facing = -Math.PI / 2;
         this.visualAngle = 0; // İlk doğanda şaquli düz durur
-        this.canPassBorder = false;
         this.hasShield = false;
+        this.maxShieldDefense = 10;
+        this.shieldDefense = 10;
         this.shieldAngle = 0;
         this.hasHyperJump = false; // 🚀 Ehtiyat Kvant Sıçrayışı (Lava yaxınlaşdıqda avtomatik atır)
         this.flapPhase = 0;
@@ -296,9 +297,52 @@ class Player {
         if (this.trail.length > 12) this.trail.shift();
     }
 
+    // 🛡️ QALXANIN BƏRPASI (YENİDƏN 10 DEFANS)
+    restoreShield() {
+        this.hasShield = true;
+        this.shieldDefense = this.maxShieldDefense; // 10 defans
+    }
+
+    // 🛡️ QALXANIN DEFANS ALMASI VƏ ZƏRBƏNİ UDMAQ (Lava: -3, Meteor: -5, Canavar: -10)
+    damageShield(amount = 1, source = 'generic') {
+        if (!this.hasShield) return false;
+
+        this.shieldDefense = Math.max(0, (this.shieldDefense !== undefined ? this.shieldDefense : 10) - amount);
+
+        // Zərbə hissəcikləri
+        if (typeof particles !== 'undefined') {
+            const pCount = Math.min(18, amount * 3);
+            for (let i = 0; i < pCount; i++) {
+                particles.push(new Particle(this.x, this.y, '#00f0ff', 3.2));
+            }
+        }
+
+        // Qısa toxunulmazlıq (i-frame) veririk ki, ardıcıl kadrlarda zərər dərhal təkrar olunmasın
+        if (typeof gameState !== 'undefined') {
+            gameState.dashInvulnerable = Math.max(gameState.dashInvulnerable || 0, 36); // ~0.6 saniyə toxunulmazlıq
+        }
+
+        if (this.shieldDefense <= 0) {
+            // Defans tükəndi - Qalxan sınır!
+            this.breakShield();
+            return false; // Qalxan qırıldı
+        } else {
+            // Defans azaldı, qalxan hələ sağdır!
+            if (typeof audio !== 'undefined') {
+                if (typeof audio.playShieldBlock === 'function') {
+                    audio.playShieldBlock();
+                } else if (typeof audio.playExplosion === 'function') {
+                    audio.playExplosion();
+                }
+            }
+            return true; // Qalxan hələ aktivdir
+        }
+    }
+
     // 🛡️ QALXANIN SINMASI VƏ OYUNÇUNUN XİLAS OLUNMASI
     breakShield() {
         this.hasShield = false;
+        this.shieldDefense = 0;
         let invulnDuration = 75; // 1.25 saniyəlik baza toxunulmazlıq
 
         // 🛡️ Titan Zirehli (Aegis) Dərisi Bonusu: +1.5s (90 kadr) əlavə toxunulmazlıq
@@ -666,7 +710,39 @@ class Player {
             }
             ctx.restore();
 
-            // DİQQƏT: Daxili ctx.fill() TAMAMİLƏ LƏĞV EDİLDİ! Kostyumun üzəri 100% təmiz qalır!
+            // 4. Qalxan Defans İndikatoru (10 xanalı neon müdafiə barı)
+            const curDef = Math.max(0, this.shieldDefense !== undefined ? this.shieldDefense : 10);
+            const barW = 44;
+            const barH = 5;
+            const barX = this.x - barW / 2;
+            const barY = this.y - shieldRad - 14;
+
+            // Arxa fon
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
+            ctx.fill();
+            ctx.stroke();
+
+            // 10 Seqmentli Defans Hücrələri
+            const segW = (barW - 9) / 10;
+            for (let d = 0; d < 10; d++) {
+                const segX = barX + d * (segW + 1);
+                if (d < curDef) {
+                    ctx.fillStyle = curDef > 5 ? '#00f0ff' : (curDef > 3 ? '#facc15' : '#f97316');
+                    ctx.shadowColor = ctx.fillStyle;
+                    ctx.shadowBlur = 6;
+                } else {
+                    ctx.fillStyle = 'rgba(51, 65, 85, 0.5)';
+                    ctx.shadowBlur = 0;
+                }
+                ctx.beginPath();
+                ctx.roundRect(segX, barY, segW, barH, 1.5);
+                ctx.fill();
+            }
+
             ctx.restore();
         }
     }
