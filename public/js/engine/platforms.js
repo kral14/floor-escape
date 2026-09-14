@@ -16,106 +16,116 @@ let activeLavaHazardBoxes = []; // Dəqiq və ədalətli toqquşma zonaları
 let lavaFlowOffset = 0;        // Animasiya zamanı (saniyə)
 let lavaDripParticles = [];    // Lavadan damcılayan közlər
 
+let cachedFloorPatterns = (typeof window !== 'undefined' && window.FLOOR_PATTERNS) ? window.FLOOR_PATTERNS : null;
+let activeTestTrackId = null; // Test üçün xüsusi seçilmiş yol (məs: 5)
+let currentTrackInfo = null;
+
+// JSON faylını həm də dinamik fetch edirik (hər dəfə dəyişəndə dərhal yenilənsin)
+async function loadFloorPatternsAsync() {
+    try {
+        const res = await fetch('data/floor_patterns.json?t=' + Date.now());
+        if (res.ok) {
+            const data = await res.json();
+            cachedFloorPatterns = data;
+            if (typeof window !== 'undefined') window.FLOOR_PATTERNS = data;
+        }
+    } catch (e) {
+        // Fetch uğursuz olsa, daxil edilmiş JS obyekti aktiv qalır
+    }
+}
+if (typeof window !== 'undefined') {
+    loadFloorPatternsAsync();
+}
+
 // 1. Qat hündürlüyü
 function getFloorWorldHeight(floor = 1) {
-    return 1400 + floor * 500;
+    if (currentTrackInfo && currentTrackInfo.worldHeight) {
+        return currentTrackInfo.worldHeight;
+    }
+    return 1800;
 }
 window.getFloorWorldHeight = getFloorWorldHeight;
 
-// 2. Hər dəfə unikal, amma 100% KEÇİLƏ BİLƏN platforma və lava xəritəsi
+// Test məqsədilə istənilən yolu birbaşa seçmək üçün köməkçi funksiya:
+// Məsələn: window.setFloorTrack(5)
+function setFloorTrack(trackNum) {
+    const num = parseInt(trackNum, 10);
+    if (!isNaN(num) && num >= 1 && num <= 30) {
+        activeTestTrackId = num;
+        console.log(`🎯 Test üçün Yol ${num} aktivləşdirildi!`);
+        if (typeof gameState !== 'undefined') {
+            initFloorPlatforms(num);
+            if (typeof player !== 'undefined' && player) {
+                player.x = 400;
+                player.y = currentWorldHeight - 200;
+            }
+        }
+        if (typeof showToast === 'function') {
+            showToast(`🗺️ Sınaq Yolu: ${num} aktivləşdirildi!`, 'info');
+        }
+        return `Yol ${num} uğurla seçildi.`;
+    }
+    return 'Xəta: Yol nömrəsi 1 ilə 30 arasında olmalıdır (Məsələn: setFloorTrack(5))';
+}
+window.setFloorTrack = setFloorTrack;
+
+// 2. 30 Yoldan cari qata uyğun yolun yüklənməsi: Qat 1 -> Yol 1, Qat 2 -> Yol 2...
 function initFloorPlatforms(floor = 1) {
-    currentWorldHeight = getFloorWorldHeight(floor);
+    const patterns = cachedFloorPatterns || (typeof window !== 'undefined' ? window.FLOOR_PATTERNS : null);
+    const tracks = (patterns && patterns.tracks) ? patterns.tracks : [];
+
+    // Cari yolun ID-si (Əgər test üçün xüsusi yol seçilibsə, onu istifadə et)
+    const targetTrackId = activeTestTrackId || (((Math.max(1, floor) - 1) % 30) + 1);
+
+    // Uyğun track-i tapırıq
+    let selectedTrack = tracks.find(t => t.id === targetTrackId);
+    if (!selectedTrack && tracks.length > 0) {
+        selectedTrack = tracks[(targetTrackId - 1) % tracks.length];
+    }
+
     currentRocks = [];
     initialLavaSources = [];
     activeLavaHazardBoxes = [];
     lavaDripParticles = [];
 
     const w = typeof canvasWidth !== 'undefined' ? canvasWidth : 800;
-    const totalHeight = currentWorldHeight;
 
-    const startY = totalHeight - 260;
-    const endY = 220;
-    const heightSpan = startY - endY;
+    if (selectedTrack) {
+        currentTrackInfo = selectedTrack;
+        currentWorldHeight = selectedTrack.worldHeight || 1800;
 
-    // Hər oyunda / qatda fərqli layout təmin edən unikal toxum
-    const runSeed = Math.floor(Math.random() * 10000);
-
-    // ========================================================================
-    // A) PROSEDURAL QAYA ADACIQLARI (GENİŞ KEÇİD BOŞLUQLARI İLƏ)
-    // ========================================================================
-    // Mərtəbələr arası 220-250px məsafə saxlayırıq ki, oyunçu rahat süzə bilsin
-    const rowSpacing = 230;
-    const numRows = Math.floor(heightSpan / rowSpacing);
-
-    for (let r = 0; r < numRows; r++) {
-        const rowY = startY - (r * rowSpacing) - (Math.random() * 25);
-        const pattern = (r + floor + runSeed) % 4;
-
-        if (pattern === 0) {
-            // Sol qaya və Sağ qaya (Ortada 240px geniş sərbəst dəhliz)
-            const leftW = 160 + Math.random() * 40;
-            const rightW = 160 + Math.random() * 40;
-            currentRocks.push({ x: 30, y: rowY, w: leftW, h: 40, type: 'rock' });
-            currentRocks.push({ x: w - 30 - rightW, y: rowY, w: rightW, h: 40, type: 'rock' });
-        } else if (pattern === 1) {
-            // Mərkəzi Qaya (Həm solunda, həm sağında 180px+ geniş keçid yolu)
-            const centerW = 200 + Math.random() * 60;
-            const centerX = (w - centerW) / 2 + (Math.random() - 0.5) * 40;
-            currentRocks.push({ x: centerX, y: rowY, w: centerW, h: 42, type: 'rock' });
-        } else if (pattern === 2) {
-            // Sola meylli qaya (Sağ tərəfdə 300px nəhəng sərbəst zona)
-            const rockW = 210 + Math.random() * 50;
-            currentRocks.push({ x: 40, y: rowY, w: rockW, h: 40, type: 'rock' });
-        } else {
-            // Sağa meylli qaya (Sol tərəfdə 300px nəhəng sərbəst zona)
-            const rockW = 210 + Math.random() * 50;
-            currentRocks.push({ x: w - 40 - rockW, y: rowY, w: rockW, h: 40, type: 'rock' });
-        }
-    }
-
-    // ========================================================================
-    // B) AĞILLI KASKAD LAVA MƏNBƏLƏRİ (SOLVABLE DEFLECTION PUZZLE)
-    // ========================================================================
-    // Qayda: Lava axınları elə hədəflənir ki, yuxarıdan tökülən lava mütləq
-    // qayanın bir kənarına dəysin, qayanın üstü ilə digər kənara axsın.
-    // Nəticədə:
-    // - Həmin qayanın ALTINDA və qarşı tərəfində TƏMİZ VƏ TƏHLÜKƏSİZ keçid yaranır.
-    // - Oyunçu həmin sığınacaqdan istifadə edərək sağa və ya sola maneəsiz keçir!
-    const numSources = Math.min(4, 2 + Math.floor(floor / 2));
-    const tierSpan = heightSpan / (numSources + 1);
-
-    for (let i = 0; i < numSources; i++) {
-        const approxY = endY + 70 + i * tierSpan + (Math.random() - 0.5) * 35;
-
-        // Bu hündürlükdən aşağıda yerləşən ən yaxın qayaları tapırıq
-        const rocksBelow = currentRocks.filter(rk => rk.y > approxY + 30 && rk.y < approxY + 280);
-
-        let sourceX = 0;
-        const sourceW = 26;
-
-        if (rocksBelow.length > 0) {
-            // Qayaya yönəldirik
-            const targetRock = rocksBelow[Math.floor(Math.random() * rocksBelow.length)];
-            // Qayanın sol və ya sağ 25%-lik kənarına yönəldirik
-            const hitLeft = (i % 2 === 0);
-            if (hitLeft) {
-                // Sola dəyəcək -> sağa yönələcək (altında soldan sağa keçid açılır!)
-                sourceX = targetRock.x + 18 + Math.random() * 14;
-            } else {
-                // Sağa dəyəcək -> sola yönələcək (altında sağdan sola keçid açılır!)
-                sourceX = targetRock.x + targetRock.w - 38 - Math.random() * 14;
-            }
-        } else {
-            // Əgər qaya yoxdursa, divara bitişik tökülür (ortadan keçid tam açıqdır)
-            sourceX = (i % 2 === 0) ? (35 + Math.random() * 20) : (w - 60 - Math.random() * 20);
+        // Qayaları JSON-dan yükləyirik
+        for (const r of selectedTrack.rocks) {
+            currentRocks.push({
+                x: r.x,
+                y: r.y,
+                w: r.w,
+                h: r.h,
+                type: 'rock'
+            });
         }
 
-        initialLavaSources.push({
-            x: Math.max(25, Math.min(w - 55, sourceX)),
-            y: approxY,
-            w: sourceW,
-            seed: i + runSeed
-        });
+        // Lava mənbələrini JSON-dan yükləyirik
+        for (let i = 0; i < selectedTrack.lavaSources.length; i++) {
+            const src = selectedTrack.lavaSources[i];
+            initialLavaSources.push({
+                x: src.x,
+                y: src.y,
+                w: src.w || 24,
+                seed: i + floor * 13
+            });
+        }
+
+        console.log(`🗺️ [YOL ${targetTrackId}/30] "${selectedTrack.name}" aktivdir.`);
+    } else {
+        // Fallback əgər fayl yüklənməyibsə
+        currentWorldHeight = 1800;
+        currentRocks.push({ x: 100, y: 1360, w: 240, h: 42, type: 'rock' });
+        currentRocks.push({ x: 460, y: 1360, w: 240, h: 42, type: 'rock' });
+        currentRocks.push({ x: 250, y: 900,  w: 300, h: 42, type: 'rock' });
+        currentRocks.push({ x: 220, y: 440,  w: 360, h: 42, type: 'rock' });
+        initialLavaSources.push({ x: 160, y: 280, w: 24, seed: 1 });
+        initialLavaSources.push({ x: 620, y: 380, w: 24, seed: 2 });
     }
 }
 window.initFloorPlatforms = initFloorPlatforms;
