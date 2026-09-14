@@ -269,8 +269,49 @@ const DEFAULT_PERM_UPGRADES = {
     bulletIceEconLvl: 0,
     bulletShockEconLvl: 0,
     bulletMineEconLvl: 0,
-    bulletPlasmaEconLvl: 0
+    bulletPlasmaEconLvl: 0,
+    // ⚡ Kiber Ulduz Ehtiyatı (Başlanğıcda 5 ədəd, Göy Almazla artırılır)
+    cyberStars: 5,
+    maxCyberStars: 5
 };
+
+function buyCyberStars(amount = 5, costDiamonds = 5) {
+    if (typeof diamonds === 'undefined') diamonds = 0;
+    if (typeof permUpgrades === 'undefined') permUpgrades = { ...DEFAULT_PERM_UPGRADES };
+    if ((permUpgrades.cyberStars || 0) >= 100) {
+        if (typeof showToast === 'function') {
+            showToast('★ Maksimum 100 Kiber Hissəcik tutumuna çatmısınız!', 'warning');
+        }
+        return false;
+    }
+    if (diamonds < costDiamonds) {
+        if (typeof showToast === 'function') {
+            showToast(`Kifayət qədər Göy Almaz yoxdur! Lazımdır: ${costDiamonds} 💎, Balans: ${diamonds} 💎`, 'error');
+        }
+        return false;
+    }
+    diamonds -= costDiamonds;
+    const oldVal = permUpgrades.cyberStars || 0;
+    permUpgrades.cyberStars = Math.min(100, oldVal + amount);
+    permUpgrades.maxCyberStars = 100;
+
+    // Kiber Sinqulyarlıq orbitini dərhal yeni sayla sinxronlaşdırırıq
+    if (typeof SingularitySpawnEffect !== 'undefined' && typeof SingularitySpawnEffect.syncAllEnginesWithStars === 'function') {
+        SingularitySpawnEffect.syncAllEnginesWithStars(permUpgrades.cyberStars);
+    }
+
+    savePermanentData();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateDashboardUI === 'function') updateDashboardUI();
+    if (typeof updatePermUpgradesUI === 'function') updatePermUpgradesUI();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD();
+    if (typeof showToast === 'function') {
+        showToast(`⭐ +${amount} Kiber Hissəcik əlavə olundu! Hal-hazırda: ${permUpgrades.cyberStars}/100`, 'success');
+    }
+    return true;
+}
+window.buyCyberStars = buyCyberStars;
 
 function getMaxLifeFlowers() {
     if (typeof permUpgrades === 'undefined') return 1;
@@ -335,6 +376,12 @@ function loadPermanentData() {
             }
             if (!SPAWN_ANIMS[permUpgrades.equippedSpawnAnim]) {
                 permUpgrades.equippedSpawnAnim = 'singularity';
+            }
+            if (typeof permUpgrades.cyberStars !== 'number' || isNaN(permUpgrades.cyberStars)) {
+                permUpgrades.cyberStars = 5;
+            }
+            if (typeof permUpgrades.maxCyberStars !== 'number' || isNaN(permUpgrades.maxCyberStars)) {
+                permUpgrades.maxCyberStars = Math.max(5, permUpgrades.cyberStars);
             }
             if (permUpgrades.turretBulletType && !permUpgrades.turretLeftType) {
                 permUpgrades.turretLeftType = permUpgrades.turretBulletType;

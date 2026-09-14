@@ -367,10 +367,12 @@ function applyPlayerDataFromCloud(player) {
             permUpgrades.equippedSkin = 'default';
         }
         if (!Array.isArray(permUpgrades.ownedSpawnAnims) || permUpgrades.ownedSpawnAnims.length === 0) {
-            permUpgrades.ownedSpawnAnims = ['portal'];
+            permUpgrades.ownedSpawnAnims = ['singularity', 'portal'];
+        } else if (!permUpgrades.ownedSpawnAnims.includes('singularity')) {
+            permUpgrades.ownedSpawnAnims.push('singularity');
         }
         if (!permUpgrades.equippedSpawnAnim || (typeof SPAWN_ANIMS !== 'undefined' && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim])) {
-            permUpgrades.equippedSpawnAnim = 'portal';
+            permUpgrades.equippedSpawnAnim = 'singularity';
         }
     }
     if (Array.isArray(player.claimedChests)) {

@@ -246,36 +246,7 @@ class Player {
             this.hasSingularity = true;
             this.singularityTheme = equippedQuantumAnim;
 
-            const spinRate = 0.5 + speedRatio * 2.5;
-            this.singularityAngles.r1 += 1.8 * spinRate * dt;
-            this.singularityAngles.r2 -= 1.2 * spinRate * dt;
-            this.singularityAngles.r3 += 0.8 * spinRate * dt;
-
-            const targetRy = Math.max(-0.55, Math.min(0.55, -(this.vx / 240) * 0.55));
-            const targetRx = Math.max(-0.45, Math.min(0.45, (this.vy / 240) * 0.45));
-            this.singularityRot.rx += (targetRx - this.singularityRot.rx) * 0.12;
-            this.singularityRot.ry += (targetRy - this.singularityRot.ry) * 0.12;
-
-            // ⚡ Düşən Ulduzlar: Orbitdən müntəzəm aşağı atılır və lavaya zərər vurur
-            this.starDropCooldown = (this.starDropCooldown || 1.2) - dt;
-            if (this.starDropCooldown <= 0) {
-                if (typeof SingularitySpawnEffect !== 'undefined') {
-                    SingularitySpawnEffect.launchInGameStar(this);
-                }
-                this.starDropCooldown = 1.4 + Math.random() * 0.8;
-            }
-
-            // Klaviaturada [E] basdıqda əl ilə dərhal ulduz qopartma
-            if (keys && keys['e'] && !this._eKeyLocked) {
-                this._eKeyLocked = true;
-                if (typeof SingularitySpawnEffect !== 'undefined') {
-                    SingularitySpawnEffect.launchInGameStar(this);
-                }
-            } else if (keys && !keys['e']) {
-                this._eKeyLocked = false;
-            }
-
-            // Düşən ulduzların hərəkəti və lavaya/canavara zərbə vurması
+            // ⚡ Ulduz Atışı və lavaya/canavara zərbə vurması
             if (typeof SingularitySpawnEffect !== 'undefined') {
                 SingularitySpawnEffect.updateInGame(dt, this);
             }
@@ -538,6 +509,19 @@ class Player {
             drawIngameLifeFlowers(ctx, this, animTime, false);
         }
 
+        // 🌀 Kvant Laboratoriyası 3D Halqaları və Zərif Enerji Aurası (DƏQİQ 1-ci AÇILIŞDAKI FORMA)
+        // Oyunçu bədənindən əvvəl arxa planda çəkilir ki, oyunçunun üzünü və dərisini örtməsin!
+        const quantumThemes = ['singularity', 'supernova', 'synapse', 'abyssal'];
+        const activeSpawnAnim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+        if (quantumThemes.includes(activeSpawnAnim)) {
+            const SingularityModule = (typeof SingularitySpawnEffect !== 'undefined') ? SingularitySpawnEffect : null;
+            if (SingularityModule) {
+                if (typeof SingularityModule.renderIngamePlayerHalo === 'function') {
+                    SingularityModule.renderIngamePlayerHalo(ctx, this, animTime);
+                }
+            }
+        }
+
         // Xüsusi Kiber Dəri Modeli (Ninja Vizor, Elektrik Spikelər, Mecha Lövhələr, Alov Buynuzları, Kiber Tac)
         const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
         const drawAngle = (typeof this.visualAngle === 'number') ? this.visualAngle : 0;
@@ -555,23 +539,11 @@ class Player {
             drawIngameLifeFlowers(ctx, this, animTime, true);
         }
 
-        // 🌀 Kvant Laboratoriyası 3D Halqaları, Oriyentasiya Qanadları və Düşən Ulduzlar (4 Mövzu)
-        const quantumThemes = ['singularity', 'supernova', 'synapse', 'abyssal'];
-        const activeSpawnAnim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+        // Aşağıya doğru atılan ulduzlar və lavada/döşəmədə parçalanan kristal qəlpələr
         if (quantumThemes.includes(activeSpawnAnim)) {
             const SingularityModule = (typeof SingularitySpawnEffect !== 'undefined') ? SingularitySpawnEffect : null;
-            if (SingularityModule && SingularityModule.themes) {
-                const activeThemeKey = activeSpawnAnim;
-                const activeTheme = SingularityModule.themes[activeThemeKey] || SingularityModule.themes.singularity;
-                ctx.save();
-                const speedFact = Math.min(1, Math.hypot(this.vx, this.vy) / 200);
-                activeTheme.render(ctx, this.x, this.y, animTime, this.singularityRot, speedFact, this.singularityAngles, 0.28);
-                ctx.restore();
-
-                // Aşağıya doğru atılan ulduzlar və lavada/döşəmədə parçalanan kristal qəlpələr
-                if (typeof SingularityModule.drawInGameProjectiles === 'function') {
-                    SingularityModule.drawInGameProjectiles(ctx);
-                }
+            if (SingularityModule && typeof SingularityModule.drawInGameProjectiles === 'function') {
+                SingularityModule.drawInGameProjectiles(ctx);
             }
         }
 

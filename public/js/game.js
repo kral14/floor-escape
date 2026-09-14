@@ -738,7 +738,8 @@ function playSummonIntro(onFinish) {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    if (!animType || animType === 'portal') animType = 'singularity';
 
     gameState.isIntroPlaying = true;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
@@ -748,8 +749,8 @@ function playSummonIntro(onFinish) {
     if (SpawnClass) {
         monsPortal = new SpawnClass({
             x: player.x,
-            y: player.y + 40,       // Monsun ilk başladığı yerdən bir az aşağıda (kompakt)
-            targetY: player.y,       // Monsun duracağı nöqtə (y = 120)
+            y: player.y,
+            targetY: player.y,
             skinId: skinId,
             animType: animType,
             onComplete: () => {
@@ -780,7 +781,8 @@ function playFloorTeleportTransition() {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    const animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    if (!animType || animType === 'portal') animType = 'singularity';
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
 
     const startX = player.x;
@@ -794,7 +796,7 @@ function playFloorTeleportTransition() {
         // Mərhələ 1: Teleport Out (Mons portala sovrulur və yox olur)
         monsPortal = new SpawnClass({
             x: startX,
-            y: startY + 25,
+            y: startY,
             targetY: startY,
             skinId: skinId,
             animType: animType,
@@ -933,14 +935,14 @@ if (hasLoadedRun) {
     }
 }
 
-const shouldPlayIntro = (!hasLoadedRun || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('floor_escape_play_intro') === 'true'));
+// Oyuna daxil olduqda və ya səhifə açılanda həmişə Kvant Doğuluş Animasiyası ilə başla
 try {
     if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('floor_escape_play_intro');
+    if (typeof permUpgrades !== 'undefined' && (!permUpgrades.equippedSpawnAnim || permUpgrades.equippedSpawnAnim === 'portal')) {
+        permUpgrades.equippedSpawnAnim = 'singularity';
+    }
 } catch (e) {}
-
-if (shouldPlayIntro) {
-    playSummonIntro();
-}
+playSummonIntro();
 
 gameState.paused = false;
 if (window.audio && typeof audio.setFloor === 'function') {
@@ -955,32 +957,18 @@ adjustViewportFit();
 
 requestAnimationFrame(gameLoop);
 
-function setIngameQuantumTheme(themeKey) {
-    const key = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(themeKey) ? themeKey : 'singularity';
-    if (typeof permUpgrades !== 'undefined') {
-        permUpgrades.equippedSpawnAnim = key;
-        if (typeof savePermanentData === 'function') savePermanentData();
-    }
+function initIngameQuantumTheme() {
+    const equipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    const key = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(equipped) ? equipped : 'singularity';
     if (typeof SingularitySpawnEffect !== 'undefined') {
         SingularitySpawnEffect.setTheme(key);
     }
     if (typeof player !== 'undefined' && player) {
         player.singularityTheme = key;
     }
-    ['singularity', 'supernova', 'synapse', 'abyssal'].forEach(k => {
-        const b = document.getElementById(`btn-theme-${k}`);
-        if (!b) return;
-        if (k === key) {
-            b.className = 'px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-cyan-500/20 border border-cyan-400 text-cyan-300 transition shadow-sm';
-        } else {
-            b.className = 'px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-900 border border-slate-700 text-slate-400 hover:text-slate-200 transition';
-        }
-    });
 }
-window.setIngameQuantumTheme = setIngameQuantumTheme;
-
-const initialQuantumTheme = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
-setTimeout(() => setIngameQuantumTheme(initialQuantumTheme), 50);
+window.initIngameQuantumTheme = initIngameQuantumTheme;
+setTimeout(initIngameQuantumTheme, 50);
 
 window.triggerGameOver = triggerGameOver;
 window.restartGame = restartGame;

@@ -88,6 +88,13 @@
             display: flex !important;
         }
 
+        /* Skin sub-tabs initial state */
+        html[data-initial-skin-sub="anims"] #skin-subtab-content-skins { display: none !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-content-anims { display: flex !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-btn-skins { border-color: transparent !important; color: #94a3b8 !important; background: transparent !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-btn-anims { border-color: #fbbf24 !important; color: #fcd34d !important; background: rgba(30, 41, 59, 0.8) !important; }
+        html[data-initial-skin-sub="anims"] #btn-replay-spawn-anim { display: flex !important; }
+
         #lab-tab-content-base:not(.hidden),
         #lab-tab-content-econ:not(.hidden) {
             display: grid !important;
@@ -138,6 +145,10 @@
                     const savedLab = localStorage.getItem('floor_escape_active_lab_tab') || 'skins';
                     if (['skins', 'market', 'base', 'econ', 'turrets'].includes(savedLab)) {
                         document.documentElement.setAttribute('data-initial-lab', savedLab);
+                    }
+                    const savedSkinSub = localStorage.getItem('floor_escape_active_skin_subtab') || 'skins';
+                    if (['skins', 'anims'].includes(savedSkinSub)) {
+                        document.documentElement.setAttribute('data-initial-skin-sub', savedSkinSub);
                     }
                 }
             } catch(e) {}
@@ -1647,7 +1658,7 @@
                             <span>CANLI PREVİEW (60 FPS)</span>
                         </div>
                         <div class="absolute top-3 right-3 text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 pointer-events-none">
-                            <span id="fs-anim-timer">0.0s / 6.0s</span>
+                            <span id="fs-anim-timer">0.0s / 7.0s</span>
                         </div>
                     </div>
 

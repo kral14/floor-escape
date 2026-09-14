@@ -43,7 +43,12 @@ function switchLabTab(tab) {
     });
 
     if (tab === 'skins') {
-        if (typeof renderSkinsShop === 'function') renderSkinsShop();
+        const targetSub = (typeof getSavedSkinSubTab === 'function') ? getSavedSkinSubTab() : (localStorage.getItem('floor_escape_active_skin_subtab') || 'skins');
+        if (typeof switchSkinSubTab === 'function') {
+            switchSkinSubTab(targetSub);
+        } else if (typeof renderSkinsShop === 'function') {
+            renderSkinsShop();
+        }
     } else if (tab === 'base') {
         updatePermUpgradesUI();
     } else if (tab === 'econ') {
@@ -94,6 +99,12 @@ function updatePermUpgradesUI() {
 
     const labDiamonds = document.getElementById('lab-diamonds-count');
     if (labDiamonds) labDiamonds.innerText = diamonds;
+
+    const starsValEl = document.getElementById('lab-val-cyber-stars');
+    if (starsValEl) {
+        const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5;
+        starsValEl.innerText = `${count} Ulduz`;
+    }
 
     // 2. MƏRMİ QƏNAƏTİ / İNFİYASİYA AZALTMASI (Qırmızı Almaz)
     const labRedDiamonds = document.getElementById('lab-red-diamonds-count');

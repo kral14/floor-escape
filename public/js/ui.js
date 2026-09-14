@@ -11,6 +11,18 @@ function updateUI() {
     const redDiamEls = document.querySelectorAll('.stat-red-diamonds');
     redDiamEls.forEach(el => el.innerText = redDiamonds);
 
+    // Kiber Ulduz Sayı
+    const cyberStarsEl = document.getElementById('stat-cyber-stars');
+    if (cyberStarsEl) {
+        const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5;
+        cyberStarsEl.innerText = count;
+        if (count === 0) {
+            cyberStarsEl.className = 'font-orbitron text-rose-400 font-bold text-sm sm:text-base tabular-nums animate-pulse';
+        } else {
+            cyberStarsEl.className = 'font-orbitron text-cyan-300 font-bold text-sm sm:text-base tabular-nums';
+        }
+    }
+
     const headerDiamonds = document.getElementById('stat-header-diamonds');
     if (headerDiamonds) headerDiamonds.innerText = `${diamonds} 💎`;
 

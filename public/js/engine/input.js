@@ -147,9 +147,9 @@ window.addEventListener('keydown', e => {
         return;
     }
 
-    if ((e.code === 'KeyE' || k === 'e') && keybinds.wall !== 'e' && keybinds.ice !== 'e' && keybinds.shock !== 'e' && keybinds.mine !== 'e' && keybinds.plasma !== 'e') {
-        if (typeof SingularitySpawnEffect !== 'undefined' && typeof player !== 'undefined') {
-            SingularitySpawnEffect.launchInGameStar(player);
+    if (!e.repeat && (e.code === 'KeyE' || k === 'e') && keybinds.wall !== 'e' && keybinds.ice !== 'e' && keybinds.shock !== 'e' && keybinds.mine !== 'e' && keybinds.plasma !== 'e') {
+        if (typeof SingularitySpawnEffect !== 'undefined' && typeof player !== 'undefined' && !gameState.gameOver && !gameState.paused) {
+            SingularitySpawnEffect.launchInGameStar(player, true);
         }
     }
 

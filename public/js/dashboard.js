@@ -147,7 +147,14 @@ function switchNavPage(pageId) {
     } else if (pageId === 'shop') {
         const labTabToOpen = (typeof getSavedLabTab === 'function') ? getSavedLabTab() : (typeof currentLabTab !== 'undefined' && currentLabTab ? currentLabTab : 'skins');
         if (typeof switchLabTab === 'function') switchLabTab(labTabToOpen);
-        if (typeof renderSkinsShop === 'function') renderSkinsShop();
+        if (labTabToOpen === 'skins') {
+            const subTabToOpen = (typeof getSavedSkinSubTab === 'function') ? getSavedSkinSubTab() : (localStorage.getItem('floor_escape_active_skin_subtab') || 'skins');
+            if (typeof switchSkinSubTab === 'function') {
+                switchSkinSubTab(subTabToOpen);
+            } else if (typeof renderSkinsShop === 'function') {
+                renderSkinsShop();
+            }
+        }
         if (typeof updatePermUpgradesUI === 'function') updatePermUpgradesUI();
         if (typeof updateTurretsUI === 'function') updateTurretsUI();
     } else if (pageId === 'leaderboard') {

@@ -14,12 +14,49 @@
             try {
                 if (!localStorage.getItem('floor_escape_player')) {
                     window.location.replace('index.html');
+                } else {
+                    const savedLab = localStorage.getItem('floor_escape_active_lab_tab') || 'skins';
+                    if (['skins', 'market', 'base', 'econ', 'turrets'].includes(savedLab)) {
+                        document.documentElement.setAttribute('data-initial-lab', savedLab);
+                    }
+                    const savedSkinSub = localStorage.getItem('floor_escape_active_skin_subtab') || 'skins';
+                    if (['skins', 'anims'].includes(savedSkinSub)) {
+                        document.documentElement.setAttribute('data-initial-skin-sub', savedSkinSub);
+                    }
                 }
             } catch(e) {}
         })();
     </script>
     <style>
         .hidden, [hidden] { display: none !important; }
+
+        /* Səhifə yenilənərkən ani bərpa (Zero flicker tab & sub-tab restoration) */
+        html[data-initial-lab="market"] #lab-tab-content-skins,
+        html[data-initial-lab="base"] #lab-tab-content-skins,
+        html[data-initial-lab="econ"] #lab-tab-content-skins,
+        html[data-initial-lab="turrets"] #lab-tab-content-skins { display: none !important; }
+
+        html[data-initial-lab="market"] #lab-tab-content-market { display: flex !important; }
+        html[data-initial-lab="base"] #lab-tab-content-base { display: grid !important; }
+        html[data-initial-lab="econ"] #lab-tab-content-econ { display: grid !important; }
+        html[data-initial-lab="turrets"] #lab-tab-content-turrets { display: flex !important; }
+
+        html[data-initial-lab="market"] #lab-tab-btn-skins,
+        html[data-initial-lab="base"] #lab-tab-btn-skins,
+        html[data-initial-lab="econ"] #lab-tab-btn-skins,
+        html[data-initial-lab="turrets"] #lab-tab-btn-skins { border-color: transparent !important; color: #94a3b8 !important; background: transparent !important; }
+        
+        html[data-initial-lab="market"] #lab-tab-btn-market { border-color: #f59e0b !important; color: #fcd34d !important; background: rgba(245, 158, 11, 0.1) !important; }
+        html[data-initial-lab="base"] #lab-tab-btn-base { border-color: #38bdf8 !important; color: #7dd3fc !important; background: rgba(56, 189, 248, 0.1) !important; }
+        html[data-initial-lab="econ"] #lab-tab-btn-econ { border-color: #f43f5e !important; color: #fb7185 !important; background: rgba(244, 63, 94, 0.1) !important; }
+        html[data-initial-lab="turrets"] #lab-tab-btn-turrets { border-color: #c084fc !important; color: #d8b4fe !important; background: rgba(192, 132, 252, 0.1) !important; }
+
+        /* Skin Sub-tabs instant restoration */
+        html[data-initial-skin-sub="anims"] #skin-subtab-content-skins { display: none !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-content-anims { display: flex !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-btn-skins { border-color: transparent !important; color: #94a3b8 !important; background: transparent !important; }
+        html[data-initial-skin-sub="anims"] #skin-subtab-btn-anims { border-color: #fbbf24 !important; color: #fcd34d !important; background: rgba(30, 41, 59, 0.8) !important; }
+        html[data-initial-skin-sub="anims"] #btn-replay-spawn-anim { display: flex !important; }
     </style>
 </head>
 <body class="flex items-center justify-center h-screen w-screen overflow-hidden bg-slate-950 select-none m-0 p-0 box-border relative font-sans">
@@ -142,6 +179,18 @@
                         </button>
                     </div>
                     <div class="flex items-center gap-2">
+                        <!-- ⚡ KİBER ULDUZ EHTİYATI VƏ GÖY ALMAZLA ALIŞ -->
+                        <div id="cyber-stars-shop-badge" class="hidden flex items-center gap-2 bg-slate-900/90 border border-sky-500/30 px-3 py-1.5 rounded-xl shadow-md">
+                            <div class="flex items-center gap-1.5 font-orbitron text-xs">
+                                <i class="fa-solid fa-star text-amber-400"></i>
+                                <span class="text-slate-300">Ulduz:</span>
+                                <span id="cyber-stars-count-val" class="text-cyan-300 font-bold">5</span>
+                            </div>
+                            <button type="button" onclick="buyCyberStars(5, 5);" class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 hover:border-sky-300 text-sky-300 font-orbitron font-bold text-[10px] flex items-center gap-1 transition transform active:scale-95 cursor-pointer shadow-sm" title="+5 Ulduz Al (5 Göy Almaz)">
+                                <span>+5 Ulduz: 5</span>
+                                <span data-icon="cyanDiamond" data-size="12"></span>
+                            </button>
+                        </div>
                         <button type="button" id="btn-replay-spawn-anim" onclick="replaySpawnAnimPreview();" class="hidden px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/40 font-orbitron font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm">
                             <i class="fa-solid fa-rotate-right text-xs"></i> Təkrar Oynat
                         </button>
@@ -475,6 +524,29 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- 9. Kiber Ulduz Ehtiyatı (Göy Almazla) -->
+                <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-cyan-500/30 bg-cyan-950/20 col-span-1 md:col-span-2 shadow-lg shadow-cyan-950/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-sky-500/30 border border-cyan-400/40 flex items-center justify-center text-amber-400 text-lg shrink-0 shadow-inner">
+                            <i class="fa-solid fa-star animate-pulse"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-orbitron font-bold text-xs text-white">Kiber Ulduz Ehtiyatı</h3>
+                                <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[9px] font-mono">Düşən Ulduzlar</span>
+                            </div>
+                            <p class="text-[11px] text-slate-300">Oyunda lavanı dondurub geriyə itələyən ulduz mərmilərinin ehtiyatı</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="lab-val-cyber-stars" class="font-orbitron text-xs text-cyan-300 font-bold">5 Ulduz</span>
+                        <button tabindex="-1" onclick="buyCyberStars(5, 5);" class="btn-diamond px-3.5 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95 transition">
+                            <span>+5 Ulduz: 5</span>
+                            <span data-icon="cyanDiamond" data-size="16"></span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 4: MƏRMİ QƏNAƏTİ -->
@@ -726,7 +798,12 @@
                             <span>CANLI PREVİEW (60 FPS)</span>
                         </div>
                         <div class="absolute top-3 right-3 text-[10px] font-mono text-slate-400 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 pointer-events-none">
-                            <span id="fs-anim-timer">0.0s / 6.0s</span>
+                            <span id="fs-anim-timer">0.0s / 7.0s</span>
+                        </div>
+                        <div class="absolute bottom-3 right-3 flex items-center gap-2">
+                            <button type="button" id="fs-drop-star-btn" onclick="if (window.SingularitySpawnEffect) { const aid = (window.fullscreenAnimInstance && window.fullscreenAnimInstance.animId) || 'singularity'; const eng = window.SingularitySpawnEffect.getActiveEngine(aid); const cv = document.getElementById('spawn-anim-fullscreen-canvas'); if (cv && eng) { if (eng.orbitParticles.length === 0) { if (typeof showToast === 'function') showToast('⚡ Kiber Hissəciklər tükəndi (0/100)! Animasiyada atmağa hissəcik yoxdur.', 'warning'); } else { const fired = eng.stellarSystem.launchStarFromOrbit(cv.width/2 + eng.x, cv.height/2 + eng.y, eng.rot3D, eng.orbitParticles, aid, false); if (fired && typeof permUpgrades !== 'undefined') { permUpgrades.cyberStars = eng.orbitParticles.length; if (typeof savePermanentData === 'function') savePermanentData(); if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD(); if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop(); } } } }" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/50 text-cyan-300 font-mono text-xs transition-all active:scale-95 shadow-lg backdrop-blur cursor-pointer flex items-center gap-1.5">
+                                <span>⚡ Ulduz Qopart [E]</span>
+                            </button>
                         </div>
                     </div>
 
@@ -736,7 +813,7 @@
                             <div id="fs-anim-progressbar" class="h-full bg-gradient-to-r from-cyan-400 to-amber-400 rounded-full transition-all duration-75" style="width: 0%;"></div>
                         </div>
                         <button type="button" onclick="replayFullscreenAnim()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-400/40 font-orbitron font-bold text-[10px] flex items-center gap-1.5 transition cursor-pointer flex-shrink-0">
-                            <i class="fa-solid fa-rotate-right text-[10px]"></i> Təkrar
+                            <i class="fa-solid fa-rotate-right text-[10px]"></i> Sıfırdan Başlat ↻
                         </button>
                     </div>
                 </div>
@@ -852,17 +929,25 @@
             if (typeof ICONS !== 'undefined' && typeof ICONS.renderDOM === 'function') {
                 ICONS.renderDOM();
             }
+            const activeTab = (typeof getSavedLabTab === 'function') ? getSavedLabTab() : (localStorage.getItem('floor_escape_active_lab_tab') || 'skins');
             if (typeof switchLabTab === 'function') {
-                switchLabTab('skins');
+                switchLabTab(activeTab);
             }
-            if (typeof renderSkinsShop === 'function') {
-                renderSkinsShop();
-            }
-            if (typeof updatePermUpgradesUI === 'function') {
-                updatePermUpgradesUI();
-            }
-            if (typeof updateTurretsUI === 'function') {
-                updateTurretsUI();
+            if (activeTab === 'skins') {
+                const activeSubTab = (typeof getSavedSkinSubTab === 'function') ? getSavedSkinSubTab() : (localStorage.getItem('floor_escape_active_skin_subtab') || 'skins');
+                if (typeof switchSkinSubTab === 'function') {
+                    switchSkinSubTab(activeSubTab);
+                } else if (typeof renderSkinsShop === 'function') {
+                    renderSkinsShop();
+                }
+            } else if (activeTab === 'base' || activeTab === 'econ') {
+                if (typeof updatePermUpgradesUI === 'function') {
+                    updatePermUpgradesUI();
+                }
+            } else if (activeTab === 'turrets') {
+                if (typeof updateTurretsUI === 'function') {
+                    updateTurretsUI();
+                }
             }
             if (typeof ICONS !== 'undefined' && typeof ICONS.renderDOM === 'function') {
                 ICONS.renderDOM();

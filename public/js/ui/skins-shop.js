@@ -13,33 +13,180 @@ function getSkinsCatalog() {
 }
 window.getSkinsCatalog = getSkinsCatalog;
 
+const SINGULARITY_VARIANTS = {
+    singularity: {
+        id: 'singularity',
+        shortName: 'Kiber',
+        name: 'Kiber Sinqulyarlıq',
+        title: 'Cyber Singularity',
+        icon: 'fa-circle-nodes',
+        fallbackIcon: 'fa-atom',
+        color: '#38bdf8',
+        glowColor: '#06b6d4',
+        badge: '🌀 Kvant Sinqulyarlığı (3D Halqalar & Lavaya Zərbə)',
+        desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.',
+        cost: 55
+    },
+    supernova: {
+        id: 'supernova',
+        shortName: 'Supernova',
+        name: 'Plazma Supernova',
+        title: 'Plasma Supernova',
+        icon: 'fa-fire-alt',
+        fallbackIcon: 'fa-sun',
+        color: '#fbbf24',
+        glowColor: '#f97316',
+        badge: '🔥 Plazma Supernova (Alovlu 3D Orbit & Lavaya Zərbə)',
+        desc: 'Qızmar plazma qığılcımları və supernova nüvəsi: Aşağı şığıyan ulduzlar lavanı partladıb soyudur (-45px) və qəlpələrə bölür.',
+        cost: 55
+    },
+    synapse: {
+        id: 'synapse',
+        shortName: 'Sinaps',
+        name: 'Kvant Sinapsı',
+        title: 'Quantum Synapse',
+        icon: 'fa-bolt-lightning',
+        fallbackIcon: 'fa-bolt',
+        color: '#c084fc',
+        glowColor: '#a855f7',
+        badge: '⚡ Kvant Sinapsı (Bio-Elektrik Şəbəkə & Lavaya Zərbə)',
+        desc: 'Bio-elektrik neyron şəbəkəsi və bənövşəyi pulslar: Kvant ulduzları aşağı atılaraq lavanı dondurub ləngidir və zərər vurur.',
+        cost: 55
+    },
+    abyssal: {
+        id: 'abyssal',
+        shortName: 'Abiss',
+        name: 'Dərin Abiss',
+        title: 'Deep Abyssal',
+        icon: 'fa-water',
+        fallbackIcon: 'fa-eye',
+        color: '#2dd4bf',
+        glowColor: '#0f766e',
+        badge: '🌊 Dərin Abiss (Biolüminisent Sporlar & Lavaya Zərbə)',
+        desc: 'Dərin okean leviathan gözü və spor dalğaları: Düşən zümrüd kristalları lavaya zərbə vuraraq lavanı geriyə itələyir.',
+        cost: 55
+    }
+};
+window.SINGULARITY_VARIANTS = SINGULARITY_VARIANTS;
+
+let currentSingularityVariantId = 'singularity';
+
 function getSpawnAnimsCatalog() {
-    if (typeof SPAWN_ANIMS !== 'undefined' && SPAWN_ANIMS && Object.keys(SPAWN_ANIMS).length > 0) return SPAWN_ANIMS;
-    if (typeof window !== 'undefined' && window.SPAWN_ANIMS && Object.keys(window.SPAWN_ANIMS).length > 0) return window.SPAWN_ANIMS;
     return {
         portal: { id: 'portal', name: 'Holoqramdan Doğuluş', title: 'Holo-Portal', icon: 'fa-atom', color: '#65dfff', glowColor: '#72ddff', badge: '🌀 Holoqram Portalı', desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.', costType: 'free', cost: 0 },
         crystal: { id: 'crystal', name: 'Kristal Yarığı', title: 'Crystal Rift', icon: 'fa-gem', color: '#b899ff', glowColor: '#d9c5ff', badge: '💎 Kristal Yarığı', desc: 'İşıq çatı açılır, 3D perspektiv kristallar ayrılır, şimşək çaxır və Mons meydana çıxır.', costType: 'redDiamonds', cost: 15 },
         stellar: { id: 'stellar', name: 'Ulduz Nüvəsi', title: 'Stellar Bloom', icon: 'fa-sun', color: '#54d8cf', glowColor: '#f8d49a', badge: '🌟 Ulduz Nüvəsi', desc: 'Enerji toplanır, 3D axın lentləri fəzanı yarır, ulduz nüvəsi açılır və Mons doğulur.', costType: 'redDiamonds', cost: 25 },
         dracula: { id: 'dracula', name: 'Drakula', title: 'Dracula', icon: 'fa-bat', fallbackIcon: 'fa-feather', color: '#ba7886', glowColor: '#9774be', badge: '🦇 Yarasa Qanadları (+1 Sürət)', desc: 'Qaranlıq oyanır, nəhəng yarasa qanadları açılır və Monsa oyunda +1 hərəkət sürəti bəxş edir.', costType: 'redDiamonds', cost: 35 },
         seed: { id: 'seed', name: 'Yaşam Çiçəyi', title: 'Time Seed', icon: 'fa-seedling', fallbackIcon: 'fa-leaf', color: '#62e6a0', glowColor: '#ffe3a0', badge: '🌸 Yaşam Çiçəyi (+1 Can)', desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq +1 əlavə can bəxş edir.', costType: 'redDiamonds', cost: 45 },
-        singularity: { id: 'singularity', name: 'Kiber Sinqulyarlıq', title: 'Cyber Singularity', icon: 'fa-circle-nodes', fallbackIcon: 'fa-atom', color: '#38bdf8', glowColor: '#06b6d4', badge: '🌀 Kvant Sinqulyarlığı (3D Halqalar & Lavaya Zərbə)', desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.', costType: 'redDiamonds', cost: 55 },
-        supernova: { id: 'supernova', name: 'Plazma Supernova', title: 'Plasma Supernova', icon: 'fa-fire-alt', fallbackIcon: 'fa-sun', color: '#fbbf24', glowColor: '#f97316', badge: '🔥 Plazma Supernova (Alovlu 3D Orbit & Lavaya Zərbə)', desc: 'Qızmar plazma qığılcımları və supernova nüvəsi: Aşağı şığıyan ulduzlar lavanı partladıb soyudur (-45px) və qəlpələrə bölür.', costType: 'redDiamonds', cost: 55 },
-        synapse: { id: 'synapse', name: 'Kvant Sinapsı', title: 'Quantum Synapse', icon: 'fa-bolt-lightning', fallbackIcon: 'fa-bolt', color: '#c084fc', glowColor: '#a855f7', badge: '⚡ Kvant Sinapsı (Bio-Elektrik Şəbəkə & Lavaya Zərbə)', desc: 'Bio-elektrik neyron şəbəkəsi və bənövşəyi pulslar: Kvant ulduzları aşağı atılaraq lavanı dondurub ləngidir və zərər vurur.', costType: 'redDiamonds', cost: 55 },
-        abyssal: { id: 'abyssal', name: 'Dərin Abiss', title: 'Deep Abyssal', icon: 'fa-water', fallbackIcon: 'fa-eye', color: '#2dd4bf', glowColor: '#0f766e', badge: '🌊 Dərin Abiss (Biolüminisent Sporlar & Lavaya Zərbə)', desc: 'Dərin okean leviathan gözü və spor dalğaları: Düşən zümrüd kristalları lavaya zərbə vuraraq lavanı geriyə itələyir.', costType: 'redDiamonds', cost: 55 }
+        singularity: { 
+            id: 'singularity', 
+            name: 'Kvant Sinqulyarlığı', 
+            title: 'Quantum Singularity', 
+            icon: 'fa-circle-nodes', 
+            fallbackIcon: 'fa-atom', 
+            color: '#38bdf8', 
+            glowColor: '#06b6d4', 
+            badge: '🌀 Kvant Sinqulyarlığı (4 Fərqli Kvant Növü)', 
+            desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.', 
+            costType: 'redDiamonds', 
+            cost: 55,
+            isMultiVariant: true,
+            variants: SINGULARITY_VARIANTS
+        }
     };
 }
-window.getSpawnAnimsCatalog = getSpawnAnimsCatalog;
+function getSavedSkinSubTab() {
+    try {
+        const saved = localStorage.getItem('floor_escape_active_skin_subtab');
+        if (saved && (saved === 'skins' || saved === 'anims')) {
+            return saved;
+        }
+    } catch (e) {}
+    return 'skins';
+}
+window.getSavedSkinSubTab = getSavedSkinSubTab;
 
-let currentSkinSubTab = 'skins'; // 'skins' | 'anims'
+let currentSkinSubTab = getSavedSkinSubTab(); // 'skins' | 'anims'
 let currentPreviewSkinId = null;
 let currentPreviewSpawnAnimId = null;
 let previewSpawnEffectInstance = null;
 let skinStageAnimFrame = null;
 let skinStageTime = 0;
 
+let hoveredSpawnAnimCardId = null;
+let lastMiniCardRenderTime = 0;
+
+function setHoveredSpawnAnimCard(aid) {
+    if (hoveredSpawnAnimCardId === aid) return;
+    const prevAid = hoveredSpawnAnimCardId;
+    hoveredSpawnAnimCardId = aid;
+    if (prevAid && prevAid !== currentPreviewSpawnAnimId) {
+        drawStaticSpawnAnimCard(prevAid);
+    }
+}
+window.setHoveredSpawnAnimCard = setHoveredSpawnAnimCard;
+
+function selectSingularityVariant(variantId) {
+    if (!SINGULARITY_VARIANTS[variantId]) return;
+    currentSingularityVariantId = variantId;
+
+    // Yuxarıdakı vitrində də dərhal həmin variantı canlandırırıq
+    setPreviewSpawnAnim(variantId, false);
+
+    // Kartın mini-kanvasını yeniləyirik
+    drawStaticSpawnAnimCard('singularity');
+
+    // Kartın HTML elementlərini (badge, düymələr, qiymət) yeniləyirik
+    renderSpawnAnimsShop();
+}
+window.selectSingularityVariant = selectSingularityVariant;
+
+function drawStaticSpawnAnimCard(aid) {
+    const targetCardId = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(aid) ? 'singularity' : aid;
+    const actualEffectId = (targetCardId === 'singularity') ? (currentSingularityVariantId || 'singularity') : targetCardId;
+
+    const cardCanvas = document.getElementById(`spawn-anim-card-canvas-${targetCardId}`);
+    if (!cardCanvas) return;
+    const cctx = cardCanvas.getContext('2d');
+    if (!cctx) return;
+
+    const cw = cardCanvas.width;
+    const ch = cardCanvas.height;
+    cctx.clearRect(0, 0, cw, ch);
+
+    const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(actualEffectId) : null;
+    if (!fxModule) return;
+
+    cctx.fillStyle = '#060715';
+    cctx.fillRect(0, 0, cw, ch);
+
+    const activeSkinId = currentPreviewSkinId || (permUpgrades && permUpgrades.equippedSkin) || 'default';
+    const drawMiniMonster = (mctx, mt) => {
+        if (typeof drawSkinModel === 'function') {
+            drawSkinModel(mctx, 0, 0, 16, activeSkinId, 0, mt * 2.5, false);
+        }
+    };
+
+    // Kiber Sinqulyarlıq üçün tam açılmış 3D halqalar (wings, compass, crystals, mons) kadrı
+    const isQuantum = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(actualEffectId);
+    const staticT = isQuantum ? 6.2 : (fxModule.duration || 6.0) * 0.62;
+    fxModule.draw(cctx, cw, ch, staticT, drawMiniMonster, false, actualEffectId);
+}
+window.drawStaticSpawnAnimCard = drawStaticSpawnAnimCard;
+
 // ==================== 🔀 ALT-TAB KEÇİDİ ====================
 function switchSkinSubTab(subTab) {
-    currentSkinSubTab = subTab || 'skins';
+    if (!subTab) {
+        subTab = getSavedSkinSubTab();
+    }
+    currentSkinSubTab = (subTab === 'anims') ? 'anims' : 'skins';
+
+    try {
+        localStorage.setItem('floor_escape_active_skin_subtab', currentSkinSubTab);
+        if (document.documentElement) {
+            document.documentElement.setAttribute('data-initial-skin-sub', currentSkinSubTab);
+        }
+    } catch (e) {}
 
     const btnSkins = document.getElementById('skin-subtab-btn-skins');
     const btnAnims = document.getElementById('skin-subtab-btn-anims');
@@ -58,10 +205,17 @@ function switchSkinSubTab(subTab) {
         if (contentAnims) contentAnims.classList.remove('hidden');
         if (replayBtn) replayBtn.classList.remove('hidden');
 
+        const starBadge = document.getElementById('cyber-stars-shop-badge');
+        if (starBadge) starBadge.classList.remove('hidden');
+        if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD();
+
         renderSpawnAnimsShop();
-        const activeAnim = currentPreviewSpawnAnimId || (permUpgrades && permUpgrades.equippedSpawnAnim) || 'portal';
+        const activeAnim = currentPreviewSpawnAnimId || (permUpgrades && permUpgrades.equippedSpawnAnim) || 'singularity';
         setPreviewSpawnAnim(activeAnim, false);
     } else {
+        const starBadge = document.getElementById('cyber-stars-shop-badge');
+        if (starBadge) starBadge.classList.add('hidden');
+
         if (btnSkins) {
             btnSkins.className = 'px-3.5 py-1.5 text-xs font-orbitron font-bold rounded-lg border-b-2 border-cyan-400 text-cyan-300 flex items-center gap-2 transition cursor-pointer bg-slate-800/80 shadow-sm';
         }
@@ -78,6 +232,23 @@ function switchSkinSubTab(subTab) {
     }
 }
 window.switchSkinSubTab = switchSkinSubTab;
+
+function updateCyberStarsHUD() {
+    const countEl = document.getElementById('cyber-stars-count-val');
+    const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5;
+    if (countEl) {
+        countEl.innerText = count;
+        if (count === 0) {
+            countEl.className = 'text-rose-400 font-bold animate-pulse';
+        } else {
+            countEl.className = 'text-cyan-300 font-bold';
+        }
+    }
+    if (typeof ICONS !== 'undefined' && typeof ICONS.renderDOM === 'function') {
+        ICONS.renderDOM();
+    }
+}
+window.updateCyberStarsHUD = updateCyberStarsHUD;
 
 // ==================== 1. KOSTYUMLARIN ÖNBAXIŞI (SKINS PREVIEW) ====================
 function highlightPreviewCard(previewId) {
@@ -146,14 +317,16 @@ window.setPreviewSkin = setPreviewSkin;
 // ==================== 2. DOĞULUŞ ANİMASİYALARININ ÖNBAXIŞI (SPAWN FX PREVIEW) ====================
 function highlightPreviewSpawnAnimCard(previewId) {
     const animsList = getSpawnAnimsCatalog();
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    const targetPreviewId = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(previewId) ? 'singularity' : previewId;
+    const targetActiveId = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) ? 'singularity' : active;
 
     Object.keys(animsList).forEach(id => {
         const cardEl = document.getElementById(`spawn-anim-card-${id}`);
         if (!cardEl) return;
         const anim = animsList[id];
-        const isActive = active === id;
-        const isPreview = previewId === id;
+        const isActive = (targetActiveId === id);
+        const isPreview = (targetPreviewId === id);
 
         if (isActive) {
             cardEl.className = 'glass-card p-2.5 sm:p-3 rounded-2xl border-2 border-emerald-500 shadow-lg shadow-emerald-500/25 bg-slate-900/80 ring-1 ring-emerald-500/40 flex flex-col justify-between items-center text-center relative overflow-hidden group transition-all duration-200 cursor-pointer';
@@ -170,9 +343,16 @@ function highlightPreviewSpawnAnimCard(previewId) {
 window.highlightPreviewSpawnAnimCard = highlightPreviewSpawnAnimCard;
 
 function setPreviewSpawnAnim(animId, shouldScroll = false) {
+    const prevAnimId = currentPreviewSpawnAnimId;
     currentPreviewSpawnAnimId = animId;
+    if (SINGULARITY_VARIANTS[animId]) {
+        currentSingularityVariantId = animId;
+    }
+    if (prevAnimId && prevAnimId !== animId) {
+        drawStaticSpawnAnimCard(prevAnimId);
+    }
     const animsList = getSpawnAnimsCatalog();
-    const anim = animsList[animId];
+    const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
     if (!anim) return;
 
     const indicatorEl = document.getElementById('preview-stage-indicator');
@@ -376,43 +556,43 @@ function startSkinStageAnimation() {
             });
         }
 
-        // Mini Kart Canvas-larını canlandır (Doğuluş Animasiyaları üçün - QISA FORMA CANLI ÖNBAXIŞ)
+        // Mini Kart Canvas-larını canlandır (Doğuluş Animasiyaları üçün - ULTRA OPTİMİZASİYA)
+        // Bütün 9 kartı birdən hər freymdə çəkmək CPU-nu dondurur.
+        // YALNIZ kursor üzərində olan (hover) VƏ YA seçilmiş tək kart 30 FPS ilə canlanır!
         if (currentSkinSubTab === 'anims') {
-            const animsList = getSpawnAnimsCatalog();
-            const activeSkinId = currentPreviewSkinId || (permUpgrades && permUpgrades.equippedSkin) || 'default';
-            const fxNow = performance.now() / 1000;
+            const activeCardId = hoveredSpawnAnimCardId || currentPreviewSpawnAnimId;
+            const nowSec = performance.now() / 1000;
 
-            Object.keys(animsList).forEach((aid) => {
-                const cardCanvas = document.getElementById(`spawn-anim-card-canvas-${aid}`);
-                if (!cardCanvas) return;
-                const cctx = cardCanvas.getContext('2d');
-                if (!cctx) return;
+            if (activeCardId && (nowSec - lastMiniCardRenderTime >= 0.033)) {
+                lastMiniCardRenderTime = nowSec;
+                const cardCanvas = document.getElementById(`spawn-anim-card-canvas-${activeCardId}`);
+                if (cardCanvas) {
+                    const cctx = cardCanvas.getContext('2d');
+                    if (cctx) {
+                        const cw = cardCanvas.width;
+                        const ch = cardCanvas.height;
+                        cctx.clearRect(0, 0, cw, ch);
 
-                const cw = cardCanvas.width;
-                const ch = cardCanvas.height;
-                cctx.clearRect(0, 0, cw, ch);
+                        const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(activeCardId) : null;
+                        if (fxModule) {
+                            cctx.fillStyle = '#060715';
+                            cctx.fillRect(0, 0, cw, ch);
 
-                const anim = animsList[aid];
-                const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(aid) : null;
-                if (!fxModule) return;
+                            const loopDur = fxModule.duration || 6.0;
+                            const miniT = (nowSec * 1.35) % loopDur;
 
-                // Dərin təmiz qaranlıq fon (Süni rəng haləsi olmadan)
-                cctx.fillStyle = '#060715';
-                cctx.fillRect(0, 0, cw, ch);
+                            const activeSkinId = currentPreviewSkinId || (permUpgrades && permUpgrades.equippedSkin) || 'default';
+                            const drawMiniMonster = (mctx, mt) => {
+                                if (typeof drawSkinModel === 'function') {
+                                    drawSkinModel(mctx, 0, 0, 16, activeSkinId, 0, mt * 2.5, false);
+                                }
+                            };
 
-                // Qısa formada dövr edən zaman
-                const loopDur = fxModule.duration || 6.0;
-                const miniT = (fxNow * 1.35) % loopDur;
-
-                const drawMiniMonster = (mctx, mt) => {
-                    if (typeof drawSkinModel === 'function') {
-                        drawSkinModel(mctx, 0, 0, 16, activeSkinId, 0, mt * 2.5, false);
+                            fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster, false, activeCardId);
+                        }
                     }
-                };
-
-                // Animasiya mühərrikini mini canvas üçün çağırırıq
-                fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster, false, aid);
-            });
+                }
+            }
         }
 
         skinStageAnimFrame = requestAnimationFrame(renderStage);
@@ -588,10 +768,9 @@ window.buyOrEquipSkin = buyOrEquipSkin;
 // ==================== 5. DOĞULUŞ ANİMASİYALARI MAĞAZASININ RENDERİ ====================
 function handleSpawnAnimCardClick(animId) {
     const animsList = getSpawnAnimsCatalog();
-    if (!animsList || !animsList[animId]) return;
+    if (!animsList[animId] && !SINGULARITY_VARIANTS[animId]) return;
 
     // Yalnızca kliklədikdə yuxarı səhnədə önbaxışı aktivləşdirir (alınıb-alınmamasından asılı olmayaraq)
-    // Mausun üzərində gəzməsi dəyişdirmir!
     setPreviewSpawnAnim(animId, false);
 }
 window.handleSpawnAnimCardClick = handleSpawnAnimCardClick;
@@ -601,34 +780,74 @@ function renderSpawnAnimsShop() {
     if (!container) return;
 
     const animsList = getSpawnAnimsCatalog();
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['portal'];
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity', 'portal'];
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
     const preview = currentPreviewSpawnAnimId || active;
 
     let html = '';
     Object.values(animsList).forEach(anim => {
-        const isOwned = owned.includes(anim.id);
-        const isActive = active === anim.id;
-        const isPreviewing = preview === anim.id;
+        let displayAnim = anim;
+        let isMulti = !!anim.isMultiVariant;
+        let multiVariantControls = '';
+
+        if (isMulti) {
+            // Əgər oyunda təchiz edilmiş animasiya bu 4-dən biridirsə, default olaraq onu seç
+            if (['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) && !currentSingularityVariantId) {
+                currentSingularityVariantId = active;
+            }
+            const curVar = SINGULARITY_VARIANTS[currentSingularityVariantId] || SINGULARITY_VARIANTS.singularity;
+            displayAnim = { ...anim, ...curVar };
+
+            multiVariantControls = `
+                <div class="grid grid-cols-4 gap-1 w-full my-1.5 px-0.5" onclick="event.stopPropagation();">
+                    ${Object.values(SINGULARITY_VARIANTS).map(v => {
+                        const isVarOwned = owned.includes(v.id);
+                        const isVarActive = (active === v.id);
+                        const isVarSelected = (currentSingularityVariantId === v.id);
+                        let pillClass = 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:border-slate-700';
+                        if (isVarSelected) {
+                            pillClass = 'border-amber-400 bg-amber-500/25 text-amber-200 shadow-sm ring-1 ring-amber-400/50';
+                        } else if (isVarActive) {
+                            pillClass = 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300';
+                        }
+                        return `
+                            <button type="button" 
+                                    onclick="selectSingularityVariant('${v.id}');"
+                                    class="px-1 py-1 rounded-lg text-[9px] font-orbitron font-bold transition flex items-center justify-center gap-0.5 border cursor-pointer ${pillClass}"
+                                    style="${isVarSelected ? `border-color:${v.color}; color:${v.color};` : ''}"
+                                    title="${v.name}">
+                                <span>${v.shortName}</span>
+                                ${!isVarOwned ? `<i class="fa-solid fa-lock text-[7px] text-slate-500 ml-0.5"></i>` : ''}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        const effectiveId = displayAnim.id; // əgər multiVariant-dırsa, cari variantın ID-si
+        const isOwned = owned.includes(effectiveId);
+        const isActive = (active === effectiveId);
+        const isPreviewing = (preview === anim.id || preview === effectiveId);
 
         let borderClass = 'border-slate-800 hover:border-amber-400/40 bg-slate-950/70';
-        let glowStyle = `box-shadow: 0 0 12px ${anim.color}10;`;
+        let glowStyle = `box-shadow: 0 0 12px ${displayAnim.color}10;`;
         if (isActive && isPreviewing) {
             borderClass = 'border-2 border-emerald-400 shadow-xl shadow-emerald-500/30 bg-slate-900/95 ring-2 ring-emerald-400/50 -translate-y-0.5';
-            glowStyle = `box-shadow: 0 0 24px ${anim.color}60;`;
+            glowStyle = `box-shadow: 0 0 24px ${displayAnim.color}60;`;
         } else if (isActive) {
             borderClass = 'border-2 border-emerald-500 shadow-lg shadow-emerald-500/25 bg-slate-900/80 ring-1 ring-emerald-500/40';
-            glowStyle = `box-shadow: 0 0 20px ${anim.color}35;`;
+            glowStyle = `box-shadow: 0 0 20px ${displayAnim.color}35;`;
         } else if (isPreviewing) {
             borderClass = 'border-2 border-amber-400 shadow-xl shadow-amber-400/30 bg-slate-900/95 ring-2 ring-amber-400/50 -translate-y-0.5';
-            glowStyle = `box-shadow: 0 0 24px ${anim.color}50;`;
+            glowStyle = `box-shadow: 0 0 24px ${displayAnim.color}50;`;
         }
 
         let actionBtn = '';
         if (isActive) {
             actionBtn = `
                 <div class="flex items-center gap-1.5 w-full">
-                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${anim.id}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
+                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
                     <button disabled class="flex-1 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-default shadow-sm shadow-emerald-500/20">
@@ -639,26 +858,26 @@ function renderSpawnAnimsShop() {
         } else if (isOwned) {
             actionBtn = `
                 <div class="flex items-center gap-1.5 w-full">
-                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${anim.id}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
+                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
-                    <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${anim.id}');" class="flex-1 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition hover:scale-[1.02]">
+                    <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${effectiveId}');" class="flex-1 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition hover:scale-[1.02]">
                         <i class="fa-solid fa-hand-pointer text-[9px]"></i> TƏCHİZ ET
                     </button>
                 </div>
             `;
         } else {
             const currentRed = (typeof redDiamonds !== 'undefined') ? redDiamonds : 0;
-            const canAfford = currentRed >= anim.cost;
+            const canAfford = currentRed >= displayAnim.cost;
             const rubySvg = (typeof ICONS !== 'undefined') ? ICONS.rubyDiamond({ size: 12 }) : '💎';
 
             actionBtn = `
                 <div class="flex items-center gap-1.5 w-full">
-                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${anim.id}');" class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white border border-amber-500/40 hover:border-amber-400 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer shadow-sm hover:scale-105" title="Bütün qeydlər və Tam Baxış">
+                    <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white border border-amber-500/40 hover:border-amber-400 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer shadow-sm hover:scale-105" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
-                    <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${anim.id}');" class="flex-1 py-1.5 rounded-lg font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer ${canAfford ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/25 hover:scale-[1.02] border border-rose-400/50' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-rose-500/30'}">
-                        <span>AL: ${anim.cost}</span>
+                    <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${effectiveId}');" class="flex-1 py-1.5 rounded-lg font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer ${canAfford ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/25 hover:scale-[1.02] border border-rose-400/50' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-rose-500/30'}">
+                        <span>AL: ${displayAnim.cost}</span>
                         <span>${rubySvg}</span>
                     </button>
                 </div>
@@ -667,32 +886,50 @@ function renderSpawnAnimsShop() {
 
         html += `
             <div id="spawn-anim-card-${anim.id}"
-                 onclick="handleSpawnAnimCardClick('${anim.id}');"
+                 onclick="handleSpawnAnimCardClick('${effectiveId}');"
+                 onmouseenter="setHoveredSpawnAnimCard('${anim.id}');"
+                 onmouseleave="setHoveredSpawnAnimCard(null);"
                  class="glass-card p-2.5 rounded-2xl border ${borderClass} flex flex-col justify-between items-center text-center relative z-10 overflow-hidden group transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:border-amber-400/60"
                  style="${glowStyle}"
                  title="Önbaxış üçün klikləyin">
                 
                 <div class="w-full flex items-center justify-between px-0.5 mb-1 pointer-events-none">
-                    <span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full border bg-slate-900/80 truncate max-w-[95px]" style="color: ${anim.color}; border-color: ${anim.color}40;">
-                        <i class="fa-solid ${anim.icon} mr-0.5"></i> ${anim.title}
+                    <span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full border bg-slate-900/80 truncate max-w-[100px]" style="color: ${displayAnim.color}; border-color: ${displayAnim.color}40;">
+                        <i class="fa-solid ${displayAnim.icon} mr-0.5"></i> ${displayAnim.title}
                     </span>
-                    ${isActive ? `<span class="bg-emerald-500 text-slate-950 rounded-full px-1.5 py-0.5 text-[8px] font-orbitron font-bold shadow flex items-center gap-0.5"><i class="fa-solid fa-check"></i> AKTİV</span>` : (isOwned ? `<span class="text-slate-400 text-[8px] font-mono">SAHİBSƏN</span>` : `<span class="text-rose-400 text-[8px] font-mono font-bold">${anim.cost} 💎</span>`)}
+                    ${isActive ? `<span class="bg-emerald-500 text-slate-950 rounded-full px-1.5 py-0.5 text-[8px] font-orbitron font-bold shadow flex items-center gap-0.5"><i class="fa-solid fa-check"></i> AKTİV</span>` : (isOwned ? `<span class="text-slate-400 text-[8px] font-mono">SAHİBSƏN</span>` : `<span class="text-rose-400 text-[8px] font-mono font-bold">${displayAnim.cost} 💎</span>`)}
                 </div>
 
                 <!-- CANLI ANİMASİYA PƏNCƏRƏSİ (KOMPAKT MİNİ KANVAS) -->
-                <div class="relative w-20 h-20 sm:w-22 sm:h-22 rounded-xl flex items-center justify-center my-1 bg-[#060715] border border-slate-800 shadow-inner group-hover:border-amber-500/40 transition-colors duration-200 overflow-hidden pointer-events-none" style="box-shadow: inset 0 0 12px ${anim.color}25, 0 0 8px ${anim.color}20;">
+                <div class="relative w-20 h-20 sm:w-22 sm:h-22 rounded-xl flex items-center justify-center my-1 bg-[#060715] border border-slate-800 shadow-inner group-hover:border-amber-500/40 transition-colors duration-200 overflow-hidden pointer-events-none" style="box-shadow: inset 0 0 12px ${displayAnim.color}25, 0 0 8px ${displayAnim.color}20;">
                     <canvas id="spawn-anim-card-canvas-${anim.id}" width="160" height="160" class="w-full h-full block object-contain"></canvas>
                     <div class="absolute bottom-1 right-1 text-[6px] font-mono text-slate-400 bg-slate-950/80 px-1 py-0.5 rounded border border-slate-800 pointer-events-none">FX</div>
                 </div>
 
+                ${multiVariantControls}
+
                 <div class="mb-1 w-full pointer-events-none">
-                    <h4 class="font-orbitron font-bold text-xs text-white tracking-wide group-hover:text-amber-300 transition-colors leading-tight">${anim.name}</h4>
+                    <h4 class="font-orbitron font-bold text-xs text-white tracking-wide group-hover:text-amber-300 transition-colors leading-tight">${displayAnim.name}</h4>
                     <div class="mt-0.5">
-                        <span class="inline-block px-2 py-0.5 rounded-full text-[8.5px] font-orbitron font-bold border shadow-sm" style="background: ${anim.color}18; color: ${anim.color}; border-color: ${anim.color}45;">
-                            ${anim.badge}
+                        <span class="inline-block px-2 py-0.5 rounded-full text-[8.5px] font-orbitron font-bold border shadow-sm" style="background: ${displayAnim.color}18; color: ${displayAnim.color}; border-color: ${displayAnim.color}45;">
+                            ${displayAnim.badge}
                         </span>
                     </div>
                 </div>
+
+                ${isMulti ? `
+                    <div class="w-full my-1.5 p-1.5 rounded-xl bg-slate-900/90 border border-sky-500/30 flex items-center justify-between gap-1 text-[10px] font-orbitron shadow-inner" onclick="event.stopPropagation();">
+                        <div class="flex items-center gap-1 text-slate-300">
+                            <i class="fa-solid fa-star text-amber-400 text-xs"></i>
+                            <span>Ulduz:</span>
+                            <span class="text-cyan-300 font-bold">${(permUpgrades && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5}</span>
+                        </div>
+                        <button type="button" onclick="buyCyberStars(5, 5);" class="px-2 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/35 border border-sky-400/40 hover:border-sky-300 text-sky-300 font-bold text-[9px] flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm" title="5 Göy Almaz ilə 5 Kiber Ulduz al">
+                            <span>+5 Ulduz: 5</span>
+                            <span data-icon="cyanDiamond" data-size="11"></span>
+                        </button>
+                    </div>
+                ` : ''}
 
                 <div class="w-full pt-1.5 border-t border-slate-800/80">
                     ${actionBtn}
@@ -702,6 +939,11 @@ function renderSpawnAnimsShop() {
     });
 
     container.innerHTML = html;
+    requestAnimationFrame(() => {
+        Object.keys(animsList).forEach(aid => {
+            drawStaticSpawnAnimCard(aid);
+        });
+    });
 }
 window.renderSpawnAnimsShop = renderSpawnAnimsShop;
 
@@ -711,7 +953,7 @@ let fullscreenAnimFrame = null;
 
 function openSpawnAnimFullscreenPreview(animId) {
     const animsList = getSpawnAnimsCatalog();
-    const anim = animsList[animId];
+    const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
     if (!anim) return;
 
     const modal = document.getElementById('spawn-anim-fullscreen-modal');
@@ -748,8 +990,8 @@ function openSpawnAnimFullscreenPreview(animId) {
         badgeEl.style.backgroundColor = `${anim.color}20`;
     }
 
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['portal'];
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity', 'portal'];
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
     const isOwned = owned.includes(anim.id);
     const isActive = active === anim.id;
 
@@ -961,11 +1203,31 @@ function openSpawnAnimFullscreenPreview(animId) {
 }
 window.openSpawnAnimFullscreenPreview = openSpawnAnimFullscreenPreview;
 
+let fsInteractiveHandlers = null;
+
+function cleanupFullscreenInteractiveHandlers() {
+    if (fsInteractiveHandlers) {
+        window.removeEventListener('keydown', fsInteractiveHandlers.keydown);
+        window.removeEventListener('keyup', fsInteractiveHandlers.keyup);
+        if (fsInteractiveHandlers.canvas) {
+            fsInteractiveHandlers.canvas.removeEventListener('mousedown', fsInteractiveHandlers.mousedown);
+            window.removeEventListener('mousemove', fsInteractiveHandlers.mousemove);
+            window.removeEventListener('mouseup', fsInteractiveHandlers.mouseup);
+            fsInteractiveHandlers.canvas.removeEventListener('touchstart', fsInteractiveHandlers.touchstart);
+            window.removeEventListener('touchmove', fsInteractiveHandlers.touchmove);
+            window.removeEventListener('touchend', fsInteractiveHandlers.touchend);
+        }
+        fsInteractiveHandlers = null;
+    }
+}
+
 function closeSpawnAnimFullscreenPreview() {
     const modal = document.getElementById('spawn-anim-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
     if (fullscreenAnimFrame) cancelAnimationFrame(fullscreenAnimFrame);
     fullscreenAnimInstance = null;
+    cleanupFullscreenInteractiveHandlers();
+
     const draculaFx = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get('dracula') : null;
     if (draculaFx) {
         draculaFx.interactive = false;
@@ -992,6 +1254,7 @@ window.replayFullscreenAnim = replayFullscreenAnim;
 
 function startFullscreenAnim(animId) {
     if (fullscreenAnimFrame) cancelAnimationFrame(fullscreenAnimFrame);
+    cleanupFullscreenInteractiveHandlers();
 
     const canvas = document.getElementById('spawn-anim-fullscreen-canvas');
     if (!canvas) return;
@@ -999,14 +1262,16 @@ function startFullscreenAnim(animId) {
     if (!ctx) return;
 
     const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(animId) : null;
-    if (window.SingularitySpawnEffect && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId)) {
+    const isQuantum = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(animId);
+
+    if (window.SingularitySpawnEffect && isQuantum) {
         window.SingularitySpawnEffect.setTheme(animId);
     }
     if (fxModule) {
         if (typeof fxModule.resetFlight === 'function') fxModule.resetFlight();
-        fxModule.interactive = (animId === 'dracula' || animId === 'seed');
+        fxModule.interactive = true;
     }
-    const fullDuration = (fxModule && fxModule.duration) ? fxModule.duration : 6.0;
+    const fullDuration = (fxModule && fxModule.duration) ? fxModule.duration : 7.0;
     const activeSkin = currentPreviewSkinId || (permUpgrades && permUpgrades.equippedSkin) || 'default';
 
     fullscreenAnimInstance = {
@@ -1015,6 +1280,97 @@ function startFullscreenAnim(animId) {
         duration: fullDuration,
         skinId: activeSkin
     };
+
+    // İstifadəçinin orijinal interaktiv W/A/S/D və [E] idarəetməsi
+    const keys = {};
+    if (isQuantum && window.SingularitySpawnEffect) {
+        const eng = window.SingularitySpawnEffect.getActiveEngine(animId);
+        eng.reset();
+
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+        let lastDragTime = performance.now();
+
+        const keydownHandler = (e) => {
+            if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+                keys[e.code] = true;
+            } else if (e.code === 'KeyE') {
+                e.preventDefault();
+                const cw = canvas.width;
+                const ch = canvas.height;
+                const fired = eng.stellarSystem.launchStarFromOrbit(cw / 2 + eng.x, ch / 2 + eng.y, eng.rot3D, eng.orbitParticles, animId, false);
+                if (fired && typeof permUpgrades !== 'undefined') {
+                    permUpgrades.cyberStars = eng.orbitParticles.length;
+                    if (typeof savePermanentData === 'function') savePermanentData();
+                    if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD();
+                    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+                } else if (!fired && typeof showToast === 'function') {
+                    showToast('⚡ Kiber Hissəciklər tükəndi (0/100)! Animasiyada atmağa hissəcik yoxdur.', 'warning');
+                }
+            }
+        };
+
+        const keyupHandler = (e) => {
+            keys[e.code] = false;
+        };
+
+        const startDrag = (cx, cy) => {
+            isDragging = true;
+            lastMouse = { x: cx, y: cy };
+            lastDragTime = performance.now();
+            if (window.SingularitySpawnEffect.cyberAudio) window.SingularitySpawnEffect.cyberAudio.init();
+        };
+
+        const moveDrag = (cx, cy) => {
+            if (!isDragging) return;
+            const now = performance.now();
+            const dt = Math.max(0.008, (now - lastDragTime) / 1000);
+            const dx = cx - lastMouse.x;
+            const dy = cy - lastMouse.y;
+            eng.x += dx;
+            eng.y += dy;
+            eng.vx = dx / dt;
+            eng.vy = dy / dt;
+            lastMouse = { x: cx, y: cy };
+            lastDragTime = now;
+        };
+
+        const endDrag = () => { isDragging = false; };
+
+        const mousedown = (e) => startDrag(e.clientX, e.clientY);
+        const mousemove = (e) => moveDrag(e.clientX, e.clientY);
+        const mouseup = () => endDrag();
+
+        const touchstart = (e) => {
+            if (e.touches.length) startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        };
+        const touchmove = (e) => {
+            if (e.touches.length) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+        };
+        const touchend = () => endDrag();
+
+        window.addEventListener('keydown', keydownHandler);
+        window.addEventListener('keyup', keyupHandler);
+        canvas.addEventListener('mousedown', mousedown);
+        window.addEventListener('mousemove', mousemove);
+        window.addEventListener('mouseup', mouseup);
+        canvas.addEventListener('touchstart', touchstart, { passive: true });
+        window.addEventListener('touchmove', touchmove, { passive: true });
+        window.addEventListener('touchend', touchend);
+
+        fsInteractiveHandlers = {
+            canvas,
+            keydown: keydownHandler,
+            keyup: keyupHandler,
+            mousedown,
+            mousemove,
+            mouseup,
+            touchstart,
+            touchmove,
+            touchend
+        };
+    }
 
     let lastTime = performance.now();
 
@@ -1025,7 +1381,7 @@ function startFullscreenAnim(animId) {
         }
 
         const now = performance.now();
-        const dt = Math.min(0.1, (now - lastTime) / 1000);
+        const dt = Math.min(0.04, (now - lastTime) / 1000);
         lastTime = now;
 
         fullscreenAnimInstance.time += dt;
@@ -1037,12 +1393,42 @@ function startFullscreenAnim(animId) {
         const h = canvas.height;
         ctx.clearRect(0, 0, w, h);
 
-        // Dərin təmiz qaranlıq fon (Kənarlarda süni rəng haləsi və ya duman olmadan)
+        // Dərin təmiz qaranlıq fon
         ctx.fillStyle = '#060715';
         ctx.fillRect(0, 0, w, h);
 
-        // Orijinal animasiya mühərrikini tam parametrlərlə çağırırıq
-        if (fxModule && typeof fxModule.draw === 'function') {
+        // İnteraktiv idarəetmə ilə 3D uçuş
+        if (isQuantum && window.SingularitySpawnEffect) {
+            const eng = window.SingularitySpawnEffect.getActiveEngine(animId);
+            let dx = 0, dy = 0;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+
+            const moveSpeed = 260;
+            eng.vx += (dx * moveSpeed - eng.vx) * 0.12;
+            eng.vy += (dy * moveSpeed - eng.vy) * 0.12;
+            eng.x += eng.vx * dt;
+            eng.y += eng.vy * dt;
+
+            const limitX = w * 0.38;
+            const limitY = h * 0.34;
+            eng.x = Math.max(-limitX, Math.min(limitX, eng.x));
+            eng.y = Math.max(-limitY, Math.min(limitY, eng.y));
+
+            eng.timeline = fullscreenAnimInstance.time;
+            eng.step(dt, eng.vx, eng.vy, false);
+
+            const scale = Math.min(w / 720, h / 510) * 0.78;
+            const drawMonster = (mctx, mt) => {
+                if (typeof drawSkinModel === 'function') {
+                    drawSkinModel(mctx, 0, 0, 28, fullscreenAnimInstance.skinId, 0, mt * 3, false);
+                }
+            };
+
+            eng.render(ctx, w / 2 + eng.x, h / 2 + eng.y, scale, drawMonster, false);
+        } else if (fxModule && typeof fxModule.draw === 'function') {
             const drawMonster = (mctx, mt) => {
                 if (typeof drawSkinModel === 'function') {
                     drawSkinModel(mctx, 0, 0, 32, fullscreenAnimInstance.skinId, 0, mt * 3, false);
@@ -1075,9 +1461,13 @@ window.addEventListener('keydown', (e) => {
 
 function buyOrEquipSpawnAnim(animId) {
     const animsList = getSpawnAnimsCatalog();
-    if (!animsList || !animsList[animId]) return;
-    const anim = animsList[animId];
+    const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
+    if (!anim) return;
     if (!permUpgrades.ownedSpawnAnims || !Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = ['portal'];
+
+    if (SINGULARITY_VARIANTS[animId]) {
+        currentSingularityVariantId = animId;
+    }
 
     setPreviewSpawnAnim(animId, true);
 
