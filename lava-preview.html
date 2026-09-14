@@ -184,29 +184,78 @@ function renderCascade(c, t, width, height, direction) {
 
     for (let index = 0; index < levels.length; index++) {
         const p = levels[index];
-        const nextY = index < levels.length - 1 ? levels[index + 1].y : 535;
+        const nextY = index < levels.length - 1 ? levels[index + 1].y : 510;
 
         for (const edge of p.out) {
             LavaEngine.drawPlatformWaterfall(c, t + index * 0.8, edge - 11, p.y + 2, 22, nextY - p.y - 2);
+            LavaEngine.drawSpillwayLip(c, edge - 11, 22, p.y + p.h);
         }
 
-        LavaEngine.drawRockPlatform(c, p.x, p.y, p.w, 40, t);
-
-        for (const hit of p.hit) {
-            LavaEngine.drawLavaImpactPool(c, t, hit, p.y + 2, 28);
-        }
+        LavaEngine.drawCascadeShelf(c, t + index * 0.4, p);
     }
 
-    // Dib Lava Hovuzu
-    c.fillStyle = '#a32b09';
-    c.fillRect(65, 535, 790, 25);
-    c.strokeStyle = '#ff9b24';
+    // 🌋 DİB LAVA CANAVARI VƏ MAQMA DƏNİZİ (Lava Monster at the bottom receiving all cascades)
+    const monsterY = 510;
+    c.save();
+    // Qızmar Alov Dənizi
+    const poolGrad = c.createLinearGradient(0, monsterY, 0, 560);
+    poolGrad.addColorStop(0, '#f97316');
+    poolGrad.addColorStop(0.25, '#c2410c');
+    poolGrad.addColorStop(0.6, '#7c2d12');
+    poolGrad.addColorStop(1, '#450a0a');
+    c.fillStyle = poolGrad;
+    c.fillRect(0, monsterY, 920, 560 - monsterY);
+
+    // Dalğalı səth
+    c.strokeStyle = '#fde047';
+    c.lineWidth = 2.5;
     c.beginPath();
-    for (let xx = 65; xx <= 855; xx += 4) {
-        let yy = 535 + Math.sin(xx * 0.07 - t * 2) * 1.5;
-        xx === 65 ? c.moveTo(xx, yy) : c.lineTo(xx, yy);
+    for (let xx = 0; xx <= 920; xx += 6) {
+        let yy = monsterY + Math.sin(xx * 0.04 - t * 3) * 3 + Math.sin(xx * 0.08 + t * 2) * 1.5;
+        xx === 0 ? c.moveTo(xx, yy) : c.lineTo(xx, yy);
     }
     c.stroke();
+
+    // 👹 LAVA CANAVARI GÖVDƏSİ VƏ GÖZLƏRİ (Dənizdən çıxan obsidian canavar)
+    const monsX = 460;
+    const monsY = monsterY + 12;
+    // Obsidian Başı
+    c.fillStyle = '#0f172a';
+    c.strokeStyle = '#dc2626';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(monsX - 60, monsY + 30);
+    c.lineTo(monsX - 45, monsY - 10);
+    c.lineTo(monsX - 25, monsY - 30); // Sol Buynuz
+    c.lineTo(monsX - 15, monsY - 12);
+    c.lineTo(monsX, monsY - 20);      // Baş təpəsi
+    c.lineTo(monsX + 15, monsY - 12);
+    c.lineTo(monsX + 25, monsY - 30); // Sağ Buynuz
+    c.lineTo(monsX + 45, monsY - 10);
+    c.lineTo(monsX + 60, monsY + 30);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    // Qızmar Qırmızı Gözlər
+    c.fillStyle = '#ef4444';
+    c.shadowColor = '#ef4444';
+    c.shadowBlur = 12;
+    c.beginPath();
+    c.ellipse(monsX - 22, monsY - 2, 7, 3, -0.2, 0, Math.PI * 2);
+    c.ellipse(monsX + 22, monsY - 2, 7, 3, 0.2, 0, Math.PI * 2);
+    c.fill();
+    c.shadowBlur = 0;
+
+    // Dişlər
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.moveTo(monsX - 20, monsY + 14); c.lineTo(monsX - 15, monsY + 22); c.lineTo(monsX - 10, monsY + 14);
+    c.moveTo(monsX - 5, monsY + 14); c.lineTo(monsX, monsY + 23); c.lineTo(monsX + 5, monsY + 14);
+    c.moveTo(monsX + 10, monsY + 14); c.lineTo(monsX + 15, monsY + 22); c.lineTo(monsX + 20, monsY + 14);
+    c.fill();
+
+    c.restore();
     c.restore();
 }
 
