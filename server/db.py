@@ -11,14 +11,21 @@ DB_FILE = os.path.join(DATA_DIR, 'floor_escape.db')
 CODES_FILE = os.path.join(DATA_DIR, 'gift_codes.json')
 USED_TOKENS_FILE = os.path.join(DATA_DIR, 'used_tokens.json')
 
-os.makedirs(DATA_DIR, exist_ok=True)
-if not os.path.exists(CODES_FILE):
-    with open(CODES_FILE, 'w', encoding='utf-8') as f:
-        json.dump([], f)
+def ensure_data_files():
+    is_remote_env = os.environ.get('IS_REMOTE_SERVER', '0').lower() in ('1', 'true', 'yes')
+    remote_url = os.environ.get('REMOTE_SERVER_URL', 'http://132.145.76.194:8082').rstrip('/')
+    if remote_url and not is_remote_env:
+        # Lokal maşında uzaq server rejimi aktivdirsə, yerli data qovluğu/faylları yaradılmır
+        return
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if not os.path.exists(CODES_FILE):
+        with open(CODES_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+    if not os.path.exists(USED_TOKENS_FILE):
+        with open(USED_TOKENS_FILE, 'w', encoding='utf-8') as f:
+            json.dump({}, f)
 
-if not os.path.exists(USED_TOKENS_FILE):
-    with open(USED_TOKENS_FILE, 'w', encoding='utf-8') as f:
-        json.dump({}, f)
+ensure_data_files()
 
 def get_db():
     conn = sqlite3.connect(DB_FILE, timeout=15)
