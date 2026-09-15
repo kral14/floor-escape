@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>Quantum visual comparison</title>
+<style>body{margin:20px;background:#03050c;color:#dbeafe;font:14px system-ui}main{display:grid;grid-template-columns:repeat(2,420px);gap:16px}canvas{width:420px;height:360px;background:#03050c}h2{font-size:16px}</style>
+<h1>Orijinal / oyun — eyni kadr müqayisəsi</h1><p id="result">Yoxlanılır...</p><main id="panels"></main>
+<script src="js/engine/spawn-effects/original-quantum.js"></script><script src="js/engine/spawn-effects/singularity.js?v=7.2"></script>
+<script>
+const fx=window.SingularitySpawnEffect;let passed=0;
+for(const key of Object.keys(OriginalQuantumThemes)){
+ const eng=fx.getPreviewEngine(key,'validation');
+ const ref=new OriginalQuantumThemes[key](null);
+ const savedRandom=Math.random;
+ function resetSeed(){let seed=123;Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);}
+ resetSeed();ref.reset();resetSeed();eng.originalTheme.reset();Math.random=savedRandom;
+ for(let i=0;i<120;i++){ref.update(1/60);eng.originalTheme.update(1/60);}
+ const rot={rx:0.2,ry:-0.3,rz:0.1},angles={r1:0.9,r2:-0.6,r3:0.3};eng.rot3D=rot;eng.ringAngles=angles;eng.speedFactor=0.4;
+ const canvases=[];
+ for(const label of ['Orijinal','Oyun']){const box=document.createElement('section');box.innerHTML='<h2>'+key+' · '+label+'</h2>';const canvas=document.createElement('canvas');canvas.width=420;canvas.height=360;box.append(canvas);panels.append(box);canvases.push(canvas);}
+ const a=canvases[0].getContext('2d'),b=canvases[1].getContext('2d');
+ // Freeze the clock for the original and integration render of the same frame.
+ const now=performance.now()/1000;
+ a.save();a.translate(210,180);a.scale(.8,.8);ref.render(a,0,0,now,rot,.4,angles);a.restore();
+ const old=eng.originalTheme.render;eng.originalTheme.render=function(c,x,y){old.call(this,c,x,y,now,rot,.4,angles);};
+ eng.render(b,210,180,.8,null,true,1);eng.originalTheme.render=old;
+ const pa=a.getImageData(0,0,420,360).data,pb=b.getImageData(0,0,420,360).data;
+ let diff=0;for(let i=0;i<pa.length;i++)if(pa[i]!==pb[i])diff++;
+ if(!diff)passed++;canvases[1].previousSibling.textContent+=' · '+(diff?'FAIL '+diff:'PASS: pixel-identical');
+}
+result.textContent=passed+'/4 — pixel-identical';
+</script>

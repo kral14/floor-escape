@@ -5,6 +5,8 @@ class Player {
         this.x = 0;
         this.y = 0;
         this.radius = 16;
+        this.glacialSlots = Array(6).fill(true);
+        this.glacialCharge = 0;
         this.speed = getBaseSpeed(); // Qalıcı laboratoriyadan başlayır
         this.color = '#00ffcc';
         this.trailColor = 'rgba(0, 255, 204,';
@@ -52,6 +54,8 @@ class Player {
     }
 
     reset(isNewRun = true) {
+        if (window.GlacialSpawnEffect) window.GlacialSpawnEffect.resetGame();
+        if (isNewRun) { this.glacialSlots = Array(6).fill(true); this.glacialCharge = 0; }
         this.x = canvasWidth / 2;
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
         this.y = worldH - 180;
@@ -158,6 +162,7 @@ class Player {
         const speedLen = Math.hypot(dx, dy);
         const speedRatio = Math.min(1, speedLen / (currentSpeed || 1));
         const dt = 1 / 60;
+        if (permUpgrades.equippedSpawnAnim === 'glacial' && window.GlacialSpawnEffect) window.GlacialSpawnEffect.updateGame(dt, this);
         this.flapPhase = (this.flapPhase || 0) + dt * (2.5 + speedRatio * 7.0);
 
         // 🦇 DRAKULA QANADLARINDAN TÖKÜLƏN QIZILI, BƏNÖVŞƏYİ VƏ FİRUZƏYİ TOZ ZƏRRƏCİKLƏRİ:
@@ -565,6 +570,12 @@ class Player {
                 }
             }
         }
+
+        if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'glacial' && window.GlacialSpawnEffect) {
+            window.GlacialSpawnEffect.drawPlayer(ctx, this);
+        }
+
+        if (permUpgrades.equippedSpawnAnim === 'tesseract' && window.TesseractSpawnEffect) window.TesseractSpawnEffect.drawPlayer(ctx,this);
 
         // Xüsusi Kiber Dəri Modeli (Ninja Vizor, Elektrik Spikelər, Mecha Lövhələr, Alov Buynuzları, Kiber Tac)
         const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';

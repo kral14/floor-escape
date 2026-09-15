@@ -10,11 +10,31 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 DB_FILE = os.path.join(DATA_DIR, 'floor_escape.db')
 CODES_FILE = os.path.join(DATA_DIR, 'gift_codes.json')
 USED_TOKENS_FILE = os.path.join(DATA_DIR, 'used_tokens.json')
+ENV_FILE = os.path.join(BASE_DIR, '.env')
+SQL_MIGRATION_FILE = os.path.join(BASE_DIR, 'migrations', '001_init_postgres.sql')
+
+# .env faylını avtomatik oxumaq
+def load_env():
+    if os.path.exists(ENV_FILE):
+        try:
+            with open(ENV_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        k, v = line.split('=', 1)
+                        os.environ.setdefault(k.strip(), v.strip())
+        except Exception:
+            pass
+
+load_env()
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+USE_POSTGRES = DATABASE_URL.startswith('postgresql://') or DATABASE_URL.startswith('postgres://')
 
 def ensure_data_files():
     is_remote_env = os.environ.get('IS_REMOTE_SERVER', '0').lower() in ('1', 'true', 'yes')
     remote_url = os.environ.get('REMOTE_SERVER_URL', 'http://132.145.76.194:8082').rstrip('/')
-    if remote_url and not is_remote_env:
+    if remote_url and not is_remote_env and not USE_POSTGRES:
         # Lokal maşında uzaq server rejimi aktivdirsə, yerli data qovluğu/faylları yaradılmır
         return
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -32,7 +52,41 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def init_postgres():
+    """PostgreSQL cədvəllərinin olub-olmadığını yoxlayır və avtomatik miqrasiya edir"""
+    try:
+        import psycopg2
+    except ImportError:
+        print(" [*] psycopg2 modulu tapılmadı, quraşdırılır...")
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary"])
+        import psycopg2
+
+    print(" [*] PostgreSQL bazası yoxlanılır və miqrasiya icra edilir...")
+    conn = psycopg2.connect(DATABASE_URL)
+    conn.autocommit = True
+    
+    if os.path.exists(SQL_MIGRATION_FILE):
+        with open(SQL_MIGRATION_FILE, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        with conn.cursor() as cur:
+            cur.execute(sql)
+        print(" [✓] PostgreSQL cədvəlləri uğurla yoxlanıldı və yaradıldı!")
+    else:
+        print(f" [-] Miqrasiya faylı tapılmadı: {SQL_MIGRATION_FILE}")
+    conn.close()
+
 def init_db():
+    # 1. Əgər DATABASE_URL varsa, ilk öncə PostgreSQL miqrasiyasını işə sal
+    if USE_POSTGRES:
+        try:
+            init_postgres()
+            return
+        except Exception as e:
+            print(f" [!] PostgreSQL-ə qoşularkən xəta baş verdi: {e}")
+            print(" [i] Fallback: Lokal SQLite bazasına keçid edilir...")
+
+    # 2. Əks halda SQLite ilə davam et
     try:
         with get_db() as conn:
             cursor = conn.cursor()

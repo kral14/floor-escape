@@ -69,10 +69,12 @@ const SINGULARITY_VARIANTS = {
 };
 window.SINGULARITY_VARIANTS = SINGULARITY_VARIANTS;
 
-let currentSingularityVariantId = 'singularity';
+let currentSingularityVariantId = null;
 
 function getSpawnAnimsCatalog() {
     return {
+        tesseract: { id:'tesseract', name:'4D Kvant Tesseraktı', title:'Graviton Singularity Core', icon:'fa-cubes', color:'#c084fc', glowColor:'#a855f7', badge:'🔮 4D Kvant Tesseraktı', desc:'4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType:'free', cost:0 },
+        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'free', cost: 0 },
         portal: { id: 'portal', name: 'Holoqramdan Doğuluş', title: 'Holo-Portal', icon: 'fa-atom', color: '#65dfff', glowColor: '#72ddff', badge: '🌀 Holoqram Portalı', desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.', costType: 'free', cost: 0 },
         crystal: { id: 'crystal', name: 'Kristal Yarığı', title: 'Crystal Rift', icon: 'fa-gem', color: '#b899ff', glowColor: '#d9c5ff', badge: '💎 Kristal Yarığı', desc: 'İşıq çatı açılır, 3D perspektiv kristallar ayrılır, şimşək çaxır və Mons meydana çıxır.', costType: 'redDiamonds', cost: 15 },
         stellar: { id: 'stellar', name: 'Ulduz Nüvəsi', title: 'Stellar Bloom', icon: 'fa-sun', color: '#54d8cf', glowColor: '#f8d49a', badge: '🌟 Ulduz Nüvəsi', desc: 'Enerji toplanır, 3D axın lentləri fəzanı yarır, ulduz nüvəsi açılır və Mons doğulur.', costType: 'redDiamonds', cost: 25 },
@@ -560,7 +562,10 @@ function startSkinStageAnimation() {
         // Bütün 9 kartı birdən hər freymdə çəkmək CPU-nu dondurur.
         // YALNIZ kursor üzərində olan (hover) VƏ YA seçilmiş tək kart 30 FPS ilə canlanır!
         if (currentSkinSubTab === 'anims') {
-            const activeCardId = hoveredSpawnAnimCardId || currentPreviewSpawnAnimId;
+            const requestedCardId = hoveredSpawnAnimCardId || currentPreviewSpawnAnimId;
+            const isQuantumCard = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(requestedCardId);
+            const activeCardId = isQuantumCard ? 'singularity' : requestedCardId;
+            const activeEffectId = isQuantumCard ? (currentSingularityVariantId || 'singularity') : activeCardId;
             const nowSec = performance.now() / 1000;
 
             if (activeCardId && (nowSec - lastMiniCardRenderTime >= 0.033)) {
@@ -573,7 +578,7 @@ function startSkinStageAnimation() {
                         const ch = cardCanvas.height;
                         cctx.clearRect(0, 0, cw, ch);
 
-                        const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(activeCardId) : null;
+                        const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(activeEffectId) : null;
                         if (fxModule) {
                             cctx.fillStyle = '#060715';
                             cctx.fillRect(0, 0, cw, ch);
@@ -588,7 +593,7 @@ function startSkinStageAnimation() {
                                 }
                             };
 
-                            fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster, false, activeCardId);
+                            fxModule.draw(cctx, cw, ch, miniT, drawMiniMonster, false, activeEffectId);
                         }
                     }
                 }
@@ -906,6 +911,11 @@ function renderSpawnAnimsShop() {
                     <div class="absolute bottom-1 right-1 text-[6px] font-mono text-slate-400 bg-slate-950/80 px-1 py-0.5 rounded border border-slate-800 pointer-events-none">FX</div>
                 </div>
 
+                ${anim.id === 'glacial' ? `<div class="w-full p-2 rounded-lg bg-sky-950/50 text-xs text-cyan-100" onclick="event.stopPropagation()">
+                    <p>Başlanğıc: 6 buz mərmisi · E ilə atış</p>
+                    <p>Hərəkətlə dolan tutum: ${getGlacialReloadLevel()}/6</p>
+                    <button type="button" class="mt-2 p-2 rounded bg-sky-700 hover:bg-sky-600" onclick="buyGlacialReload()" ${getGlacialReloadLevel()>=6?'disabled':''}>${getGlacialReloadLevel()>=6?'Tam təkmilləşib':`Doldurma +1 · ${GLACIAL_RELOAD_PRICES[getGlacialReloadLevel()]} Fancy`}</button>
+                </div>` : ''}
                 ${multiVariantControls}
 
                 <div class="mb-1 w-full pointer-events-none">
@@ -1244,6 +1254,9 @@ window.closeSpawnAnimFullscreenPreview = closeSpawnAnimFullscreenPreview;
 function replayFullscreenAnim() {
     if (fullscreenAnimInstance) {
         fullscreenAnimInstance.time = 0;
+        if (window.SingularitySpawnEffect && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(fullscreenAnimInstance.animId)) {
+            window.SingularitySpawnEffect.getPreviewEngine(fullscreenAnimInstance.animId).reset();
+        }
         const fxModule = (typeof SpawnEffectRegistry !== 'undefined') ? SpawnEffectRegistry.get(fullscreenAnimInstance.animId) : null;
         if (fxModule && typeof fxModule.resetFlight === 'function') {
             fxModule.resetFlight();
@@ -1284,7 +1297,7 @@ function startFullscreenAnim(animId) {
     // İstifadəçinin orijinal interaktiv W/A/S/D və [E] idarəetməsi
     const keys = {};
     if (isQuantum && window.SingularitySpawnEffect) {
-        const eng = window.SingularitySpawnEffect.getActiveEngine(animId);
+        const eng = window.SingularitySpawnEffect.getPreviewEngine(animId);
         eng.reset();
 
         let isDragging = false;
@@ -1295,17 +1308,15 @@ function startFullscreenAnim(animId) {
             if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
                 keys[e.code] = true;
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                eng.originalTheme.triggerBurst();
             } else if (e.code === 'KeyE') {
                 e.preventDefault();
                 const cw = canvas.width;
                 const ch = canvas.height;
-                const fired = eng.stellarSystem.launchStarFromOrbit(cw / 2 + eng.x, ch / 2 + eng.y, eng.rot3D, eng.orbitParticles, animId, false);
-                if (fired && typeof permUpgrades !== 'undefined') {
-                    permUpgrades.cyberStars = eng.orbitParticles.length;
-                    if (typeof savePermanentData === 'function') savePermanentData();
-                    if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD();
-                    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
-                } else if (!fired && typeof showToast === 'function') {
+                const fired = eng.stellarSystem.launchStarFromOrbit(cw / 2 + eng.x, ch / 2 + eng.y, eng.rot3D, eng.orbitParticles, animId, false, Math.min(1, cw / 520, ch / 520));
+                if (!fired && typeof showToast === 'function') {
                     showToast('⚡ Kiber Hissəciklər tükəndi (0/100)! Animasiyada atmağa hissəcik yoxdur.', 'warning');
                 }
             }
@@ -1372,6 +1383,19 @@ function startFullscreenAnim(animId) {
         };
     }
 
+    if (['glacial','tesseract'].includes(animId)) {
+        const module = animId === 'glacial' ? window.GlacialSpawnEffect : window.TesseractSpawnEffect;
+        const engine = module.getEngine('fullscreen');
+        engine.restartIntro();
+        const keydown = e => {
+            if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+                e.preventDefault(); engine.keys[e.code] = true;
+            } else if (e.code === 'KeyE') { e.preventDefault(); if(animId==='glacial')engine.javelinSystem.launchIceBullet();else engine.singularitySystem.launchGraviton(); }
+        };
+        const keyup = e => { engine.keys[e.code] = false; };
+        window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup);
+        fsInteractiveHandlers = {keydown, keyup};
+    }
     let lastTime = performance.now();
 
     function renderLoop() {
@@ -1385,7 +1409,7 @@ function startFullscreenAnim(animId) {
         lastTime = now;
 
         fullscreenAnimInstance.time += dt;
-        if (fullscreenAnimInstance.time > fullscreenAnimInstance.duration) {
+        if (!isQuantum && !['glacial','tesseract'].includes(animId) && fullscreenAnimInstance.time > fullscreenAnimInstance.duration) {
             fullscreenAnimInstance.time = 0; // Dövr edir
         }
 
@@ -1399,7 +1423,7 @@ function startFullscreenAnim(animId) {
 
         // İnteraktiv idarəetmə ilə 3D uçuş
         if (isQuantum && window.SingularitySpawnEffect) {
-            const eng = window.SingularitySpawnEffect.getActiveEngine(animId);
+            const eng = window.SingularitySpawnEffect.getPreviewEngine(animId);
             let dx = 0, dy = 0;
             if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
             if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
@@ -1420,14 +1444,21 @@ function startFullscreenAnim(animId) {
             eng.timeline = fullscreenAnimInstance.time;
             eng.step(dt, eng.vx, eng.vy, false);
 
-            const scale = Math.min(w / 720, h / 510) * 0.78;
+            const scale = Math.min(1, w / 520, h / 520);
             const drawMonster = (mctx, mt) => {
                 if (typeof drawSkinModel === 'function') {
                     drawSkinModel(mctx, 0, 0, 28, fullscreenAnimInstance.skinId, 0, mt * 3, false);
                 }
             };
 
-            eng.render(ctx, w / 2 + eng.x, h / 2 + eng.y, scale, drawMonster, false);
+            eng.render(ctx, w / 2 + eng.x, h / 2 + eng.y, scale, drawMonster, false, 1);
+        } else if (['glacial','tesseract'].includes(animId)) {
+            const module = animId === 'glacial' ? window.GlacialSpawnEffect : window.TesseractSpawnEffect;
+            module.draw(ctx,w,h,fullscreenAnimInstance.time,(c,t,alpha)=>{
+                c.save(); c.globalAlpha *= alpha;
+                if (typeof drawSkinModel === 'function') drawSkinModel(c,0,0,28,fullscreenAnimInstance.skinId,0,t,false);
+                c.restore();
+            },false,'fullscreen');
         } else if (fxModule && typeof fxModule.draw === 'function') {
             const drawMonster = (mctx, mt) => {
                 if (typeof drawSkinModel === 'function') {

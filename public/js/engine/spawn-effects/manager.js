@@ -145,7 +145,7 @@ class MonsSpawnEffect {
         this.targetY = (targetY !== undefined) ? targetY : y;
         this.skinId = skinId;
         this.skin = (typeof SKINS !== 'undefined' && SKINS[skinId]) ? SKINS[skinId] : null;
-        let selectedType = ['singularity', 'supernova', 'synapse', 'abyssal', 'crystal', 'stellar', 'dracula', 'seed'].includes(animType) ? animType : 'singularity';
+        let selectedType = ['singularity', 'supernova', 'synapse', 'abyssal', 'crystal', 'stellar', 'dracula', 'seed', 'glacial', 'tesseract'].includes(animType) ? animType : 'singularity';
         if (!selectedType || selectedType === 'portal') selectedType = 'singularity';
         this.animType = selectedType;
         this.mode = mode || 'in';
@@ -172,7 +172,7 @@ class MonsSpawnEffect {
         }
         this.maxAnimTime = (fxModule && fxModule.duration) ? fxModule.duration : 7.0;
         // 🌀 Tam ardıcıl sıfırdan doğuluş animasiyası (İstifadəçinin tam kodu: 5.6s tam onlayn)
-        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : 5.6);
+        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : (['glacial','tesseract'].includes(this.animType) ? 6.8 : 5.6));
         this.finished = false;
         this.scale = 0.56; // İKİNCİ ŞƏKİLDƏKİ REAL OYUNÇU ÖLÇÜSÜ
         this._burstPlayed = false;
@@ -304,6 +304,10 @@ if (resolvedEffects && singModule) {
         SpawnEffectRegistry.register(id, resolvedEffects[id]);
     });
 }
+
+if (typeof GlacialSpawnEffect !== 'undefined') SpawnEffectRegistry.register('glacial', GlacialSpawnEffect);
+
+if (typeof TesseractSpawnEffect !== 'undefined') SpawnEffectRegistry.register('tesseract', TesseractSpawnEffect);
 
 // Qlobal reyestr
 if (typeof window !== 'undefined') {

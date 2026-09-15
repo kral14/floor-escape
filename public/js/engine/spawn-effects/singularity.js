@@ -353,14 +353,16 @@
             }
 
             // Animasiyanın içindəki fırlanan real hissəciklərdən biri qoparılır və atılır
-            const idx = Math.floor(Math.random() * orbitParticles.length);
+            const available = orbitParticles.map((p, i) => p.burst ? -1 : i).filter(i => i >= 0);
+            if (!available.length) return false;
+            const idx = available[Math.floor(Math.random() * available.length)];
             const [p] = orbitParticles.splice(idx, 1);
 
             // Həmin hissəciyin fəzadakı dəqiq anlıq 3D koordinatı hesablanır
-            const lx = Math.cos(p.angle) * p.radius;
-            const ly = Math.sin(p.angle) * (p.radius * 0.42);
+            const lx = themeKey === 'singularity' ? Math.cos(p.angle) * p.radius : (themeKey === 'supernova' ? Math.cos(p.angle) * p.distance : p.x);
+            const ly = themeKey === 'singularity' ? Math.sin(p.angle) * p.radius * 0.42 : (themeKey === 'supernova' ? Math.sin(p.angle) * p.distance : p.y);
             const lz = p.z || 0;
-            const proj = Math3D.project(lx, ly, lz, rot3D.rx, rot3D.ry, rot3D.rz);
+            const proj = window.OriginalQuantumMath3D.project(lx, ly, lz, rot3D.rx, rot3D.ry, rot3D.rz);
             const origin = { x: cx + proj.x * scale, y: cy + proj.y * scale };
 
             const pal = THEME_PALETTES[themeKey] || THEME_PALETTES.singularity;
@@ -662,7 +664,9 @@
             this.duration = 7.0;
             this.currentPhase = 1;
 
-            this.orbitParticles = [];
+            this.originalTheme = new window.OriginalQuantumThemes[themeKey](null);
+            this.originalTheme.reset();
+            this.particleKey = {singularity: 'particles', supernova: 'sparks', synapse: 'nodes', abyssal: 'spores'}[themeKey];
             this.maxOrbitParticles = 100; // İstifadəçi tələbi: Maksimum 100 hissəcik saxlaya bilər
             this.stellarSystem = new StellarDropSystem();
 
@@ -679,26 +683,12 @@
             this.syncWithStarCount(initialCount);
         }
 
+        get orbitParticles() { return this.originalTheme[this.particleKey]; }
+
         syncWithStarCount(targetCount) {
-            const count = Math.max(0, Math.min(this.maxOrbitParticles, targetCount));
-            if (this.orbitParticles.length > count) {
-                // Artıq olan hissəcikləri kəsirik ki, ulduz sayına DƏQİQ bərabər olsun
-                this.orbitParticles.length = count;
-            } else if (this.orbitParticles.length < count) {
-                const diff = count - this.orbitParticles.length;
-                for (let i = 0; i < diff; i++) {
-                    const r = MathUtils.randomRange(52, 175);
-                    this.orbitParticles.push({
-                        radius: r,
-                        angle: Math.random() * Math.PI * 2,
-                        speed: (1.5 / Math.sqrt(r)) * 14 * (Math.random() > 0.08 ? 1 : -1),
-                        size: MathUtils.randomRange(2.0, 4.0),
-                        z: MathUtils.randomRange(-16, 16),
-                        hue: this.themeKey === 'supernova' ? MathUtils.randomRange(35, 55) : (this.themeKey === 'synapse' ? MathUtils.randomRange(270, 295) : (this.themeKey === 'abyssal' ? MathUtils.randomRange(160, 180) : MathUtils.randomRange(175, 205))),
-                        alpha: MathUtils.randomRange(0.4, 0.95)
-                    });
-                }
-            }
+            // Visual density belongs to the original animation; ammunition is game inventory.
+            this.ammoCount = Math.max(0, Math.min(100, targetCount));
+            if (this.ammoCount > 0 && this.originalTheme.getParticleCount() === 0) this.originalTheme.reset();
         }
 
         populateOrbitParticles(count = 100) {
@@ -712,6 +702,7 @@
             this.speedFactor = 0;
             this.ringAngles = { r1: 0, r2: 0, r3: 0 };
             this.stellarSystem.reset();
+            this.originalTheme.reset();
             this.x = 0;
             this.y = 0;
             this.vx = 0;
@@ -744,20 +735,7 @@
                 }
             }
 
-            // Oyunda animasiyadakı hissəciklərin sayı real ulduz sayına DƏQİQ bərabər saxlanılır (Maks 100)
-            if (isIngame && typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') {
-                const targetStars = Math.max(0, Math.min(this.maxOrbitParticles, permUpgrades.cyberStars));
-                if (this.orbitParticles.length !== targetStars) {
-                    this.syncWithStarCount(targetStars);
-                }
-            } else if (!isIngame && this.timeline >= 1.6 && this.timeline < 5.6 && this.orbitParticles.length < this.maxOrbitParticles) {
-                this.syncWithStarCount(Math.min(this.maxOrbitParticles, this.orbitParticles.length + 2));
-            }
-
-            // Orbit hissəciklərinin fırlanması
-            for (const p of this.orbitParticles) {
-                p.angle += p.speed * dt;
-            }
+            this.originalTheme.update(dt);
 
             // Dinamik sürət / Meyl idarəetməsi
             if (customVx !== null && customVy !== null) {
@@ -802,9 +780,9 @@
             // 1. PHASE 01: Microscopic Initial Spark Birth (t < 1.8s)
             if (!isIngame && forcedAssemblyRatio === null && this.timeline < 1.8) {
                 const sparkFade = 1.0 - MathUtils.smooth(1.4, 1.8, this.timeline);
-                ctx.globalAlpha *= sparkFade;
                 const pulse = (Math.sin(nowSec * 16) * 0.5 + 0.5) * 6;
                 ctx.save();
+                ctx.globalAlpha *= sparkFade;
                 ctx.shadowColor = pal.glow;
                 ctx.shadowBlur = 18;
                 ctx.fillStyle = '#f0fdfa';
@@ -814,53 +792,12 @@
                 ctx.restore();
             }
 
-            // 2. Ambient Cyber Singularity Glow
-            const ringAssembleRatio = (forcedAssemblyRatio !== null) 
-                ? forcedAssemblyRatio 
-                : (isIngame ? 1.0 : MathUtils.smooth(3.6, 5.6, this.timeline));
-
-            if (isIngame || forcedAssemblyRatio !== null || this.timeline >= 1.6) {
-                const glowAlpha = (forcedAssemblyRatio !== null || isIngame)
-                    ? (0.28 + this.speedFactor * 0.2)
-                    : MathUtils.smooth(1.6, 3.6, this.timeline) * (0.24 + this.speedFactor * 0.2);
-
-                const glowRadius = 220 + this.speedFactor * 45;
-                const bgGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, glowRadius);
-                bgGrad.addColorStop(0, `rgba(6, 182, 212, ${glowAlpha})`);
-                bgGrad.addColorStop(0.5, `rgba(14, 165, 233, ${glowAlpha * 0.4})`);
-                bgGrad.addColorStop(1, 'transparent');
-                ctx.fillStyle = bgGrad;
-                ctx.fillRect(-glowRadius, -glowRadius, glowRadius * 2, glowRadius * 2);
-            }
-
-            // 3. Render 3D Celestial Rings & The Hollow Central Bezel
-            CyberRingRenderer.renderSystem(ctx, nowSec, this.rot3D, this.speedFactor, this.ringAngles, ringAssembleRatio, this.themeKey);
-
-            // 4. 3D Depth Sorted Particles (Acquires true orbit around the bezel)
-            const orbitReveal = (isIngame || forcedAssemblyRatio !== null) ? 1 : MathUtils.smooth(1.6, 3.6, this.timeline);
-            if (this.orbitParticles.length > 0 && orbitReveal > 0) {
-                const sorted = [];
-                for (const p of this.orbitParticles) {
-                    const lx = Math.cos(p.angle) * p.radius;
-                    const ly = Math.sin(p.angle) * (p.radius * 0.42);
-                    const lz = p.z || 0;
-                    const proj = Math3D.project(lx, ly, lz, this.rot3D.rx, this.rot3D.ry, this.rot3D.rz);
-                    sorted.push({ p, proj });
-                }
-                sorted.sort((a, b) => a.proj.z - b.proj.z);
-
-                for (const item of sorted) {
-                    const { p, proj } = item;
-                    const depthRatio = Math.max(0.3, Math.min(1.4, proj.k));
-                    ctx.save();
-                    ctx.fillStyle = `hsla(${p.hue}, 95%, 68%, ${p.alpha * depthRatio * orbitReveal})`;
-                    ctx.shadowColor = pal.glow;
-                    ctx.shadowBlur = 6 * depthRatio;
-                    ctx.beginPath();
-                    ctx.arc(proj.x, proj.y, Math.max(0.6, p.size * depthRatio), 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
+            const reveal = (isIngame || forcedAssemblyRatio !== null) ? 1 : MathUtils.smooth(1.6, 5.6, this.timeline);
+            if (reveal > 0) {
+                ctx.save();
+                ctx.scale(reveal, reveal);
+                this.originalTheme.render(ctx, 0, 0, nowSec, this.rot3D, this.speedFactor, this.ringAngles);
+                ctx.restore();
             }
 
             // 5. MONS CHARACTER EMBEDDED DIRECTLY IN THE HOLLOW RING
@@ -899,6 +836,8 @@
         abyssal:     new SingularitySimulationEngine('abyssal')
     };
 
+    const previewEngines = {};
+
     /* 7. Əsas İnteqrasiya İnterfeysi */
     const SingularitySpawnEffect = {
         id: 'singularity',
@@ -915,22 +854,22 @@
         themes: {
             singularity: {
                 triggerBurst: () => {
-                    if (engines.singularity) engines.singularity.speedFactor = 1.0;
+                    if (engines.singularity) engines.singularity.originalTheme.triggerBurst();
                 }
             },
             supernova: {
                 triggerBurst: () => {
-                    if (engines.supernova) engines.supernova.speedFactor = 1.0;
+                    if (engines.supernova) engines.supernova.originalTheme.triggerBurst();
                 }
             },
             synapse: {
                 triggerBurst: () => {
-                    if (engines.synapse) engines.synapse.speedFactor = 1.0;
+                    if (engines.synapse) engines.synapse.originalTheme.triggerBurst();
                 }
             },
             abyssal: {
                 triggerBurst: () => {
-                    if (engines.abyssal) engines.abyssal.speedFactor = 1.0;
+                    if (engines.abyssal) engines.abyssal.originalTheme.triggerBurst();
                 }
             }
         },
@@ -939,6 +878,13 @@
             if (engines[key]) {
                 this.currentTheme = key;
             }
+        },
+
+        getPreviewEngine(key = 'singularity', surface = 'fullscreen') {
+            const theme = engines[key] ? key : 'singularity';
+            const id = surface + ':' + theme;
+            if (!previewEngines[id]) previewEngines[id] = new SingularitySimulationEngine(theme);
+            return previewEngines[id];
         },
 
         getActiveEngine(key = null) {
@@ -990,7 +936,7 @@
             if (fired) {
                 // Atdıqca hissəciklər real olaraq azalır və ulduz sayı qalan hissəcik sayına bərabər olur
                 if (typeof permUpgrades !== 'undefined') {
-                    permUpgrades.cyberStars = eng.orbitParticles.length;
+                    permUpgrades.cyberStars = Math.max(0, curStars - 1);
                     if (typeof savePermanentData === 'function') savePermanentData();
                     if (typeof updateCyberStarsHUD === 'function') updateCyberStarsHUD();
                 }
@@ -1035,9 +981,12 @@
         // Mağaza mini kartı və vitrin üçün xüsusi render funksiyası
         draw(ctx, w, h, t, drawMonster, isIngame = false, explicitTheme = 'singularity') {
             const themeKey = explicitTheme || 'singularity';
-            const eng = this.getActiveEngine(themeKey);
+            const eng = this.getPreviewEngine(themeKey, w <= 200 && h <= 200 ? 'card' : 'stage');
+            const now = performance.now() / 1000;
+            const dt = eng.lastDrawAt === undefined ? 0 : Math.max(0, Math.min(0.05, now - eng.lastDrawAt));
+            eng.lastDrawAt = now;
             eng.timeline = t;
-            eng.step(0.016, null, null, isIngame);
+            eng.step(dt, null, null, isIngame);
 
             // Mini kart üçün (160x160) xüsusi optimallaşdırılmış miqyas
             let scale;

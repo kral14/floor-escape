@@ -122,6 +122,8 @@ if (typeof window !== 'undefined') {
 // 🌀 GİRİŞ VƏ DOĞULUŞ ANİMASİYALARI KATALOQU (SPAWN ANIMATIONS / INTRO FX)
 // İstifadəçinin verdiyi 3 xüsusi doğuluş animasiyası
 const SPAWN_ANIMS = {
+        tesseract: { id:'tesseract', name:'4D Kvant Tesseraktı', title:'Graviton Singularity Core', icon:'fa-cubes', color:'#c084fc', glowColor:'#a855f7', badge:'🔮 4D Kvant Tesseraktı', desc:'4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType:'free', cost:0 },
+        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'free', cost: 0 },
     portal: {
         id: 'portal',
         name: 'Holoqramdan Doğuluş',
@@ -254,6 +256,7 @@ const DEFAULT_PERM_UPGRADES = {
     ownedSkins: ['default'], // Sahib olunan dərilər
     equippedSpawnAnim: 'singularity', // 🌀 YENİ ƏSAS DOĞULUŞ ANİMASİYASI (Kvant Laboratoriyası FX)
     ownedSpawnAnims: ['singularity', 'supernova', 'synapse', 'abyssal', 'portal'], // Sahib olunan animasiyalar
+    glacialReloadLvl: 0,
     seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
     hasTwinTurrets: false,
@@ -549,6 +552,8 @@ function saveActiveRun() {
         playerY: typeof player !== 'undefined' && player ? player.y : null,
         playerHasShield: typeof player !== 'undefined' && player ? !!player.hasShield : false,
         playerHasHyperJump: typeof player !== 'undefined' && player ? !!player.hasHyperJump : false,
+        playerGlacialSlots: player.glacialSlots,
+        playerGlacialCharge: player.glacialCharge || 0,
         playerLifeFlowers: typeof player !== 'undefined' && player ? (player.lifeFlowers || 0) : 0,
         playerMaxLifeFlowers: typeof player !== 'undefined' && player ? (player.maxLifeFlowers || 1) : 1,
         playerLifeFlowerState: typeof player !== 'undefined' && player ? (player.lifeFlowerState || 'none') : 'none',
@@ -636,6 +641,10 @@ function loadActiveRun() {
                     monster.y = player.y + 240;
                 }
                 gameState.dashInvulnerable = 90; // Yüklənərkən 1.5s təhlükəsizlik
+                if (Array.isArray(saved.playerGlacialSlots) && saved.playerGlacialSlots.length === 6) {
+                    player.glacialSlots = saved.playerGlacialSlots.map(Boolean);
+                    player.glacialCharge = Math.max(0, Math.min(1, Number(saved.playerGlacialCharge) || 0));
+                }
                 player.hasShield = !!saved.playerHasShield;
                 player.hasHyperJump = !!saved.playerHasHyperJump;
                 if (permUpgrades.equippedSpawnAnim === 'seed' && saved.playerLifeFlowers !== undefined) {
@@ -683,3 +692,21 @@ function loadActiveRun() {
 function clearActiveRun() {
     localStorage.removeItem('floor_escape_active_run');
 }
+
+const GLACIAL_RELOAD_PRICES = [100, 150, 225, 325, 450, 600];
+function getGlacialReloadLevel() { return Math.max(0, Math.min(6, Math.floor(Number(permUpgrades.glacialReloadLvl) || 0))); }
+function buyGlacialReload() {
+    const level = getGlacialReloadLevel();
+    if (level >= 6) return false;
+    const price = GLACIAL_RELOAD_PRICES[level];
+    if (redDiamonds < price) { if (typeof showToast === 'function') showToast('Kifayət qədər Fancy almaz yoxdur!', 'warning'); return false; }
+    redDiamonds -= price;
+    permUpgrades.glacialReloadLvl = level + 1;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    return true;
+}
+window.buyGlacialReload = buyGlacialReload;
+window.getGlacialReloadLevel = getGlacialReloadLevel;

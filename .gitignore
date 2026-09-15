@@ -15,3 +15,6 @@ baxis_tarixce.bat
 # Lokal verilənlər bazaları
 *.db
 database.db
+
+# Ətraf mühit dəyişənləri və açarlar
+.env
