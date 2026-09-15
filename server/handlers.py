@@ -1,7 +1,10 @@
+import os
 import json
 import random
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from server.db import (
     get_db, hash_pin, generate_player_id,

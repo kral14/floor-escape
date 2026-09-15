@@ -82,7 +82,12 @@
         radius: 16,
         vx: 0,
         vy: 0,
-        speed: 260
+        speed: 280,
+        health: 100,
+        maxHealth: 100,
+        invulnerableTime: 0,
+        hitFlash: 0,
+        reachedFinish: false
     };
     let keys = {};
 
@@ -437,33 +442,35 @@
                 }
             }
 
-            // 🎯 Havada Sonlanma Tutacağı (Mid-Air Termination Gizmo)
-            if (p.midAirTermination) {
+            // 🎯 Havada Sonlanma Tutacağı (Mid-Air Termination Gizmo - yalnız redaktor rejimində)
+            if (p.midAirTermination && !isTestMode) {
                 const mat = p.midAirTermination;
                 const isSelectedLava = (selectedType === 'lava' && selectedIndex === mat.sourceIndex);
 
                 ctx.save();
                 ctx.shadowColor = '#ff3b00';
-                ctx.shadowBlur = 16;
-                ctx.fillStyle = isSelectedLava ? '#ff3b00' : 'rgba(239, 68, 68, 0.85)';
+                ctx.shadowBlur = isSelectedLava ? 12 : 6;
+                ctx.fillStyle = isSelectedLava ? '#ff3b00' : 'rgba(239, 68, 68, 0.8)';
                 ctx.beginPath();
-                ctx.arc(mat.x + mat.w * 0.5, mat.y + 6, 12, 0, Math.PI * 2);
+                ctx.arc(mat.x + mat.w * 0.5, mat.y + 6, 9, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 11px sans-serif';
+                ctx.font = 'bold 9px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('↕', mat.x + mat.w * 0.5, mat.y + 6);
 
                 // Yanındakı zərif etiket
-                ctx.fillStyle = '#ff9999';
-                ctx.font = 'bold 10px Orbitron, monospace';
-                ctx.fillText(`🛑 SONLANMA (Y:${Math.round(mat.y)})`, mat.x + mat.w * 0.5, mat.y - 12);
+                if (isSelectedLava) {
+                    ctx.fillStyle = '#ff9999';
+                    ctx.font = 'bold 10px Orbitron, monospace';
+                    ctx.fillText(`🛑 SONLANMA (Y:${Math.round(mat.y)})`, mat.x + mat.w * 0.5, mat.y - 12);
+                }
                 ctx.restore();
             }
         }
@@ -727,8 +734,20 @@
         ctx.restore();
     }
 
-    // 8. SINAQ OYUNÇUSU
+    // 8. SINAQ OYUNÇUSU (CANLI FİZİKA VƏ KAMERA)
     function updateTestPlayerPhysics(dt) {
+        // [R] basıldıqda yenidən başlanğıca qayıt
+        if (keys['KeyR']) {
+            testPlayer.x = 400;
+            testPlayer.y = 1600;
+            testPlayer.health = 100;
+            testPlayer.invulnerableTime = 0.5;
+            testPlayer.reachedFinish = false;
+            const targetScroll = Math.max(0, 1600 - canvasWrapper.clientHeight * 0.7);
+            canvasWrapper.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            return;
+        }
+
         const speed = testPlayer.speed;
         let dx = 0;
         let dy = 0;
@@ -752,25 +771,130 @@
 
         // Qayalarla toqquşma (itələmə)
         const pr = testPlayer.radius;
-        for (const rock of currentTrack.rocks) {
-            const closestX = Math.max(rock.x, Math.min(testPlayer.x, rock.x + rock.w));
-            const closestY = Math.max(rock.y, Math.min(testPlayer.y, rock.y + rock.h));
-            const distSq = (testPlayer.x - closestX) ** 2 + (testPlayer.y - closestY) ** 2;
+        if (currentTrack && currentTrack.rocks) {
+            for (const rock of currentTrack.rocks) {
+                const closestX = Math.max(rock.x, Math.min(testPlayer.x, rock.x + rock.w));
+                const closestY = Math.max(rock.y, Math.min(testPlayer.y, rock.y + rock.h));
+                const distSq = (testPlayer.x - closestX) ** 2 + (testPlayer.y - closestY) ** 2;
 
-            if (distSq < pr * pr && distSq > 0.001) {
-                const dist = Math.sqrt(distSq);
-                const overlap = pr - dist;
-                testPlayer.x += ((testPlayer.x - closestX) / dist) * overlap;
-                testPlayer.y += ((testPlayer.y - closestY) / dist) * overlap;
+                if (distSq < pr * pr && distSq > 0.001) {
+                    const dist = Math.sqrt(distSq);
+                    const overlap = pr - dist;
+                    testPlayer.x += ((testPlayer.x - closestX) / dist) * overlap;
+                    testPlayer.y += ((testPlayer.y - closestY) / dist) * overlap;
+                }
             }
+        }
+
+        // 🎥 Kamera İzləməsi (Avtomatik və hamar skroll)
+        const idealScroll = testPlayer.y - canvasWrapper.clientHeight * 0.55;
+        const scrollDiff = idealScroll - canvasWrapper.scrollTop;
+        if (Math.abs(scrollDiff) > 5) {
+            canvasWrapper.scrollTop += scrollDiff * 0.12;
+        }
+
+        // Taymerlər
+        if (testPlayer.invulnerableTime > 0) testPlayer.invulnerableTime -= dt;
+        if (testPlayer.hitFlash > 0) testPlayer.hitFlash -= dt;
+
+        // 🔥 Lava Kaskad Axınları ilə Toqquşma Yoxlanışı
+        if (testPlayer.invulnerableTime <= 0 && currentTrack && currentTrack.lavaSources) {
+            const cascadePaths = traceCascadePaths(currentTrack.lavaSources, currentTrack.rocks, 1750);
+            let hitLava = false;
+
+            for (const p of cascadePaths) {
+                for (const f of p.falls) {
+                    // Fall düzbucaqlısı
+                    if (testPlayer.x + pr * 0.7 > f.x && testPlayer.x - pr * 0.7 < f.x + f.w &&
+                        testPlayer.y + pr * 0.7 > f.y && testPlayer.y - pr * 0.7 < f.y + f.h) {
+                        hitLava = true;
+                        break;
+                    }
+                }
+                if (hitLava) break;
+                for (const sh of p.shelves) {
+                    if (testPlayer.x + pr * 0.7 > sh.x && testPlayer.x - pr * 0.7 < sh.x + sh.w &&
+                        testPlayer.y + pr * 0.7 > sh.y && testPlayer.y - pr * 0.7 < sh.y + sh.h) {
+                        hitLava = true;
+                        break;
+                    }
+                }
+                if (hitLava) break;
+            }
+
+            if (hitLava) {
+                testPlayer.health -= 35;
+                testPlayer.invulnerableTime = 0.9;
+                testPlayer.hitFlash = 0.4;
+
+                if (testPlayer.health <= 0) {
+                    showToast(`💀 Lavaya düşdünüz! Canınız tükəndi. Başlanğıca qaytarılırsınız.`, 'warning');
+                    testPlayer.x = 400;
+                    testPlayer.y = 1600;
+                    testPlayer.health = 100;
+                    testPlayer.invulnerableTime = 1.0;
+                    const targetScroll = Math.max(0, 1600 - canvasWrapper.clientHeight * 0.7);
+                    canvasWrapper.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                } else {
+                    showToast(`⚠️ Lava Zədəsi! Can: ${testPlayer.health}%`, 'warning');
+                }
+            }
+        }
+
+        // 🏆 Zirvəyə (Qələbə Portalına) Çatmaq
+        if (testPlayer.y <= 180 && !testPlayer.reachedFinish) {
+            testPlayer.reachedFinish = true;
+            showToast(`🎉 TƏBRİKLƏR! Yol ${currentTrack ? currentTrack.id : 1} sınaqdan uğurla keçdi! "Oyunda Sınaqdan Keçir" ilə canlı rejimdə yoxlaya bilərsiniz.`, 'success');
         }
     }
 
-    function drawTestPlayerVisual() {
+    // Zirvə Portalı (Çıxış Qapısı)
+    function drawFinishPortalVisual() {
+        const portalY = 120;
+        const portalX = 400;
         ctx.save();
-        ctx.shadowColor = '#00ffcc';
-        ctx.shadowBlur = 15;
-        ctx.fillStyle = '#00ffcc';
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = 25;
+        
+        // Fırlanan xarici halqa
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(portalX, portalY, 60, 24, animTime * 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Daxili parlaqlıq
+        const grad = ctx.createRadialGradient(portalX, portalY, 5, portalX, portalY, 50);
+        grad.addColorStop(0, 'rgba(52, 211, 153, 0.8)');
+        grad.addColorStop(0.6, 'rgba(16, 185, 129, 0.3)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(portalX, portalY, 50, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = 'bold 13px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🏆 ÇIXIŞ / QƏLƏBƏ ZONASI', portalX, portalY - 32);
+        ctx.restore();
+    }
+
+    function drawTestPlayerVisual() {
+        // Həmişə zirvə portalını da göstər
+        drawFinishPortalVisual();
+
+        ctx.save();
+        const isHit = testPlayer.hitFlash > 0;
+        const isInvul = testPlayer.invulnerableTime > 0 && Math.floor(animTime * 15) % 2 === 0;
+
+        if (isInvul) {
+            ctx.globalAlpha = 0.5;
+        }
+
+        ctx.shadowColor = isHit ? '#ef4444' : '#00ffcc';
+        ctx.shadowBlur = isHit ? 25 : 16;
+        ctx.fillStyle = isHit ? '#ef4444' : '#00ffcc';
         ctx.beginPath();
         ctx.arc(testPlayer.x, testPlayer.y, testPlayer.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -786,6 +910,47 @@
         ctx.arc(testPlayer.x - 4, testPlayer.y - 2, 2.5, 0, Math.PI * 2);
         ctx.arc(testPlayer.x + 4, testPlayer.y - 2, 2.5, 0, Math.PI * 2);
         ctx.fill();
+
+        // Başın üstündə Can (HP) Barı
+        const barW = 44;
+        const barH = 6;
+        const barX = testPlayer.x - barW * 0.5;
+        const barY = testPlayer.y - 28;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+        const hpRatio = Math.max(0, testPlayer.health / testPlayer.maxHealth);
+        ctx.fillStyle = hpRatio > 0.5 ? '#10b981' : (hpRatio > 0.25 ? '#f59e0b' : '#ef4444');
+        ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+        // Can yazısı və Ad
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 9px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`SƏN (${testPlayer.health}%)`, testPlayer.x, barY - 5);
+
+        ctx.restore();
+
+        // Kətan üzərində Sınaq Məlumat Lövhəsi (HUD)
+        ctx.save();
+        const hudY = canvasWrapper.scrollTop + 20;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = '#00ffcc';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(20, hudY, 320, 52, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#00ffcc';
+        ctx.font = 'bold 12px Orbitron, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`🎮 SINAQ: YOL ${currentTrack ? currentTrack.id : 1}`, 32, hudY + 20);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px Rajdhani, sans-serif';
+        ctx.fillText(`[W,A,S,D / Oxlar] Hərəkət | [R] Sıfırla | Y: ${Math.round(testPlayer.y)}`, 32, hudY + 38);
         ctx.restore();
     }
 
@@ -827,6 +992,73 @@
             updateStats();
             showToast('Yeni lava mənbəyi əlavə edildi!', 'info');
         });
+
+        // 🎲 Təsadüfi Şablon Quraşdır
+        const btnRandomGenerate = document.getElementById('btn-random-generate');
+        if (btnRandomGenerate) {
+            btnRandomGenerate.addEventListener('click', () => {
+                if (!currentTrack) return;
+                generateRandomLayoutForCurrentTrack();
+                selectElement(null, -1);
+                updateStats();
+                showToast(`🎲 Yol ${currentTrack.id} üçün təzə təsadüfi arxitektura quruldu! İstədiyiniz kimi dəyişib yadda saxlaya bilərsiniz.`, 'info');
+            });
+        }
+
+        function generateRandomLayoutForCurrentTrack() {
+            if (!currentTrack) return;
+            const newRocks = [];
+            const newLavas = [];
+            const yLevels = [1420, 1160, 900, 640, 380];
+
+            for (let i = 0; i < yLevels.length; i++) {
+                const y = yLevels[i];
+                const pattern = Math.floor(Math.random() * 4);
+                if (pattern === 0) {
+                    const w = 240 + Math.floor(Math.random() * 100);
+                    const x = Math.floor((800 - w) / 2) + Math.floor(Math.random() * 60 - 30);
+                    newRocks.push({ x: Math.max(40, Math.min(760 - w, x)), y: y, w: w, h: 42 });
+                } else if (pattern === 1) {
+                    const w1 = 180 + Math.floor(Math.random() * 60);
+                    const w2 = 180 + Math.floor(Math.random() * 60);
+                    newRocks.push({ x: 50 + Math.floor(Math.random() * 40), y: y, w: w1, h: 42 });
+                    newRocks.push({ x: 520 + Math.floor(Math.random() * 40), y: y, w: w2, h: 42 });
+                } else if (pattern === 2) {
+                    const w = 220 + Math.floor(Math.random() * 80);
+                    newRocks.push({ x: 80 + Math.floor(Math.random() * 160), y: y, w: w, h: 42 });
+                    if (Math.random() < 0.6) {
+                        newRocks.push({ x: 510 + Math.floor(Math.random() * 70), y: y + (Math.random() < 0.5 ? -30 : 30), w: 180, h: 42 });
+                    }
+                } else {
+                    const w = 220 + Math.floor(Math.random() * 80);
+                    newRocks.push({ x: 380 + Math.floor(Math.random() * 140), y: y, w: w, h: 42 });
+                    if (Math.random() < 0.6) {
+                        newRocks.push({ x: 60 + Math.floor(Math.random() * 70), y: y + (Math.random() < 0.5 ? -30 : 30), w: 180, h: 42 });
+                    }
+                }
+            }
+            newRocks.push({ x: 260 + Math.floor(Math.random() * 100), y: 200, w: 260, h: 42 });
+
+            const lavaCount = 1 + Math.floor(Math.random() * 2.3);
+            const xs = [80 + Math.floor(Math.random() * 80), 320 + Math.floor(Math.random() * 160), 620 + Math.floor(Math.random() * 80)];
+            xs.sort(() => Math.random() - 0.5);
+
+            for (let j = 0; j < lavaCount; j++) {
+                const ly = 240 + Math.floor(Math.random() * 200);
+                const dirs = ['auto', 'auto', 'right', 'left'];
+                const dir = dirs[Math.floor(Math.random() * dirs.length)];
+                const lObj = { x: xs[j], y: ly, w: 24, direction: dir };
+                if (Math.random() < 0.3) {
+                    lObj.stopOnHit = true;
+                } else if (Math.random() < 0.5) {
+                    lObj.endY = ly + 400 + Math.floor(Math.random() * 300);
+                }
+                newLavas.push(lObj);
+            }
+
+            currentTrack.rocks = newRocks;
+            currentTrack.lavaSources = newLavas;
+        }
 
         // Xassələr (Props) Dəyişimi
         inputRockW.addEventListener('input', (e) => {
@@ -923,19 +1155,53 @@
             });
         }
 
-        // Sınaq Rejimi Düyməsi
+        // Sınaq Rejimi Düyməsi (Kətan daxilində canlı test)
         btnModeTest.addEventListener('click', () => {
             isTestMode = !isTestMode;
             btnModeTest.classList.toggle('active', isTestMode);
-            modeText.textContent = isTestMode ? 'Redaktor Rejimi' : 'Sınaq Rejimi';
+            modeText.textContent = isTestMode ? 'Redaktora Qayıt' : 'Kətan Sınağı';
             if (isTestMode) {
                 testPlayer.x = 400;
                 testPlayer.y = 1600;
-                showToast('🎮 Sınaq Rejimi aktivdir! W, A, S, D ilə hərəkət edin.', 'success');
+                testPlayer.health = 100;
+                testPlayer.invulnerableTime = 0.6;
+                testPlayer.reachedFinish = false;
+                // Kətanı dərhal aşağıya - oyunçunun başladığı zonaya hamar sürüşdür
+                const targetScroll = Math.max(0, 1600 - canvasWrapper.clientHeight * 0.7);
+                canvasWrapper.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                showToast(`🎮 Kətan Sınağı: Yol ${currentTrack ? currentTrack.id : 1} aktivdir! W,A,S,D və ya Oxlarla hərəkət edin, [R] Sıfırla.`, 'success');
             } else {
                 showToast('✏️ Redaktor Rejiminə qayıdıldı.', 'info');
             }
         });
+
+        // 🎮 Birbaşa Əsas Oyunda Canlı Sınaqdan Keçir
+        const btnTestInGame = document.getElementById('btn-test-in-game');
+        if (btnTestInGame) {
+            btnTestInGame.addEventListener('click', async () => {
+                showToast('⏳ Yol yadda saxlanılır və oyun açılır...', 'info');
+                await saveTrackToServer();
+                const trackId = currentTrack ? currentTrack.id : 1;
+                try {
+                    localStorage.setItem('floor_escape_custom_tracks', JSON.stringify(allTracks));
+                } catch(e) {}
+                setTimeout(() => {
+                    window.location.href = `../game.html?testTrack=${trackId}&t=${Date.now()}`;
+                }, 150);
+            });
+        }
+
+        // Oyuna Keç linki
+        const linkGame = document.getElementById('link-game');
+        if (linkGame) {
+            linkGame.addEventListener('click', (e) => {
+                const trackId = currentTrack ? currentTrack.id : 1;
+                try {
+                    localStorage.setItem('floor_escape_custom_tracks', JSON.stringify(allTracks));
+                } catch(err) {}
+                linkGame.href = `../game.html?testTrack=${trackId}&t=${Date.now()}`;
+            });
+        }
 
         // Yolu Yadda Saxla (Save Track API)
         btnSave.addEventListener('click', saveTrackToServer);
@@ -1282,9 +1548,17 @@
                 })
             });
 
+            // Hər ehtimala qarşı dərhal brauzer yaddaşında da saxla
+            try {
+                localStorage.setItem('floor_escape_custom_tracks', JSON.stringify(allTracks));
+                if (typeof window.FLOOR_PATTERNS !== 'undefined') {
+                    window.FLOOR_PATTERNS.tracks = allTracks;
+                }
+            } catch(e) {}
+
             if (res.ok) {
                 const respData = await res.json();
-                showToast(`💾 Yol ${currentTrack.id} uğurla saxlanıldı və oyuna tətbiq edildi!`, 'success');
+                showToast(`💾 Yol ${currentTrack.id} uğurla saxlanıldı! "Kətan Sınağı" və ya "Oyunda Sınaqdan Keçir" ilə test edə bilərsiniz.`, 'success');
             } else {
                 fallbackLocalSave();
             }
@@ -1300,7 +1574,7 @@
             if (typeof window.FLOOR_PATTERNS !== 'undefined') {
                 window.FLOOR_PATTERNS.tracks = allTracks;
             }
-            showToast(`💾 Yol ${currentTrack.id} lokal yadda saxlanıldı!`, 'success');
+            showToast(`💾 Yol ${currentTrack.id} lokal yadda saxlanıldı! "Kətan Sınağı" və ya "Oyunda Sınaqdan Keçir" ilə test edə bilərsiniz.`, 'success');
         } catch(e) {
             showToast('Yadda saxlanarkən xəta baş verdi', 'warning');
         }

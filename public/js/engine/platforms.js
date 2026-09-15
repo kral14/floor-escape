@@ -17,8 +17,41 @@ let lavaFlowOffset = 0;        // Animasiya zamanı (saniyə)
 let lavaDripParticles = [];    // Lavadan damcılayan közlər
 
 let cachedFloorPatterns = (typeof window !== 'undefined' && window.FLOOR_PATTERNS) ? window.FLOOR_PATTERNS : null;
-let activeTestTrackId = null; // Test üçün xüsusi seçilmiş yol (məs: 5)
+
+// Əgər localStorage-də redaktordan saxlanmış xüsusi yollar varsa, ilk növbədə onu nəzərə al
+if (typeof localStorage !== 'undefined') {
+    try {
+        const localSaved = localStorage.getItem('floor_escape_custom_tracks');
+        if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                cachedFloorPatterns = {
+                    totalTracks: parsed.length,
+                    description: 'Redaktordan saxlanmış fərdi sınaq yolları',
+                    tracks: parsed
+                };
+                if (typeof window !== 'undefined') window.FLOOR_PATTERNS = cachedFloorPatterns;
+            }
+        }
+    } catch(e) {}
+}
+
+let activeTestTrackId = null; // Test üçün xüsusi seçilmiş yol (məs: 1)
 let currentTrackInfo = null;
+
+// URL parametrindən testTrack-i yoxla (?testTrack=1 və ya ?track=1)
+if (typeof window !== 'undefined' && window.location && window.location.search) {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const qTrack = urlParams.get('testTrack') || urlParams.get('track');
+        if (qTrack) {
+            const parsedId = parseInt(qTrack, 10);
+            if (!isNaN(parsedId) && parsedId >= 1 && parsedId <= 30) {
+                activeTestTrackId = parsedId;
+            }
+        }
+    } catch(e) {}
+}
 
 // JSON faylını həm də dinamik fetch edirik (hər dəfə dəyişəndə dərhal yenilənsin)
 async function loadFloorPatternsAsync() {
@@ -26,8 +59,13 @@ async function loadFloorPatternsAsync() {
         const res = await fetch('data/floor_patterns.json?t=' + Date.now());
         if (res.ok) {
             const data = await res.json();
+            // Əgər localStorage-də daha təzə dəyişiklik yoxdursa, JSON-u götür
             cachedFloorPatterns = data;
             if (typeof window !== 'undefined') window.FLOOR_PATTERNS = data;
+            // Əgər aktiv oyun varsa və sınaq yolundadırsa yenilə
+            if (typeof gameState !== 'undefined' && gameState.floor) {
+                initFloorPlatforms(gameState.floor);
+            }
         }
     } catch (e) {
         // Fetch uğursuz olsa, daxil edilmiş JS obyekti aktiv qalır
@@ -71,11 +109,31 @@ window.setFloorTrack = setFloorTrack;
 
 // 2. 30 Yoldan cari qata uyğun yolun yüklənməsi: Qat 1 -> Yol 1, Qat 2 -> Yol 2...
 function initFloorPlatforms(floor = 1) {
+    // 1. Canlı localStorage yoxlanışı (Redaktorda edilən dəyişiklik dərhal əks olunsun)
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const localSaved = localStorage.getItem('floor_escape_custom_tracks');
+            if (localSaved) {
+                const parsed = JSON.parse(localSaved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    cachedFloorPatterns = {
+                        totalTracks: parsed.length,
+                        description: 'Redaktordan canlı yadda saxlanılmış fərdi sınaq yolları',
+                        tracks: parsed
+                    };
+                    if (typeof window !== 'undefined') window.FLOOR_PATTERNS = cachedFloorPatterns;
+                }
+            }
+        } catch(e) {}
+    }
+
     const patterns = cachedFloorPatterns || (typeof window !== 'undefined' ? window.FLOOR_PATTERNS : null);
     const tracks = (patterns && patterns.tracks) ? patterns.tracks : [];
 
     // Cari yolun ID-si (Əgər test üçün xüsusi yol seçilibsə, onu istifadə et)
-    const targetTrackId = activeTestTrackId || (((Math.max(1, floor) - 1) % 30) + 1);
+    const targetTrackId = (typeof activeTestTrackId === 'number' && activeTestTrackId >= 1)
+        ? activeTestTrackId
+        : (((Math.max(1, floor) - 1) % 30) + 1);
 
     // Uyğun track-i tapırıq
     let selectedTrack = tracks.find(t => t.id === targetTrackId);
@@ -94,29 +152,35 @@ function initFloorPlatforms(floor = 1) {
         currentTrackInfo = selectedTrack;
         currentWorldHeight = selectedTrack.worldHeight || 1800;
 
-        // Qayaları JSON-dan yükləyirik
-        for (const r of selectedTrack.rocks) {
+        // Qayaları tam yükləyirik
+        for (const r of (selectedTrack.rocks || [])) {
             currentRocks.push({
-                x: r.x,
-                y: r.y,
-                w: r.w,
-                h: r.h,
+                x: Number(r.x),
+                y: Number(r.y),
+                w: Number(r.w),
+                h: Number(r.h),
                 type: 'rock'
             });
         }
 
-        // Lava mənbələrini JSON-dan yükləyirik
-        for (let i = 0; i < selectedTrack.lavaSources.length; i++) {
+        // Lava mənbələrini və xüsusi istiqamət/kəsilmə xassələrini tam yükləyirik
+        for (let i = 0; i < (selectedTrack.lavaSources || []).length; i++) {
             const src = selectedTrack.lavaSources[i];
             initialLavaSources.push({
-                x: src.x,
-                y: src.y,
-                w: src.w || 24,
+                x: Number(src.x),
+                y: Number(src.y),
+                w: Number(src.w || 24),
+                direction: src.direction || 'auto',
+                endY: src.endY !== undefined ? Number(src.endY) : undefined,
+                customBottomY: src.customBottomY !== undefined ? Number(src.customBottomY) : undefined,
+                stopOnHit: !!src.stopOnHit,
+                shelfOffsets: src.shelfOffsets || null,
+                customOutX: src.customOutX !== undefined ? Number(src.customOutX) : undefined,
                 seed: i + floor * 13
             });
         }
 
-        console.log(`🗺️ [YOL ${targetTrackId}/30] "${selectedTrack.name}" aktivdir.`);
+        console.log(`🗺️ [CANLI YOL ${targetTrackId}/30] "${selectedTrack.name}" aktivdir! Platforma: ${currentRocks.length}, Lava: ${initialLavaSources.length}`);
     } else {
         // Fallback əgər fayl yüklənməyibsə
         currentWorldHeight = 1800;
@@ -124,8 +188,8 @@ function initFloorPlatforms(floor = 1) {
         currentRocks.push({ x: 460, y: 1360, w: 240, h: 42, type: 'rock' });
         currentRocks.push({ x: 250, y: 900,  w: 300, h: 42, type: 'rock' });
         currentRocks.push({ x: 220, y: 440,  w: 360, h: 42, type: 'rock' });
-        initialLavaSources.push({ x: 160, y: 280, w: 24, seed: 1 });
-        initialLavaSources.push({ x: 620, y: 380, w: 24, seed: 2 });
+        initialLavaSources.push({ x: 160, y: 280, w: 24, direction: 'auto', seed: 1 });
+        initialLavaSources.push({ x: 620, y: 380, w: 24, direction: 'auto', seed: 2 });
     }
 }
 window.initFloorPlatforms = initFloorPlatforms;

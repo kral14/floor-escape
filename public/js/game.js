@@ -681,17 +681,21 @@ function restartGame() {
     if (typeof particles !== 'undefined') particles.length = 0;
     if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
     if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
-    if (typeof initFloorPlatforms === 'function') initFloorPlatforms(1);
+    const targetFloor = (typeof activeTestTrackId === 'number' && activeTestTrackId >= 1) ? activeTestTrackId : 1;
+    gameState.floor = targetFloor;
+    if (typeof initFloorPlatforms === 'function') initFloorPlatforms(targetFloor);
     player.reset();
     monster.reset();
     if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
-    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(1) : canvasHeight;
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(targetFloor) : canvasHeight;
     cameraY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
     window.cameraY = cameraY;
     gameState.dashInvulnerable = 120; // Başlanğıcda 2 saniyə təhlükəsizlik
     spawnCoins();
     updateUI();
-    saveActiveRun();
+    if (typeof activeTestTrackId !== 'number') {
+        saveActiveRun();
+    }
 
     // 🎵 Pause və Game Over fon musiqilərini dayandır və 1-ci Qatın fon musiqisini yenidən başlat
     if (typeof audio !== 'undefined') {
@@ -878,13 +882,19 @@ if (typeof loadKeybinds === 'function') loadKeybinds();
 resizeCanvas();
 adjustViewportFit();
 
+let isTestingSpecificTrack = false;
+if (typeof activeTestTrackId === 'number' && activeTestTrackId >= 1) {
+    isTestingSpecificTrack = true;
+    gameState.floor = activeTestTrackId;
+}
+
 if (typeof initFloorPlatforms === 'function') initFloorPlatforms(gameState.floor || 1);
 player.reset();
 monster.reset();
 if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
 applyFloorModifier();
 
-const hasLoadedRun = loadActiveRun();
+const hasLoadedRun = isTestingSpecificTrack ? false : loadActiveRun();
 
 const startWorldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor || 1) : canvasHeight;
 cameraY = Math.max(0, Math.min(startWorldH - canvasHeight, player.y - canvasHeight * 0.55));
@@ -903,7 +913,11 @@ if (gameState.activeModifier === 'darkness') {
     gameState.activeModifier = 'normal';
 }
 
-if (hasLoadedRun) {
+if (isTestingSpecificTrack) {
+    if (typeof showToast === 'function') {
+        showToast(`🎯 SINAQ REJİMİ: Yol ${activeTestTrackId} sınaqdan keçirilir!`, 'info');
+    }
+} else if (hasLoadedRun) {
     if (typeof showToast === 'function') {
         showToast(`🔄 Oyun ${gameState.floor}-ci Qatdan davam edir! (Vəziyyət tam saxlanıldı)`, 'success');
     }
@@ -958,6 +972,23 @@ function initIngameQuantumTheme() {
     if (typeof player !== 'undefined' && player) {
         player.singularityTheme = key;
     }
+}
+
+// 🎯 Track Studio Sınaq Rejimi Bildiriş Paneli
+if (typeof isTestingSpecificTrack !== 'undefined' && isTestingSpecificTrack) {
+    const testBanner = document.createElement('div');
+    testBanner.id = 'track-studio-test-banner';
+    testBanner.style.cssText = 'position:fixed; top:56px; left:50%; transform:translateX(-50%); z-index:9999; padding:8px 16px; background:rgba(15,23,42,0.96); border:1px solid #10b981; border-radius:14px; box-shadow:0 0 25px rgba(16,185,129,0.35); display:flex; align-items:center; gap:12px; color:#fff; font-family:Orbitron,sans-serif; font-size:11px;';
+    testBanner.innerHTML = `
+        <span style="color:#34d399; font-weight:bold; display:flex; align-items:center; gap:6px;">
+            🎮 SINAQ: YOL ${activeTestTrackId}
+        </span>
+        <span style="color:#94a3b8; font-family:system-ui,sans-serif; font-size:11px;">Redaktorda qurduğunuz canlı platforma və lavalar aktivdir.</span>
+        <a href="editor/" style="padding:4px 10px; background:#059669; border-radius:6px; color:#fff; text-decoration:none; font-weight:bold; font-size:10px; display:flex; align-items:center; gap:4px;">
+            ✏️ Redaktora Qayıt
+        </a>
+    `;
+    document.body.appendChild(testBanner);
 }
 window.initIngameQuantumTheme = initIngameQuantumTheme;
 setTimeout(initIngameQuantumTheme, 50);

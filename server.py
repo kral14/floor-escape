@@ -70,21 +70,26 @@ class GameHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             pass
 
     def do_POST(self):
-        parsed = urlparse(self.path)
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else '{}'
-
         try:
-            data = json.loads(post_data)
-        except Exception:
-            data = {}
+            parsed = urlparse(self.path)
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8') if content_length > 0 else '{}'
 
-        # API POST marşrutları (server/handlers.py)
-        if handle_post(self, parsed, data):
-            return
+            try:
+                data = json.loads(post_data)
+            except Exception:
+                data = {}
 
-        self.send_response(404)
-        self.end_headers()
+            # API POST marşrutları (server/handlers.py)
+            if handle_post(self, parsed, data):
+                return
+
+            self.send_response(404)
+            self.end_headers()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self.send_json({'success': False, 'error': str(e)}, 500)
 
     def log_message(self, format, *args):
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format % args))

@@ -33,8 +33,11 @@
 
             <!-- ƏMƏLİYYAT DÜYMƏLƏRİ -->
             <div class="action-buttons">
-                <button id="btn-mode-test" class="btn btn-mode" title="W, A, S, D ilə sınaqdan keçir">
-                    <i class="fa-solid fa-gamepad"></i> <span id="mode-text">Sınaq Rejimi</span>
+                <button id="btn-mode-test" class="btn btn-mode" title="W, A, S, D ilə kətan daxilində sınaqdan keçir">
+                    <i class="fa-solid fa-person-running"></i> <span id="mode-text">Kətan Sınağı</span>
+                </button>
+                <button id="btn-test-in-game" class="btn btn-game-test" title="Cari yolu birbaşa oyunda canlı sınaqdan keçir!">
+                    <i class="fa-solid fa-gamepad"></i> Oyunda Sınaqdan Keçir
                 </button>
                 <button id="btn-save" class="btn btn-primary" title="Faylı yadda saxla">
                     <i class="fa-solid fa-floppy-disk"></i> Yolu Yadda Saxla
@@ -42,7 +45,7 @@
                 <button id="btn-export" class="btn btn-secondary" title="JSON faylı kimi yüklə">
                     <i class="fa-solid fa-file-export"></i> JSON
                 </button>
-                <a href="../game.html" class="btn btn-outline" title="Oyuna qayıt">
+                <a href="../game.html?testTrack=1" id="link-game" class="btn btn-outline" title="Oyuna Keç">
                     <i class="fa-solid fa-play"></i> Oyuna Keç
                 </a>
             </div>
@@ -61,6 +64,10 @@
                     <button id="btn-add-lava" class="tool-btn">
                         <i class="fa-solid fa-fire-flame-curved text-orange"></i>
                         <span>+ Lava Mənbəyi Qoy</span>
+                    </button>
+                    <button id="btn-random-generate" class="tool-btn" style="border-color: #8b5cf6; background: rgba(139, 92, 246, 0.15);" title="Cari yol üçün yeni təsadüfi arxitektura generasiya et">
+                        <i class="fa-solid fa-dice text-purple-400" style="color: #a78bfa;"></i>
+                        <span>🎲 Random Şablon Qur</span>
                     </button>
                 </div>
 

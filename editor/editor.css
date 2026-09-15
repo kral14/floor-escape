@@ -189,6 +189,17 @@ body {
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
+.btn-game-test {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+.btn-game-test:hover {
+    background: linear-gradient(135deg, #34d399, #059669);
+    box-shadow: 0 0 18px rgba(52, 211, 153, 0.6);
+    transform: translateY(-1px);
+}
+
 /* ==========================================================================
    İŞ SAHƏSİ (SIDEBAR & VIEWPORT)
    ========================================================================== */

@@ -24,11 +24,11 @@
             let offset = 0;
 
             if (isMidAir) {
-                // Havada sonlanma: Alt uca yaxınlaşdıqda axın daralır və damcı/stalaktit forması alır!
-                if (p > 0.60) {
-                    const tp = (p - 0.60) / 0.40;
-                    // Mərkəzə (u = 0.5) doğru kəskin sıxılma
-                    offset = (0.5 - u) * width * (tp * 0.78);
+                // Havada sonlanma: Alt uca yaxınlaşdıqda axın təbii viskoz lava kimi yumşaq daralır və incələşir
+                if (p > 0.40) {
+                    const tp = (p - 0.40) / 0.60;
+                    const taper = Math.pow(tp, 1.4);
+                    offset = (0.5 - u) * width * (taper * 0.88);
                 }
             } else if (p > 0.72) {
                 // Qayaya dəyən axın: Kənarlara doğru təbii yayılma
@@ -43,7 +43,7 @@
         grad.addColorStop(0.12, '#fa6514');
         grad.addColorStop(0.65, '#bf2708');
         grad.addColorStop(0.90, '#ff7815');
-        grad.addColorStop(1, isMidAir ? '#ffe066' : '#ffce55');
+        grad.addColorStop(1, isMidAir ? '#ff9922' : '#ffce55');
 
         c.beginPath();
         c.moveTo(flow(0, 0), y);
@@ -53,14 +53,14 @@
             c.lineTo(flow(0, p), y + p * height);
         }
 
-        // Alt ucu: DÜZ KƏSİK QƏTİYYƏN YOXDUR!
+        // Alt ucu: Təbii sivri damcı qövsü
         const rightBottomX = flow(1, 1);
         const leftBottomX = flow(0, 1);
         const midBottomX = (rightBottomX + leftBottomX) * 0.5;
 
         if (isMidAir) {
-            // Havada sonlananda qabarıq damcı ucluq (teardrop tip)
-            const dropHang = 14 + Math.sin(t * 5) * 2.5;
+            // Havada sonlananda incə, zərif və təbii damcı ucluq
+            const dropHang = 8 + Math.sin(t * 3.5) * 1.5;
             c.quadraticCurveTo(midBottomX, y + height + dropHang, rightBottomX, y + height);
         } else {
             // Qayanın üstünə yayılan qabarıq təbii qövs
@@ -114,21 +114,23 @@
         }
         c.restore();
 
-        // Kənarlardan sıçrayan közlər
-        c.save();
-        c.globalCompositeOperation = 'lighter';
-        for (let j = 0; j < 38; j++) {
-            let p = (t * 0.7 + j * 0.173) % 1;
-            let side = j % 2 ? 1 : -1;
-            let xx = x + width * 0.5 + side * (width * 0.45 + p * 45) * Math.sin(j * 17);
-            let yy = y + height - p * 65 + 90 * p * p;
-            c.globalAlpha = (1 - p) * 0.7;
-            c.fillStyle = '#ffb938';
-            c.beginPath();
-            c.ellipse(xx, yy, 1.3, 2.8, side * 0.5, 0, Math.PI * 2);
-            c.fill();
+        // Yalnız qayanın üstünə çırpılan lavadan kənara köz sıçrayır (Havada sonlananda fəvvarə sıçrayışı qətiyyən yoxdur)
+        if (!isMidAir) {
+            c.save();
+            c.globalCompositeOperation = 'lighter';
+            for (let j = 0; j < 24; j++) {
+                let p = (t * 0.7 + j * 0.173) % 1;
+                let side = j % 2 ? 1 : -1;
+                let xx = x + width * 0.5 + side * (width * 0.45 + p * 45) * Math.sin(j * 17);
+                let yy = y + height - p * 65 + 90 * p * p;
+                c.globalAlpha = (1 - p) * 0.7;
+                c.fillStyle = '#ffb938';
+                c.beginPath();
+                c.ellipse(xx, yy, 1.3, 2.8, side * 0.5, 0, Math.PI * 2);
+                c.fill();
+            }
+            c.restore();
         }
-        c.restore();
     }
 
     // 2. QAYANIN DAXİLİNDƏKİ VULKANİK MƏNBƏ OYUĞU (Source Rock Overhang)
@@ -436,42 +438,25 @@
         c.restore();
     }
 
-    // 6. HAVADA SONLANAN DAMCILAYAN LAVA UCLUĞU (Düz kəsik olmadan, damcılayan ucluq)
+    // 6. HAVADA SONLANAN DAMCILAYAN LAVA UCLUĞU (Süni toplar və şarlar qətiyyən yoxdur - orqanik süzülən damcı)
     function drawMidAirLavaTip(c, t, x, y, width = 24) {
         if (!c) return;
         c.save();
 
         const midX = x + width * 0.5;
 
-        // Qızmar aura
-        c.shadowColor = '#ff5500';
-        c.shadowBlur = 18;
-
-        // Qabarıq damcı ucu
-        const tipGrad = c.createRadialGradient(midX, y + 4, 2, midX, y + 6, 16);
-        tipGrad.addColorStop(0, '#ffffff');
-        tipGrad.addColorStop(0.3, '#ffcc00');
-        tipGrad.addColorStop(0.7, '#ff5500');
-        tipGrad.addColorStop(1, 'rgba(150, 20, 0, 0)');
-
-        c.fillStyle = tipGrad;
-        c.beginPath();
-        c.arc(midX, y + 6, 12, 0, Math.PI * 2);
-        c.fill();
-        c.shadowBlur = 0;
-
-        // Havaya damcılayan közlər (Dripping droplets falling below)
-        for (let i = 0; i < 6; i++) {
-            const progress = (t * 1.4 + i * 0.22) % 1;
-            const dropY = y + 10 + progress * 55;
-            const dropX = midX + Math.sin(i * 9 + t * 2) * 4;
-            const size = Math.max(1, (1 - progress) * 3.5);
-            const alpha = Math.sin(progress * Math.PI);
+        // Ucdan zərif şəkildə şaquli olaraq aşağı süzülən 2-3 xırda köz damcısı (radius 1-1.5px)
+        for (let i = 0; i < 3; i++) {
+            const progress = (t * 1.15 + i * 0.33) % 1;
+            const dropY = y + 8 + progress * 42;
+            const dropX = midX + Math.sin(i * 11 + t * 1.8) * 1.2;
+            const size = Math.max(0.6, (1 - progress) * 1.8);
+            const alpha = (1 - progress) * 0.8;
 
             c.globalAlpha = alpha;
-            c.fillStyle = (i % 2 === 0) ? '#ffea75' : '#ff7a1a';
+            c.fillStyle = progress < 0.4 ? '#ffe570' : '#e64a19';
             c.beginPath();
-            c.ellipse(dropX, dropY, size * 0.8, size * 1.5, 0, 0, Math.PI * 2);
+            c.ellipse(dropX, dropY, size * 0.75, size * 1.2, 0, 0, Math.PI * 2);
             c.fill();
         }
 
