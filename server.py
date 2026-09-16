@@ -4,14 +4,27 @@ import os
 import sys
 from urllib.parse import urlparse
 
-from server.proxy import is_remote_mode, proxy_request, REMOTE_SERVER_URL
-
 # Windows konsol kodlaşdırma xətasının qarşısını almaq
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
+
+# .env faylını server işə düşərkən dərhal yükləmək
+ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if os.path.exists(ENV_FILE):
+    try:
+        with open(ENV_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+    except Exception:
+        pass
+
+from server.proxy import is_remote_mode, proxy_request, REMOTE_SERVER_URL
 
 PORT = int(os.environ.get('PORT', 4000))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -51,7 +64,7 @@ class GameHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode('utf-8'))
 
     def do_GET(self):
         parsed = urlparse(self.path)

@@ -4,7 +4,16 @@
       constructor() {
         this.ctx = null;
       }
+      canPlay() {
+        if (typeof window === 'undefined') return false;
+        if (window.spawnAnimAudioEnabled) return true;
+        if (typeof gameRunning !== 'undefined' && gameRunning) return true;
+        if (typeof isGameActive !== 'undefined' && isGameActive) return true;
+        const fsModal = document.getElementById('spawn-anim-fullscreen-modal');
+        return !!(fsModal && !fsModal.classList.contains('hidden'));
+      }
       init() {
+        if (!this.canPlay()) return;
         if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
         if (!this.ctx) {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -15,7 +24,7 @@
         }
       }
       playServoClick() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();
@@ -32,7 +41,7 @@
         } catch (e) {}
       }
       playIceShoot() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           // High-pitch glacial whistle launch
@@ -50,7 +59,7 @@
         } catch (e) {}
       }
       playEnergyHum() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();
@@ -67,7 +76,7 @@
         } catch (e) {}
       }
       playIceForge() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           // Crystal freezing chime when a new ice projectile is forged by spinning
@@ -92,7 +101,7 @@
         } catch (e) {}
       }
       playIceShatter() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           // Noise burst + multiple glass/crystal pings

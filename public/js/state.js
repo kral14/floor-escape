@@ -122,8 +122,8 @@ if (typeof window !== 'undefined') {
 // 🌀 GİRİŞ VƏ DOĞULUŞ ANİMASİYALARI KATALOQU (SPAWN ANIMATIONS / INTRO FX)
 // İstifadəçinin verdiyi 3 xüsusi doğuluş animasiyası
 const SPAWN_ANIMS = {
-        tesseract: { id:'tesseract', name:'4D Kvant Tesseraktı', title:'Graviton Singularity Core', icon:'fa-cubes', color:'#c084fc', glowColor:'#a855f7', badge:'🔮 4D Kvant Tesseraktı', desc:'4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType:'free', cost:0 },
-        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'free', cost: 0 },
+        tesseract: { id:'tesseract', name:'4D Kvant Tesseraktı', title:'Graviton Singularity Core', icon:'fa-cubes', color:'#c084fc', glowColor:'#a855f7', badge:'🔮 4D Kvant Tesseraktı', desc:'4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType:'redDiamonds', cost:100 },
+        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'redDiamonds', cost: 100 },
     portal: {
         id: 'portal',
         name: 'Holoqramdan Doğuluş',
@@ -133,8 +133,8 @@ const SPAWN_ANIMS = {
         glowColor: '#72ddff',
         badge: '🌀 Holoqram Portalı',
         desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.',
-        costType: 'free',
-        cost: 0
+        costType: 'redDiamonds',
+        cost: 5
     },
     crystal: {
         id: 'crystal',
@@ -254,8 +254,8 @@ const DEFAULT_PERM_UPGRADES = {
     startGoldLvl: 1,      // Başlanğıc qızıl
     equippedSkin: 'default', // Aktiv dəri (skin)
     ownedSkins: ['default'], // Sahib olunan dərilər
-    equippedSpawnAnim: 'singularity', // 🌀 YENİ ƏSAS DOĞULUŞ ANİMASİYASI (Kvant Laboratoriyası FX)
-    ownedSpawnAnims: ['singularity', 'supernova', 'synapse', 'abyssal', 'portal'], // Sahib olunan animasiyalar
+    equippedSpawnAnim: null, // Aktiv doğuluş animasiyası (alındıqda təchiz edilir)
+    ownedSpawnAnims: [], // Sahib olunan animasiyalar (hər birinin öz dəyəri var)
     glacialReloadLvl: 0,
     seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
@@ -365,20 +365,20 @@ function loadPermanentData() {
                 permUpgrades.equippedSkin = 'default';
             }
             if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
-                permUpgrades.ownedSpawnAnims = ['singularity', 'supernova', 'synapse', 'abyssal', 'portal'];
+                permUpgrades.ownedSpawnAnims = [];
             }
-            // 4 Kvant laboratoriya temasını sahib olunanlara təminatlı əlavə edirik
-            ['singularity', 'supernova', 'synapse', 'abyssal'].forEach(th => {
-                if (!permUpgrades.ownedSpawnAnims.includes(th)) {
-                    permUpgrades.ownedSpawnAnims.push(th);
+            // 4 Kvant variantının (və portalın) hər birinin 55 Fancy ilə tək-tək alınması üçün təmizləmə
+            const quantumCleaned = localStorage.getItem('floor_escape_quantum_clean_v3');
+            if (!quantumCleaned) {
+                permUpgrades.ownedSpawnAnims = permUpgrades.ownedSpawnAnims.filter(id => !['singularity', 'supernova', 'synapse', 'abyssal', 'portal'].includes(id));
+                if (['singularity', 'supernova', 'synapse', 'abyssal', 'portal'].includes(permUpgrades.equippedSpawnAnim)) {
+                    permUpgrades.equippedSpawnAnim = null;
                 }
-            });
-            // Köhnə 'portal' qalıbsa, birbaşa yeni Kvant Sinqulyarlığına keçir
-            if (!permUpgrades.equippedSpawnAnim || permUpgrades.equippedSpawnAnim === 'portal') {
-                permUpgrades.equippedSpawnAnim = 'singularity';
+                localStorage.setItem('floor_escape_quantum_clean_v3', 'true');
+                savePermanentData();
             }
-            if (!SPAWN_ANIMS[permUpgrades.equippedSpawnAnim]) {
-                permUpgrades.equippedSpawnAnim = 'singularity';
+            if (permUpgrades.equippedSpawnAnim && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal'].includes(permUpgrades.equippedSpawnAnim)) {
+                permUpgrades.equippedSpawnAnim = null;
             }
             if (typeof permUpgrades.cyberStars !== 'number' || isNaN(permUpgrades.cyberStars)) {
                 permUpgrades.cyberStars = 5;
@@ -605,7 +605,7 @@ function loadActiveRun() {
                 let mY = parseFloat(saved.monsterY);
                 // Əgər köhnə saxlanmış dəyər yeni şaquli dünyaya uyğun deyilsə və ya yuxarıdadırsa düzəldirik
                 if (isNaN(mY) || mY < currentWorldH * 0.35) {
-                    mY = currentWorldH + 50;
+                    mY = currentWorldH - 38;
                 }
                 monster.y = mY;
                 monster.slowTimer = parseInt(saved.monsterSlowTimer) || 0;
@@ -698,14 +698,19 @@ function getGlacialReloadLevel() { return Math.max(0, Math.min(6, Math.floor(Num
 function buyGlacialReload() {
     const level = getGlacialReloadLevel();
     if (level >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('glacial')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə Kvant Buz Zirehi animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
     const price = GLACIAL_RELOAD_PRICES[level];
-    if (redDiamonds < price) { if (typeof showToast === 'function') showToast('Kifayət qədər Fancy almaz yoxdur!', 'warning'); return false; }
+    if (redDiamonds < price) { if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning'); return false; }
     redDiamonds -= price;
     permUpgrades.glacialReloadLvl = level + 1;
     savePermanentData();
     if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
     if (typeof updateUI === 'function') updateUI();
     if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof showToast === 'function') showToast(`❄️ Buz Tutumu artırıldı: ${permUpgrades.glacialReloadLvl}/6`, 'success');
     return true;
 }
 window.buyGlacialReload = buyGlacialReload;

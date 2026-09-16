@@ -10,7 +10,16 @@
         constructor() {
             this.ctx = null;
         }
+        canPlay() {
+            if (typeof window === 'undefined') return false;
+            if (window.spawnAnimAudioEnabled) return true;
+            if (typeof gameRunning !== 'undefined' && gameRunning) return true;
+            if (typeof isGameActive !== 'undefined' && isGameActive) return true;
+            const fsModal = document.getElementById('spawn-anim-fullscreen-modal');
+            return !!(fsModal && !fsModal.classList.contains('hidden'));
+        }
         init() {
+            if (!this.canPlay()) return;
             if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
             if (!this.ctx) {
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -21,7 +30,7 @@
             }
         }
         playSpark() {
-            if (!this.ctx) return;
+            if (!this.canPlay() || !this.ctx) return;
             try {
                 const t = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
@@ -38,7 +47,7 @@
             } catch (e) {}
         }
         playRingLock() {
-            if (!this.ctx) return;
+            if (!this.canPlay() || !this.ctx) return;
             try {
                 const t = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
@@ -55,7 +64,7 @@
             } catch (e) {}
         }
         playStarDetach() {
-            if (!this.ctx) return;
+            if (!this.canPlay() || !this.ctx) return;
             try {
                 const t = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
@@ -72,7 +81,7 @@
             } catch (e) {}
         }
         playShatter() {
-            if (!this.ctx) return;
+            if (!this.canPlay() || !this.ctx) return;
             try {
                 const t = this.ctx.currentTime;
                 const bufferSize = Math.floor(this.ctx.sampleRate * 0.14);

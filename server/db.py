@@ -5,6 +5,13 @@ import random
 import sqlite3
 import hashlib
 
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 DB_FILE = os.path.join(DATA_DIR, 'floor_escape.db')
@@ -30,6 +37,57 @@ load_env()
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 USE_POSTGRES = DATABASE_URL.startswith('postgresql://') or DATABASE_URL.startswith('postgres://')
+DB_STRICT = os.environ.get('DB_STRICT', '0').strip().lower() in ('1', 'true', 'yes')
+
+_POSTGRES_ACTIVE = False
+
+class PostgresCursorWrapper:
+    def __init__(self, cur):
+        self.cur = cur
+
+    def execute(self, query, params=None):
+        if '?' in query:
+            query = query.replace('?', '%s')
+        if params is not None:
+            return self.cur.execute(query, params)
+        return self.cur.execute(query)
+
+    def fetchone(self):
+        return self.cur.fetchone()
+
+    def fetchall(self):
+        return self.cur.fetchall()
+
+    @property
+    def rowcount(self):
+        return self.cur.rowcount
+
+class PostgresConnWrapper:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def cursor(self):
+        import psycopg2.extras
+        return PostgresCursorWrapper(self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor))
+
+    def commit(self):
+        return self.conn.commit()
+
+    def rollback(self):
+        return self.conn.rollback()
+
+    def close(self):
+        return self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        self.conn.close()
 
 def ensure_data_files():
     is_remote_env = os.environ.get('IS_REMOTE_SERVER', '0').lower() in ('1', 'true', 'yes')
@@ -48,12 +106,25 @@ def ensure_data_files():
 ensure_data_files()
 
 def get_db():
+    global _POSTGRES_ACTIVE
+    if USE_POSTGRES:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(DATABASE_URL)
+            _POSTGRES_ACTIVE = True
+            return PostgresConnWrapper(conn)
+        except Exception as e:
+            if DB_STRICT:
+                print(f" [✘] PostgreSQL əlaqəsi kəsildi: {e}")
+                sys.exit(1)
+            print(f" [!] PostgreSQL xətası, SQLite fallback: {e}")
     conn = sqlite3.connect(DB_FILE, timeout=15)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_postgres():
     """PostgreSQL cədvəllərinin olub-olmadığını yoxlayır və avtomatik miqrasiya edir"""
+    global _POSTGRES_ACTIVE
     try:
         import psycopg2
     except ImportError:
@@ -75,8 +146,10 @@ def init_postgres():
     else:
         print(f" [-] Miqrasiya faylı tapılmadı: {SQL_MIGRATION_FILE}")
     conn.close()
+    _POSTGRES_ACTIVE = True
 
 def init_db():
+    global _POSTGRES_ACTIVE
     # 1. Əgər DATABASE_URL varsa, ilk öncə PostgreSQL miqrasiyasını işə sal
     if USE_POSTGRES:
         try:
@@ -84,7 +157,11 @@ def init_db():
             return
         except Exception as e:
             print(f" [!] PostgreSQL-ə qoşularkən xəta baş verdi: {e}")
+            if DB_STRICT:
+                print(" [✘] DB_STRICT=1 rejimi aktivdir! Server dayandırılır.")
+                sys.exit(1)
             print(" [i] Fallback: Lokal SQLite bazasına keçid edilir...")
+            _POSTGRES_ACTIVE = False
 
     # 2. Əks halda SQLite ilə davam et
     try:

@@ -21,8 +21,12 @@ function addFloatingText(x, y, text, color = '#00f0ff', size = 15) {
 }
 
 function triggerScreenPulse(color = '#00f0ff', maxAlpha = 0.35) {
-    screenPulse.color = color;
-    screenPulse.alpha = maxAlpha;
+    if (typeof color === 'number') {
+        maxAlpha = color;
+        color = '#ef4444';
+    }
+    screenPulse.color = (typeof color === 'string' && color) ? color : '#00f0ff';
+    screenPulse.alpha = (typeof maxAlpha === 'number') ? maxAlpha : 0.35;
 }
 
 function spawnCoins() {
@@ -166,6 +170,12 @@ function nextFloor() {
     if (typeof player !== 'undefined' && player.reset) player.reset(false);
     if (typeof monster !== 'undefined' && monster.reset) monster.reset();
     if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
+
+    // 🎥 Kameranı dərhal yeni qatın başlanğıcına (Monsun doğulduğu aşağı sahəyə) fokuslayırıq
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
+    monster.y = worldH - 38;
+    cameraY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
+    window.cameraY = cameraY;
 
     applyFloorModifier();
     spawnCoins();

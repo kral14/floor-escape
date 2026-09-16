@@ -18,6 +18,18 @@ except Exception:
     verify_signed_gift_code = None
     create_signed_gift_code = None
 
+def safe_parse_json(val, default=None):
+    if val is None:
+        return default if default is not None else {}
+    if isinstance(val, (dict, list)):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            return default if default is not None else {}
+    return default if default is not None else {}
+
 def handle_get(req, parsed):
     # 1. API: Hədiyyə kodlarının siyahısı
     if parsed.path == '/api/giftcode/list':
@@ -104,9 +116,11 @@ def handle_get(req, parsed):
                     LIMIT 50
                 ''', (player_id, player_id))
                 rows = [dict(r) for r in cursor.fetchall()]
+                print(f" [INBOX] playerId={player_id} üçün sorğu gəldi. Bazadan tapılan məktub sayı: {len(rows)}")
                 req.send_json({'success': True, 'messages': rows})
                 return True
         except Exception as e:
+            print(f" [INBOX XƏTASI] {e}")
             req.send_json({'success': False, 'message': str(e)}, 500)
             return True
 
@@ -132,8 +146,8 @@ def handle_get(req, parsed):
                             'redDiamonds': row['red_diamonds'] or 0,
                             'gold': row['gold'] or 0,
                             'bestFloor': row['best_floor'] or 1,
-                            'permUpgrades': json.loads(row['perm_upgrades'] or '{}'),
-                            'claimedChests': json.loads(row['claimed_chests'] or '[]')
+                            'permUpgrades': safe_parse_json(row['perm_upgrades'], {}),
+                            'claimedChests': safe_parse_json(row['claimed_chests'], [])
                         }
                     })
                 else:
@@ -232,8 +246,8 @@ def handle_post(req, parsed, data):
                 cursor.execute('UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE player_id = ?', (row['player_id'],))
                 conn.commit()
 
-                upgrades = json.loads(row['perm_upgrades'] or '{}')
-                chests = json.loads(row['claimed_chests'] or '[]')
+                upgrades = safe_parse_json(row['perm_upgrades'], {})
+                chests = safe_parse_json(row['claimed_chests'], [])
 
                 req.send_json({
                     'success': True,
@@ -493,16 +507,22 @@ def handle_post(req, parsed, data):
 
                 if msg['expires_at']:
                     try:
-                        clean_exp = msg['expires_at'].replace('Z', '+00:00')
-                        exp_dt = datetime.fromisoformat(clean_exp)
+                        exp_val = msg['expires_at']
+                        if isinstance(exp_val, str):
+                            clean_exp = exp_val.replace('Z', '+00:00')
+                            exp_dt = datetime.fromisoformat(clean_exp)
+                        else:
+                            exp_dt = exp_val
+                        if exp_dt.tzinfo is None:
+                            exp_dt = exp_dt.replace(tzinfo=timezone.utc)
                         if datetime.now(timezone.utc) > exp_dt:
                             req.send_json({
                                 'success': False, 
-                                'isExpired': True,
+                                'isExpired': True, 
                                 'message': 'Bu hədiyyənin istifadə müddəti bitib!'
                             }, 200)
                             return True
-                    except Exception:
+                    except Exception as ex:
                         pass
 
                 if msg['is_claimed'] == 1:
@@ -533,7 +553,7 @@ def handle_post(req, parsed, data):
                 ''', (player_id, message_id))
 
                 cursor.execute('''
-                    INSERT OR IGNORE INTO claimed_messages (message_id, player_id)
+                    INSERT INTO claimed_messages (message_id, player_id)
                     VALUES (?, ?)
                 ''', (message_id, player_id))
 
@@ -559,6 +579,7 @@ def handle_post(req, parsed, data):
                 p_res = cursor.fetchone()
                 conn.commit()
 
+                print(f" [CLAIM UĞURLU] Oyunçu {player_id} məktub #{message_id} qəbul etdi. Yeni balans: {p_res['diamonds']} Mavi, {p_res['red_diamonds']} Qırmızı")
                 req.send_json({
                     'success': True,
                     'message': f'🎉 Hədiyyə kodu uğurla təsdiqləndi və qəbul edildi! (+{blue} [cyan], +{red} [ruby])',
@@ -569,6 +590,7 @@ def handle_post(req, parsed, data):
                 })
                 return True
         except Exception as e:
+            print(f" [CLAIM XƏTASI] {e}")
             req.send_json({'success': False, 'message': f'Baza xətası: {str(e)}'}, 200)
             return True
 

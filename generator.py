@@ -16,15 +16,33 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
+# .env faylını oxumaq
+ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if os.path.exists(ENV_FILE):
+    try:
+        with open(ENV_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+    except Exception:
+        pass
+
 SECRET_KEY = "FLOOR_ESCAPE_SECRET_KEY_2026_AGY_SECURE_TOKEN_SYSTEM"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 DB_FILE = os.path.join(DATA_DIR, 'floor_escape.db')
 
-def get_db():
-    conn = sqlite3.connect(DB_FILE, timeout=15)
-    conn.row_factory = sqlite3.Row
-    return conn
+try:
+    from server.db import get_db, DATABASE_URL, USE_POSTGRES
+except Exception:
+    DATABASE_URL = os.environ.get('DATABASE_URL', '')
+    USE_POSTGRES = False
+    def get_db():
+        conn = sqlite3.connect(DB_FILE, timeout=15)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def create_signed_gift_code(blue_diamonds, red_diamonds):
     nonce = secrets.token_hex(4).upper() # 8 simvol
@@ -63,7 +81,7 @@ def verify_signed_gift_code(token):
 
 import urllib.request
 
-DEFAULT_SERVER_URL = os.environ.get('GAME_SERVER_URL', 'http://132.145.76.194:8082')
+DEFAULT_SERVER_URL = os.environ.get('GAME_SERVER_URL') or os.environ.get('REMOTE_SERVER_URL') or 'http://84.8.148.216:8082'
 CURRENT_SERVER_URL = DEFAULT_SERVER_URL
 
 def set_current_server_url(url):
@@ -73,9 +91,39 @@ def set_current_server_url(url):
 def get_current_server_url():
     return CURRENT_SERVER_URL
 
+def check_postgres_connection():
+    if not USE_POSTGRES:
+        return False, "PostgreSQL deaktivdir (SQLite istifadə olunur)"
+    try:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL, connect_timeout=3)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM players")
+            count = cur.fetchone()[0]
+        conn.close()
+        return True, f"Qoşuldu (Cəmi oyunçu: {count})"
+    except Exception as e:
+        return False, f"Xəta: {str(e)}"
+
 def get_all_players_from_db(server_url=None):
+    # 1. İlk öncə birbaşa PostgreSQL bazasından oxumaq (Ən sürətli və dəqiq)
+    if USE_POSTGRES:
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT player_id, username, diamonds, red_diamonds, gold, best_floor, last_login
+                    FROM players
+                    ORDER BY last_login DESC
+                ''')
+                players = [dict(r) for r in cursor.fetchall()]
+                print(f"  [✔] PostgreSQL bazasından {len(players)} oyunçu uğurla oxundu.")
+                return players
+        except Exception as e:
+            print(f"  [!] PostgreSQL-dən oyunçu oxuma xətası: {e}. Alternativ kanallara keçilir...")
+
     url = (server_url or get_current_server_url()).strip().rstrip('/')
-    # 1. Uzaq VM Serverindən API ilə oxumaq
+    # 2. Uzaq HTTP Serverindən API ilə oxumaq
     if url:
         for endpoint in ['/api/players/list', '/api/leaderboard']:
             try:
@@ -89,18 +137,22 @@ def get_all_players_from_db(server_url=None):
             except Exception:
                 continue
 
-    # 2. Lokal SQLite bazasından oxumaq (Fallback)
+    # 3. Lokal SQLite bazasından oxumaq (Fallback)
     try:
         if not os.path.exists(DB_FILE):
             return []
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT player_id, username, diamonds, red_diamonds, gold, best_floor, last_login
-                FROM players
-                ORDER BY last_login DESC
-            ''')
-            return [dict(r) for r in cursor.fetchall()]
+        import sqlite3
+        conn = sqlite3.connect(DB_FILE, timeout=15)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT player_id, username, diamonds, red_diamonds, gold, best_floor, last_login
+            FROM players
+            ORDER BY last_login DESC
+        ''')
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return rows
     except Exception as e:
         print(f"Oyunçuları oxuyarkən xəta: {e}")
         return []
@@ -115,7 +167,39 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
 
     url = (server_url or get_current_server_url()).strip().rstrip('/')
 
-    sent_to_vm = False
+    # 1. BİRBAŞA POSTGRESQL BAZASINA YAZMAQ
+    if USE_POSTGRES:
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (token, target_type, player_id, blue, red, expires_at))
+                cursor.execute('''
+                    INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ''', (target_type, player_id, title, note, token, blue, red, expires_at))
+                conn.commit()
+                print(f"  [✔] Hədiyyə və məktub BİRBAŞA PostgreSQL bazasına yazıldı! (Kod: {token})")
+
+            # Real-time WebSocket üçün HTTP serverə də bildiriş atırıq (əgər server açıqdırsa)
+            if url:
+                try:
+                    payload = json.dumps({
+                        'targetType': target_type, 'playerId': player_id,
+                        'blueDiamonds': blue, 'redDiamonds': red,
+                        'title': title, 'note': note, 'expiresAt': expires_at, 'token': token
+                    }).encode('utf-8')
+                    req = urllib.request.Request(f"{url}/api/admin/send_gift", data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'FloorEscapeAdmin/1.0'})
+                    urllib.request.urlopen(req, timeout=1.5)
+                except Exception:
+                    pass
+            return token, expires_at, True
+        except Exception as e:
+            print(f"  [!] PostgreSQL bazasına yazarkən xəta: {e}. Digər kanallara keçilir...")
+
+    # 2. Uzaq HTTP Serverinə göndərmək
     if url:
         try:
             payload = json.dumps({
@@ -132,57 +216,54 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
             with urllib.request.urlopen(req, timeout=4.5) as resp:
                 res_data = json.loads(resp.read().decode('utf-8'))
                 if res_data.get('success'):
-                    print(f"  [✔] Hədiyyə və məktub birbaşa uzaq VM serverinə ({url}) göndərildi!")
+                    print(f"  [✔] Hədiyyə və məktub HTTP serverinə ({url}) göndərildi!")
                     return token, expires_at, True
         except Exception as e:
-            print(f"  [!] Uzaq VM-ə göndərmə xətası: {e}. Lokal bazaya yazılır...")
+            print(f"  [!] HTTP serverinə göndərmə xətası: {e}. Lokal SQLite bazasına yazılır...")
 
-    # 2. Lokal SQLite bazası (Əgər VM serveri əlçatmazdırsa)
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # 1. gift_codes_advanced cədvəlinə yazırıq
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS gift_codes_advanced (
-                code TEXT PRIMARY KEY,
-                target_type TEXT NOT NULL DEFAULT 'ALL',
-                target_player_id TEXT DEFAULT 'ALL',
-                blue_diamonds INTEGER DEFAULT 0,
-                red_diamonds INTEGER DEFAULT 0,
-                expires_at TIMESTAMP DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                is_active INTEGER DEFAULT 1
-            )
-        ''')
-        cursor.execute('''
-            INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (token, target_type, player_id, blue, red, expires_at))
-
-        # 2. inbox_messages cədvəlinə yazırıq
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS inbox_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                target_type TEXT NOT NULL DEFAULT 'ALL',
-                player_id TEXT DEFAULT 'ALL',
-                title TEXT NOT NULL,
-                note TEXT,
-                gift_code TEXT NOT NULL,
-                blue_diamonds INTEGER DEFAULT 0,
-                red_diamonds INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP DEFAULT NULL,
-                is_claimed INTEGER DEFAULT 0,
-                claimed_by TEXT DEFAULT NULL,
-                claimed_at TIMESTAMP DEFAULT NULL
-            )
-        ''')
-        cursor.execute('''
-            INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-        ''', (target_type, player_id, title, note, token, blue, red, expires_at))
-        conn.commit()
-
+    # 3. Lokal SQLite bazası (Ən son ehtiyat variant)
+    import sqlite3
+    conn = sqlite3.connect(DB_FILE, timeout=15)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS gift_codes_advanced (
+            code TEXT PRIMARY KEY,
+            target_type TEXT NOT NULL DEFAULT 'ALL',
+            target_player_id TEXT DEFAULT 'ALL',
+            blue_diamonds INTEGER DEFAULT 0,
+            red_diamonds INTEGER DEFAULT 0,
+            expires_at TIMESTAMP DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_active INTEGER DEFAULT 1
+        )
+    ''')
+    cursor.execute('''
+        INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (token, target_type, player_id, blue, red, expires_at))
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inbox_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_type TEXT NOT NULL DEFAULT 'ALL',
+            player_id TEXT DEFAULT 'ALL',
+            title TEXT NOT NULL,
+            note TEXT,
+            gift_code TEXT NOT NULL,
+            blue_diamonds INTEGER DEFAULT 0,
+            red_diamonds INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP DEFAULT NULL,
+            is_claimed INTEGER DEFAULT 0,
+            claimed_by TEXT DEFAULT NULL,
+            claimed_at TIMESTAMP DEFAULT NULL
+        )
+    ''')
+    cursor.execute('''
+        INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+    ''', (target_type, player_id, title, note, token, blue, red, expires_at))
+    conn.commit()
+    conn.close()
     return token, expires_at, False
 
 # ============================================================================
@@ -241,20 +322,32 @@ def launch_gui():
     lbl_desc.pack(anchor="w")
 
     # 🌐 Uzaq VM Server Qoşulma Paneli
-    server_bar = tk.Frame(header_frame, bg="#0f172a", padx=10, pady=6, highlightthickness=1, highlightbackground="#1e293b")
-    server_bar.pack(fill=tk.X, pady=(8, 0))
+    server_bar = tk.Frame(header_frame, bg="#0f172a", padx=10, pady=5, highlightthickness=1, highlightbackground="#1e293b")
+    server_bar.pack(fill=tk.X, pady=(6, 0))
 
-    tk.Label(server_bar, text="🌐 Server URL (VM):", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+    tk.Label(server_bar, text="🌐 HTTP API:", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
     server_url_var = tk.StringVar(value=get_current_server_url())
-    ent_server_url = tk.Entry(server_bar, textvariable=server_url_var, bg="#1e293b", fg="#ffffff", font=("Segoe UI", 9), width=32, insertbackground="#ffffff")
-    ent_server_url.pack(side=tk.LEFT, padx=(0, 10))
+    ent_server_url = tk.Entry(server_bar, textvariable=server_url_var, bg="#1e293b", fg="#ffffff", font=("Segoe UI", 9), width=28, insertbackground="#ffffff")
+    ent_server_url.pack(side=tk.LEFT, padx=(0, 8))
 
     btn_ping = tk.Button(server_bar, text="⚡ Qoşulmanı Yoxla", bg="#0284c7", fg="#ffffff", font=("Segoe UI", 8, "bold"), cursor="hand2", padx=8, pady=2, relief=tk.FLAT)
-    btn_ping.pack(side=tk.LEFT, padx=(0, 12))
+    btn_ping.pack(side=tk.LEFT, padx=(0, 10))
 
     status_var = tk.StringVar(value="🟡 Yoxlanılır...")
     lbl_status = tk.Label(server_bar, textvariable=status_var, bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"))
     lbl_status.pack(side=tk.LEFT)
+
+    # 🐘 PostgreSQL Mərkəzi Baza Paneli
+    db_bar = tk.Frame(header_frame, bg="#0b1a2e", padx=10, pady=5, highlightthickness=1, highlightbackground="#1e3a8a")
+    db_bar.pack(fill=tk.X, pady=(3, 0))
+
+    tk.Label(db_bar, text="🐘 Baza (PostgreSQL):", bg="#0b1a2e", fg="#60a5fa", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+    db_host_label = DATABASE_URL.split('@')[-1] if (USE_POSTGRES and '@' in DATABASE_URL) else ("SQLite (Yerli)" if not USE_POSTGRES else "PostgreSQL")
+    tk.Label(db_bar, text=db_host_label, bg="#1e293b", fg="#93c5fd", font=("Segoe UI", 8, "bold"), padx=6, pady=1).pack(side=tk.LEFT, padx=(0, 8))
+
+    db_status_var = tk.StringVar(value="🟡 Baza yoxlanılır...")
+    lbl_db_status = tk.Label(db_bar, textvariable=db_status_var, bg="#0b1a2e", fg="#93c5fd", font=("Segoe UI", 9, "bold"))
+    lbl_db_status.pack(side=tk.LEFT)
 
     # 2. Üst Bölmə: Oyunçu Seçimi və Cədvəl
     player_box = tk.LabelFrame(main_frame, text=" 👥 1. HƏDƏF SEÇİMİ VƏ QEYDİYYATLI OYUNÇULAR ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 10, "bold"), padx=12, pady=8)
@@ -328,26 +421,31 @@ def launch_gui():
         set_current_server_url(cur_url)
         all_players_cache = get_all_players_from_db(cur_url)
         
-        # Statusu yoxlamaq
+        # 1. PostgreSQL Statusunu yoxlamaq
+        pg_ok, pg_msg = check_postgres_connection()
+        if pg_ok:
+            db_status_var.set(f"🟢 {pg_msg}")
+            lbl_db_status.config(fg="#10b981")
+        else:
+            db_status_var.set(f"🔴 {pg_msg}")
+            lbl_db_status.config(fg="#ef4444")
+
+        # 2. HTTP Server Statusunu yoxlamaq
         if cur_url:
             try:
                 test_req = urllib.request.Request(f"{cur_url}/api/leaderboard", headers={'User-Agent': 'FloorEscapeAdmin/1.0'})
                 with urllib.request.urlopen(test_req, timeout=2.5) as r:
                     if r.status == 200:
-                        status_var.set(f"🟢 Uzaq VM Serverinə Bağlandı ({len(all_players_cache)} oyunçu)")
+                        status_var.set(f"🟢 HTTP API Aktivdir ({len(all_players_cache)} oyunçu)")
                         lbl_status.config(fg="#10b981")
                     else:
                         status_var.set(f"🟡 Server cavab verdi ({r.status})")
                         lbl_status.config(fg="#f59e0b")
             except Exception:
-                if all_players_cache:
-                    status_var.set(f"🟡 VM Oflayn - Lokal Baza ({len(all_players_cache)} oyunçu)")
-                    lbl_status.config(fg="#f59e0b")
-                else:
-                    status_var.set("🔴 Server Oflayn və Baza Boş")
-                    lbl_status.config(fg="#ef4444")
+                status_var.set("🔴 HTTP Server Oflayn (PostgreSQL birbaşa işləyir)")
+                lbl_status.config(fg="#f59e0b")
         else:
-            status_var.set(f"💾 Lokal SQLite Bazası ({len(all_players_cache)} oyunçu)")
+            status_var.set("💾 Yalnız Baza Rejimi")
             lbl_status.config(fg="#94a3b8")
 
         filter_players()

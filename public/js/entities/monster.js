@@ -44,7 +44,7 @@ class Monster {
     reset() {
         const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : canvasHeight;
-        this.y = worldH + 50;
+        this.y = worldH - 38;
         this.baseSpeed = 0.22 + (fl - 1) * 0.06;
         this.speed = this.baseSpeed;
         this.wallTimer = 0;
@@ -483,9 +483,6 @@ class Monster {
                 if (typeof audio !== 'undefined' && audio.playMeteorWarning) {
                     audio.playMeteorWarning();
                 }
-                if (typeof showToast === 'function') {
-                    showToast('☄️ CANAVAR LAVA METEORLARI YAĞDIRIR!', 'warning');
-                }
             }
 
             // 2. Zərbə Qışqırığı (Shockwave Roar)
@@ -502,12 +499,6 @@ class Monster {
                 this.surgeSide = Math.random() < 0.5 ? 'left' : 'right';
                 this.surgeTimer = 160;
                 this.surgeHeight = 50;
-                if (typeof audio !== 'undefined' && audio.playRoar) {
-                    audio.playRoar();
-                }
-                if (typeof showToast === 'function') {
-                    showToast(`🔥 DİQQƏT: LAVA DALĞASI QABARIR (${this.surgeSide === 'left' ? 'SOL' : 'SAĞ'})!`, 'error');
-                }
             }
         }
 
@@ -1030,9 +1021,6 @@ class Monster {
 
     // 📢 ZƏRBƏ QİŞQIRIĞINI TETİKLƏMƏK (SHOCKWAVE ROAR)
     triggerRoar() {
-        if (typeof audio !== 'undefined' && audio.playRoar) {
-            audio.playRoar();
-        }
         const w = canvasWidth;
         const h = canvasHeight;
         this.shockwaves.push({
@@ -1049,10 +1037,6 @@ class Monster {
         if (mainView) {
             mainView.classList.add('shake');
             setTimeout(() => mainView.classList.remove('shake'), 350);
-        }
-
-        if (typeof showToast === 'function') {
-            showToast('📢 CANAVARIN ZƏRBƏ QİŞQIRIĞI! (DURUXMA)', 'error');
         }
     }
 

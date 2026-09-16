@@ -126,13 +126,17 @@ class Player {
 
         let dx = 0, dy = 0;
 
-        const isWallA = keybinds.wall === 'a';
-        const isMoveLeft = keys['arrowleft'] || keys['touch_left'] || (keys['a'] && !isWallA);
+        const isWallA = (typeof keybinds !== 'undefined' && (keybinds.wall === 'a' || keybinds.wall === 'keya'));
 
-        if (keys['w'] || keys['arrowup'] || keys['touch_up']) dy = -currentSpeed;
-        if (keys['s'] || keys['arrowdown'] || keys['touch_down']) dy = currentSpeed;
-        if (isMoveLeft) dx = -currentSpeed;
-        if (keys['d'] || keys['arrowright'] || keys['touch_right']) dx = currentSpeed;
+        const isUp = !!(keys['w'] || keys['keyw'] || keys['arrowup'] || keys['up'] || keys['touch_up'] || keys['ц']);
+        const isDown = !!(keys['s'] || keys['keys'] || keys['arrowdown'] || keys['down'] || keys['touch_down'] || keys['ы']);
+        const isLeft = !!((keys['a'] || keys['keya'] || keys['arrowleft'] || keys['left'] || keys['touch_left'] || keys['ф']) && !isWallA);
+        const isRight = !!(keys['d'] || keys['keyd'] || keys['arrowright'] || keys['right'] || keys['touch_right'] || keys['в']);
+
+        if (isUp) dy = -currentSpeed;
+        if (isDown) dy = currentSpeed;
+        if (isLeft) dx = -currentSpeed;
+        if (isRight) dx = currentSpeed;
 
         if (dx !== 0 && dy !== 0) {
             dx *= 0.7071;

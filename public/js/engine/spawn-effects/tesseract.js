@@ -4,7 +4,16 @@
       constructor() {
         this.ctx = null;
       }
+      canPlay() {
+        if (typeof window === 'undefined') return false;
+        if (window.spawnAnimAudioEnabled) return true;
+        if (typeof gameRunning !== 'undefined' && gameRunning) return true;
+        if (typeof isGameActive !== 'undefined' && isGameActive) return true;
+        const fsModal = document.getElementById('spawn-anim-fullscreen-modal');
+        return !!(fsModal && !fsModal.classList.contains('hidden'));
+      }
       init() {
+        if (!this.canPlay()) return;
         if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
         if (!this.ctx) {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -15,7 +24,7 @@
         }
       }
       playTesseractFold() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           const osc1 = this.ctx.createOscillator();
@@ -39,7 +48,7 @@
         } catch (e) {}
       }
       playGravitonLaunch() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();
@@ -56,7 +65,7 @@
         } catch (e) {}
       }
       playGravitonImplosion() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           // 1. Heavy Gravitational Sub-Drop & Detonation
@@ -111,7 +120,7 @@
         } catch (e) {}
       }
       playForgeOrb() {
-        if (!this.ctx) return;
+        if (!this.canPlay() || !this.ctx) return;
         try {
           const t = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();

@@ -12,8 +12,8 @@ const PortalSpawnEffect = {
     glowColor: '#72ddff',
     badge: '🌀 Standart Holoqram',
     desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.',
-    costType: 'free',
-    cost: 0,
+    costType: 'redDiamonds',
+    cost: 5,
     duration: 6.0,
 
     draw(ctx, w, h, t, drawMonster) {

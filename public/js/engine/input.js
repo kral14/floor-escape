@@ -107,6 +107,11 @@ window.addEventListener('keydown', e => {
         e.preventDefault();
     }
 
+    // Ox düymələri və boşluq zamanı səhifənin scroll olmasını önləyirik
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) || ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+    }
+
     if (typeof gameState !== 'undefined' && gameState.transitioning) return;
     if (typeof gameState !== 'undefined' && gameState.isIntroPlaying) {
         if (e.code === 'Space' || e.key === ' ' || e.key === 'Enter') {
@@ -117,6 +122,7 @@ window.addEventListener('keydown', e => {
     }
     if (typeof audio !== 'undefined') audio.init();
     const k = (e.key || '').toLowerCase();
+    const c = (e.code || '').toLowerCase();
 
     if (recordingTrapType) {
         e.preventDefault();
@@ -140,6 +146,7 @@ window.addEventListener('keydown', e => {
     }
 
     if (k) keys[k] = true;
+    if (c) keys[c] = true;
 
     if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
@@ -181,7 +188,9 @@ window.addEventListener('keyup', e => {
         e.preventDefault();
     }
     const k = (e.key || '').toLowerCase();
+    const c = (e.code || '').toLowerCase();
     if (k) keys[k] = false;
+    if (c) keys[c] = false;
 });
 
 function handleTouchStart(dir) {

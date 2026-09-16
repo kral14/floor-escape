@@ -4,15 +4,32 @@ import json
 import urllib.request
 import urllib.error
 
-REMOTE_SERVER_URL = os.environ.get('REMOTE_SERVER_URL', 'http://132.145.76.194:8082').rstrip('/')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENV_FILE = os.path.join(BASE_DIR, '.env')
+if os.path.exists(ENV_FILE):
+    try:
+        with open(ENV_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, v = line.split('=', 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+    except Exception:
+        pass
+
+REMOTE_SERVER_URL = os.environ.get('REMOTE_SERVER_URL', '').rstrip('/')
 
 def is_remote_mode():
     """
-    Əgər REMOTE_SERVER_URL təyin olunubsa və bu maşın uzaq serverin özü deyilsə (IS_REMOTE_SERVER != '1'),
-    onda sistem lokal baza yaratmır və bütün API sorğularını uzaq VM-ə yönləndirir.
+    Əgər DATABASE_URL və ya IS_REMOTE_SERVER=1 təyin olunubsa, server birbaşa öz bazası ilə işləyir.
+    Yalnız və yalnız xüsusi olaraq REMOTE_SERVER_URL verildikdə və yerli baza olmadıqda proxy edilir.
     """
+    if os.environ.get('DATABASE_URL'):
+        return False
     is_remote_env = os.environ.get('IS_REMOTE_SERVER', '0').lower() in ('1', 'true', 'yes')
-    return bool(REMOTE_SERVER_URL) and not is_remote_env
+    if is_remote_env:
+        return False
+    return bool(REMOTE_SERVER_URL)
 
 def proxy_request(handler, method, path, body_bytes=None):
     """

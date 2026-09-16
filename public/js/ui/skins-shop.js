@@ -73,24 +73,24 @@ let currentSingularityVariantId = null;
 
 function getSpawnAnimsCatalog() {
     return {
-        tesseract: { id:'tesseract', name:'4D Kvant Tesseraktı', title:'Graviton Singularity Core', icon:'fa-cubes', color:'#c084fc', glowColor:'#a855f7', badge:'🔮 4D Kvant Tesseraktı', desc:'4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType:'free', cost:0 },
-        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'free', cost: 0 },
-        portal: { id: 'portal', name: 'Holoqramdan Doğuluş', title: 'Holo-Portal', icon: 'fa-atom', color: '#65dfff', glowColor: '#72ddff', badge: '🌀 Holoqram Portalı', desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.', costType: 'free', cost: 0 },
+        tesseract: { id: 'tesseract', name: '4D Kvant Tesseraktı', title: 'Graviton Singularity Core', icon: 'fa-cubes', color: '#c084fc', glowColor: '#a855f7', badge: '🔮 4D Kvant Tesseraktı', desc: '4D fırlanan hiperkub, qraviton kürələri və kvant hissəcikləri. Tam önbaxışda WASD ilə hərəkət, E ilə qraviton atışı.', costType: 'redDiamonds', cost: 100 },
+        glacial: { id: 'glacial', name: 'Kvant Buz Zirehi', title: 'Glacial Mecha Iris', icon: 'fa-snowflake', color: '#67e8f9', glowColor: '#38bdf8', badge: '❄️ Kvant Buz Zirehi', desc: 'Altıbucaqlı mexaniki zireh, üzən buz kameraları və kriogen hissəciklər. Önbaxışda WASD ilə hərəkət, E ilə buz atışı.', costType: 'redDiamonds', cost: 100 },
+        portal: { id: 'portal', name: 'Holoqramdan Doğuluş', title: 'Holo-Portal', icon: 'fa-atom', color: '#65dfff', glowColor: '#72ddff', badge: '🌀 Holoqram Portalı', desc: 'Portal açılır, orbital qəfəs və komet quyruqları toplanır, Mons meydana çıxır.', costType: 'redDiamonds', cost: 5 },
         crystal: { id: 'crystal', name: 'Kristal Yarığı', title: 'Crystal Rift', icon: 'fa-gem', color: '#b899ff', glowColor: '#d9c5ff', badge: '💎 Kristal Yarığı', desc: 'İşıq çatı açılır, 3D perspektiv kristallar ayrılır, şimşək çaxır və Mons meydana çıxır.', costType: 'redDiamonds', cost: 15 },
         stellar: { id: 'stellar', name: 'Ulduz Nüvəsi', title: 'Stellar Bloom', icon: 'fa-sun', color: '#54d8cf', glowColor: '#f8d49a', badge: '🌟 Ulduz Nüvəsi', desc: 'Enerji toplanır, 3D axın lentləri fəzanı yarır, ulduz nüvəsi açılır və Mons doğulur.', costType: 'redDiamonds', cost: 25 },
         dracula: { id: 'dracula', name: 'Drakula', title: 'Dracula', icon: 'fa-bat', fallbackIcon: 'fa-feather', color: '#ba7886', glowColor: '#9774be', badge: '🦇 Yarasa Qanadları (+1 Sürət)', desc: 'Qaranlıq oyanır, nəhəng yarasa qanadları açılır və Monsa oyunda +1 hərəkət sürəti bəxş edir.', costType: 'redDiamonds', cost: 35 },
         seed: { id: 'seed', name: 'Yaşam Çiçəyi', title: 'Time Seed', icon: 'fa-seedling', fallbackIcon: 'fa-leaf', color: '#62e6a0', glowColor: '#ffe3a0', badge: '🌸 Yaşam Çiçəyi (+1 Can)', desc: 'Zaman toxumu cücərir, qoruyucu sarmaşıqlar və yaşam çiçəkləri Monsu əhatəyə alaraq +1 əlavə can bəxş edir.', costType: 'redDiamonds', cost: 45 },
-        singularity: { 
-            id: 'singularity', 
-            name: 'Kvant Sinqulyarlığı', 
-            title: 'Quantum Singularity', 
-            icon: 'fa-circle-nodes', 
-            fallbackIcon: 'fa-atom', 
-            color: '#38bdf8', 
-            glowColor: '#06b6d4', 
-            badge: '🌀 Kvant Sinqulyarlığı (4 Fərqli Kvant Növü)', 
-            desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.', 
-            costType: 'redDiamonds', 
+        singularity: {
+            id: 'singularity',
+            name: 'Kvant Sinqulyarlığı',
+            title: 'Quantum Singularity',
+            icon: 'fa-circle-nodes',
+            fallbackIcon: 'fa-atom',
+            color: '#38bdf8',
+            glowColor: '#06b6d4',
+            badge: '🌀 Kvant Sinqulyarlığı (4 Fərqli Kvant Növü)',
+            desc: 'Kvant Fizikası: 3D hadisə üfüqü, aşağı atılan ulduzlar lavaya dəyəndə lavanı soyudur (-45px) və kristal qəlpələrə parçalayır.',
+            costType: 'redDiamonds',
             cost: 55,
             isMultiVariant: true,
             variants: SINGULARITY_VARIANTS
@@ -103,7 +103,7 @@ function getSavedSkinSubTab() {
         if (saved && (saved === 'skins' || saved === 'anims')) {
             return saved;
         }
-    } catch (e) {}
+    } catch (e) { }
     return 'skins';
 }
 window.getSavedSkinSubTab = getSavedSkinSubTab;
@@ -188,7 +188,7 @@ function switchSkinSubTab(subTab) {
         if (document.documentElement) {
             document.documentElement.setAttribute('data-initial-skin-sub', currentSkinSubTab);
         }
-    } catch (e) {}
+    } catch (e) { }
 
     const btnSkins = document.getElementById('skin-subtab-btn-skins');
     const btnAnims = document.getElementById('skin-subtab-btn-anims');
@@ -785,7 +785,7 @@ function renderSpawnAnimsShop() {
     if (!container) return;
 
     const animsList = getSpawnAnimsCatalog();
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity', 'portal'];
+    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity'];
     const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
     const preview = currentPreviewSpawnAnimId || active;
 
@@ -806,16 +806,16 @@ function renderSpawnAnimsShop() {
             multiVariantControls = `
                 <div class="grid grid-cols-4 gap-1 w-full my-1.5 px-0.5" onclick="event.stopPropagation();">
                     ${Object.values(SINGULARITY_VARIANTS).map(v => {
-                        const isVarOwned = owned.includes(v.id);
-                        const isVarActive = (active === v.id);
-                        const isVarSelected = (currentSingularityVariantId === v.id);
-                        let pillClass = 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:border-slate-700';
-                        if (isVarSelected) {
-                            pillClass = 'border-amber-400 bg-amber-500/25 text-amber-200 shadow-sm ring-1 ring-amber-400/50';
-                        } else if (isVarActive) {
-                            pillClass = 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300';
-                        }
-                        return `
+                const isVarOwned = owned.includes(v.id);
+                const isVarActive = (active === v.id);
+                const isVarSelected = (currentSingularityVariantId === v.id);
+                let pillClass = 'border-slate-800 bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:border-slate-700';
+                if (isVarSelected) {
+                    pillClass = 'border-amber-400 bg-amber-500/25 text-amber-200 shadow-sm ring-1 ring-amber-400/50';
+                } else if (isVarActive) {
+                    pillClass = 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300';
+                }
+                return `
                             <button type="button" 
                                     onclick="selectSingularityVariant('${v.id}');"
                                     class="px-1 py-1 rounded-lg text-[9px] font-orbitron font-bold transition flex items-center justify-center gap-0.5 border cursor-pointer ${pillClass}"
@@ -825,7 +825,7 @@ function renderSpawnAnimsShop() {
                                 ${!isVarOwned ? `<i class="fa-solid fa-lock text-[7px] text-slate-500 ml-0.5"></i>` : ''}
                             </button>
                         `;
-                    }).join('')}
+            }).join('')}
                 </div>
             `;
         }
@@ -899,10 +899,11 @@ function renderSpawnAnimsShop() {
                  title="Önbaxış üçün klikləyin">
                 
                 <div class="w-full flex items-center justify-between px-0.5 mb-1 pointer-events-none">
-                    <span class="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full border bg-slate-900/80 truncate max-w-[100px]" style="color: ${displayAnim.color}; border-color: ${displayAnim.color}40;">
-                        <i class="fa-solid ${displayAnim.icon} mr-0.5"></i> ${displayAnim.title}
+                    <span class="text-[9.5px] font-orbitron font-bold px-2 py-0.5 rounded-full border bg-slate-900/90 truncate max-w-[145px] flex items-center gap-1" style="color: ${displayAnim.color}; border-color: ${displayAnim.color}40;">
+                        <i class="fa-solid ${displayAnim.icon}"></i>
+                        <span class="truncate">${displayAnim.name}</span>
                     </span>
-                    ${isActive ? `<span class="bg-emerald-500 text-slate-950 rounded-full px-1.5 py-0.5 text-[8px] font-orbitron font-bold shadow flex items-center gap-0.5"><i class="fa-solid fa-check"></i> AKTİV</span>` : (isOwned ? `<span class="text-slate-400 text-[8px] font-mono">SAHİBSƏN</span>` : `<span class="text-rose-400 text-[8px] font-mono font-bold">${displayAnim.cost} 💎</span>`)}
+                    ${isActive ? `<span class="bg-emerald-500 text-slate-950 rounded-full px-1.5 py-0.5 text-[8px] font-orbitron font-bold shadow flex items-center gap-0.5"><i class="fa-solid fa-check"></i> AKTİV</span>` : (isOwned ? `<span class="text-slate-400 text-[8px] font-mono">SAHİBSƏN</span>` : '')}
                 </div>
 
                 <!-- CANLI ANİMASİYA PƏNCƏRƏSİ (KOMPAKT MİNİ KANVAS) -->
@@ -911,21 +912,22 @@ function renderSpawnAnimsShop() {
                     <div class="absolute bottom-1 right-1 text-[6px] font-mono text-slate-400 bg-slate-950/80 px-1 py-0.5 rounded border border-slate-800 pointer-events-none">FX</div>
                 </div>
 
-                ${anim.id === 'glacial' ? `<div class="w-full p-2 rounded-lg bg-sky-950/50 text-xs text-cyan-100" onclick="event.stopPropagation()">
-                    <p>Başlanğıc: 6 buz mərmisi · E ilə atış</p>
-                    <p>Hərəkətlə dolan tutum: ${getGlacialReloadLevel()}/6</p>
-                    <button type="button" class="mt-2 p-2 rounded bg-sky-700 hover:bg-sky-600" onclick="buyGlacialReload()" ${getGlacialReloadLevel()>=6?'disabled':''}>${getGlacialReloadLevel()>=6?'Tam təkmilləşib':`Doldurma +1 · ${GLACIAL_RELOAD_PRICES[getGlacialReloadLevel()]} Fancy`}</button>
-                </div>` : ''}
+                ${anim.id === 'glacial' ? (() => {
+                    const lvl = getGlacialReloadLevel();
+                    const isMax = lvl >= 6;
+                    const price = !isMax ? GLACIAL_RELOAD_PRICES[lvl] : 0;
+                    const ruby = (typeof ICONS !== 'undefined') ? ICONS.rubyDiamond({ size: 10 }) : '💎';
+                    return `
+                        <div class="w-full my-1 px-2 py-1 rounded-xl bg-sky-950/70 border border-sky-500/30 text-[9px] text-cyan-100 flex items-center justify-between gap-1.5 shadow-inner" onclick="event.stopPropagation()">
+                            <span class="font-mono text-slate-300">❄️ Tutum: <strong class="text-sky-300 font-bold">${lvl}/6</strong></span>
+                            <button type="button" class="px-2 py-0.5 rounded-lg font-orbitron font-bold text-[8.5px] shrink-0 transition active:scale-95 cursor-pointer ${isMax ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-slate-950 shadow-sm flex items-center gap-1'}" onclick="buyGlacialReload()" ${isMax ? 'disabled' : ''}>
+                                <span>${isMax ? 'MAKS' : `+1: ${price}`}</span>
+                                ${!isMax ? ruby : ''}
+                            </button>
+                        </div>
+                    `;
+                })() : ''}
                 ${multiVariantControls}
-
-                <div class="mb-1 w-full pointer-events-none">
-                    <h4 class="font-orbitron font-bold text-xs text-white tracking-wide group-hover:text-amber-300 transition-colors leading-tight">${displayAnim.name}</h4>
-                    <div class="mt-0.5">
-                        <span class="inline-block px-2 py-0.5 rounded-full text-[8.5px] font-orbitron font-bold border shadow-sm" style="background: ${displayAnim.color}18; color: ${displayAnim.color}; border-color: ${displayAnim.color}45;">
-                            ${displayAnim.badge}
-                        </span>
-                    </div>
-                </div>
 
                 ${isMulti ? `
                     <div class="w-full my-1.5 p-1.5 rounded-xl bg-slate-900/90 border border-sky-500/30 flex items-center justify-between gap-1 text-[10px] font-orbitron shadow-inner" onclick="event.stopPropagation();">
@@ -962,6 +964,7 @@ let fullscreenAnimInstance = null;
 let fullscreenAnimFrame = null;
 
 function openSpawnAnimFullscreenPreview(animId) {
+    window.spawnAnimAudioEnabled = true;
     const animsList = getSpawnAnimsCatalog();
     const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
     if (!anim) return;
@@ -1000,7 +1003,7 @@ function openSpawnAnimFullscreenPreview(animId) {
         badgeEl.style.backgroundColor = `${anim.color}20`;
     }
 
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity', 'portal'];
+    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity'];
     const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
     const isOwned = owned.includes(anim.id);
     const isActive = active === anim.id;
@@ -1232,6 +1235,7 @@ function cleanupFullscreenInteractiveHandlers() {
 }
 
 function closeSpawnAnimFullscreenPreview() {
+    window.spawnAnimAudioEnabled = false;
     const modal = document.getElementById('spawn-anim-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
     if (fullscreenAnimFrame) cancelAnimationFrame(fullscreenAnimFrame);
@@ -1383,18 +1387,18 @@ function startFullscreenAnim(animId) {
         };
     }
 
-    if (['glacial','tesseract'].includes(animId)) {
+    if (['glacial', 'tesseract'].includes(animId)) {
         const module = animId === 'glacial' ? window.GlacialSpawnEffect : window.TesseractSpawnEffect;
         const engine = module.getEngine('fullscreen');
         engine.restartIntro();
         const keydown = e => {
-            if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+            if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault(); engine.keys[e.code] = true;
-            } else if (e.code === 'KeyE') { e.preventDefault(); if(animId==='glacial')engine.javelinSystem.launchIceBullet();else engine.singularitySystem.launchGraviton(); }
+            } else if (e.code === 'KeyE') { e.preventDefault(); if (animId === 'glacial') engine.javelinSystem.launchIceBullet(); else engine.singularitySystem.launchGraviton(); }
         };
         const keyup = e => { engine.keys[e.code] = false; };
         window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup);
-        fsInteractiveHandlers = {keydown, keyup};
+        fsInteractiveHandlers = { keydown, keyup };
     }
     let lastTime = performance.now();
 
@@ -1409,7 +1413,7 @@ function startFullscreenAnim(animId) {
         lastTime = now;
 
         fullscreenAnimInstance.time += dt;
-        if (!isQuantum && !['glacial','tesseract'].includes(animId) && fullscreenAnimInstance.time > fullscreenAnimInstance.duration) {
+        if (!isQuantum && !['glacial', 'tesseract'].includes(animId) && fullscreenAnimInstance.time > fullscreenAnimInstance.duration) {
             fullscreenAnimInstance.time = 0; // Dövr edir
         }
 
@@ -1452,13 +1456,13 @@ function startFullscreenAnim(animId) {
             };
 
             eng.render(ctx, w / 2 + eng.x, h / 2 + eng.y, scale, drawMonster, false, 1);
-        } else if (['glacial','tesseract'].includes(animId)) {
+        } else if (['glacial', 'tesseract'].includes(animId)) {
             const module = animId === 'glacial' ? window.GlacialSpawnEffect : window.TesseractSpawnEffect;
-            module.draw(ctx,w,h,fullscreenAnimInstance.time,(c,t,alpha)=>{
+            module.draw(ctx, w, h, fullscreenAnimInstance.time, (c, t, alpha) => {
                 c.save(); c.globalAlpha *= alpha;
-                if (typeof drawSkinModel === 'function') drawSkinModel(c,0,0,28,fullscreenAnimInstance.skinId,0,t,false);
+                if (typeof drawSkinModel === 'function') drawSkinModel(c, 0, 0, 28, fullscreenAnimInstance.skinId, 0, t, false);
                 c.restore();
-            },false,'fullscreen');
+            }, false, 'fullscreen');
         } else if (fxModule && typeof fxModule.draw === 'function') {
             const drawMonster = (mctx, mt) => {
                 if (typeof drawSkinModel === 'function') {
@@ -1494,7 +1498,7 @@ function buyOrEquipSpawnAnim(animId) {
     const animsList = getSpawnAnimsCatalog();
     const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
     if (!anim) return;
-    if (!permUpgrades.ownedSpawnAnims || !Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = ['portal'];
+    if (!permUpgrades.ownedSpawnAnims || !Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = ['singularity'];
 
     if (SINGULARITY_VARIANTS[animId]) {
         currentSingularityVariantId = animId;

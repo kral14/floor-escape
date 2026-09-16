@@ -105,9 +105,10 @@ function updatePhysicsStep() {
         if (typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
             monsPortal.update(1 / 60);
         }
-        // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər şaquli dünyanın altında gözləyir
+        // Canavar hələ yüksəlmir, lakin lava həmişə ekranın alt kənarında dalğalanaraq aydın görünür
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
-        monster.y = worldH + 100;
+        monster.y = worldH - 38;
+        if (typeof monster.t === 'number') monster.t += 0.025;
         return;
     }
     frameCount++;
@@ -370,7 +371,11 @@ function updatePhysicsStep() {
     // 🎥 Şaquli Kamera İzləməsi (Smooth Vertical Camera Following Player)
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
     const targetCamY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
-    cameraY += (targetCamY - cameraY) * 0.14;
+    if (gameState.isIntroPlaying || gameState.transitioning) {
+        cameraY = targetCamY;
+    } else {
+        cameraY += (targetCamY - cameraY) * 0.14;
+    }
     window.cameraY = cameraY;
 
     // Hissəciklər
@@ -519,7 +524,8 @@ function renderGame() {
         ctx.save();
         const pGrad = ctx.createRadialGradient(canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.35, canvasWidth / 2, canvasHeight / 2, canvasWidth * 0.65);
         pGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        pGrad.addColorStop(1, screenPulse.color);
+        const pulseColor = (typeof screenPulse.color === 'string' && screenPulse.color) ? screenPulse.color : '#ef4444';
+        pGrad.addColorStop(1, pulseColor);
         ctx.globalAlpha = screenPulse.alpha;
         ctx.fillStyle = pGrad;
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -688,6 +694,7 @@ function restartGame() {
     monster.reset();
     if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(targetFloor) : canvasHeight;
+    monster.y = worldH - 38;
     cameraY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
     window.cameraY = cameraY;
     gameState.dashInvulnerable = 120; // Başlanğıcda 2 saniyə təhlükəsizlik
@@ -730,7 +737,16 @@ function playSummonIntro(onFinish) {
 
     gameState.isIntroPlaying = true;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
-    monster.y = worldH + 100; // Canavar hələ gəlmir, oyunçunun doğuluşu bitənə qədər aşağıda gözləyir
+    monster.y = worldH - 38; // Lava həmişə ekranın alt kənarında sabit görünür
+
+    // Kamera dərhal oyunçunun doğulduğu yerə fokuslanır
+    cameraY = Math.max(0, Math.min(worldH - canvasHeight, player.y - canvasHeight * 0.55));
+    window.cameraY = cameraY;
+
+    // Yalnız 1-ci qatda: canavar nəriltisi və təlimat banneri
+    if (gameState.floor === 1) {
+        showFirstFloorLavaWarning();
+    }
 
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
     if (SpawnClass) {
@@ -755,6 +771,74 @@ function playSummonIntro(onFinish) {
     }
 }
 
+// ==================== ⚠️ 1-Cİ QAT LAV CANAVARI XƏBƏRDARLIĞI VƏ NƏRİLTİSİ ====================
+function showFirstFloorLavaWarning() {
+    // 1. Zərif Kiber Bildiriş Səsi (Cyber Chime)
+    setTimeout(() => {
+        if (typeof audio !== 'undefined') {
+            if (typeof audio.playCyberWarning === 'function') {
+                audio.playCyberWarning();
+            } else if (typeof audio.playRoar === 'function') {
+                audio.playRoar();
+            }
+        }
+        if (typeof triggerScreenPulse === 'function') {
+            triggerScreenPulse('#ef4444', 0.65);
+        }
+    }, 350);
+
+    // 2. Ekranın mərkəzində möhtəşəm Kiber Xəbərdarlıq Baneri
+    const container = document.getElementById('canvas-container');
+    if (!container) return;
+
+    const existing = document.getElementById('first-floor-lava-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'first-floor-lava-banner';
+    banner.className = 'absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 select-none transition-all duration-500 ease-out';
+    banner.style.opacity = '0';
+    banner.style.transform = 'scale(0.85)';
+
+    banner.innerHTML = `
+        <div class="flex flex-col items-center gap-3 px-7 py-5 rounded-3xl bg-slate-950/92 border-2 border-red-500/80 shadow-[0_0_50px_rgba(239,68,68,0.75)] backdrop-blur-md max-w-[85%] text-center">
+            <div class="flex items-center gap-3 bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white font-orbitron font-extrabold px-6 py-2.5 rounded-2xl border border-amber-400/80 shadow-[0_0_25px_rgba(239,68,68,0.8)] text-base uppercase tracking-wider">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-300 text-2xl animate-bounce"></i>
+                <span class="drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">⚠️ DİQQƏT: LAV CANAVARI YÜKSƏLİR!</span>
+                <i class="fa-solid fa-fire text-amber-300 text-xl animate-pulse"></i>
+            </div>
+            <div class="text-sm font-mono text-amber-200 drop-shadow-md">
+                🌋 Onu məğlub edərək və maneələri keçərək irəliləməlisiniz!
+            </div>
+            <div class="flex items-center gap-3 text-xs font-orbitron text-slate-300 bg-slate-900/85 px-4 py-1.5 rounded-xl border border-slate-700/80 shadow-inner">
+                <span>🎮 WASD / Oxlar: Hərəkət</span>
+                <span class="text-slate-500">•</span>
+                <span>⚡ E / Boşluq: Dash & Bacarıq</span>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(banner);
+
+    // Zərif Fade-in və Scale animasiyası
+    requestAnimationFrame(() => {
+        banner.style.opacity = '1';
+        banner.style.transform = 'scale(1)';
+    });
+
+    // 4 saniyə sonra zərifcə fade-out edərək silinir
+    setTimeout(() => {
+        if (banner && banner.parentNode) {
+            banner.style.opacity = '0';
+            banner.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                if (banner && banner.parentNode) banner.remove();
+            }, 500);
+        }
+    }, 4000);
+}
+window.showFirstFloorLavaWarning = showFirstFloorLavaWarning;
+
 // ==================== 🌀 QAT KEÇİDİ TELEPORTASİYASI (TELEPORT OUT ➔ TELEPORT IN) ====================
 function playFloorTeleportTransition() {
     if (gameState.gameOver) return;
@@ -777,7 +861,7 @@ function playFloorTeleportTransition() {
 
     gameState.isIntroPlaying = true;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
-    monster.y = worldH + 100; // Canavar aşağıda gözləyir
+    monster.y = worldH - 38; // Lava bütün qatlarda aşağıda aydın görünür və dalğalanır
 
     if (SpawnClass) {
         // Mərhələ 1: Teleport Out (Mons portala sovrulur və yox olur)
@@ -939,8 +1023,8 @@ try {
         shouldPlayIntro = sessionStorage.getItem('floor_escape_play_intro') === 'true' || !hasLoadedRun;
         sessionStorage.removeItem('floor_escape_play_intro');
     }
-    if (typeof permUpgrades !== 'undefined' && (!permUpgrades.equippedSpawnAnim || permUpgrades.equippedSpawnAnim === 'portal')) {
-        permUpgrades.equippedSpawnAnim = 'singularity';
+    if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim && Array.isArray(permUpgrades.ownedSpawnAnims) && !permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
+        permUpgrades.equippedSpawnAnim = null;
     }
 } catch (e) {}
 if (shouldPlayIntro) {

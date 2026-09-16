@@ -305,19 +305,39 @@ class AudioSFX {
     }
 
     playRoar() {
+        this.playCyberWarning();
+    }
+
+    playCyberWarning() {
         if (this.muted || !this.ctx) return;
         const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(85, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
-        gain.gain.setValueAtTime(0.28, now);
-        gain.gain.exponentialRampToValueAtTime(0.005, now + 0.6);
-        osc.connect(gain);
-        gain.connect(this.dest);
-        osc.start(now);
-        osc.stop(now + 0.6);
+
+        // 1. Zərif Məxməri Kosmik Sinus Bası (Warm Sub-Pulse)
+        const subOsc = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(146.83, now); // D3
+        subOsc.frequency.exponentialRampToValueAtTime(110.0, now + 1.1); // A2
+        subGain.gain.setValueAtTime(0.20, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+        subOsc.connect(subGain);
+        subGain.connect(this.dest);
+
+        // 2. Təmiz Kristal Kiber Akkord (Ethereal Crystal Harmonics)
+        const chimeOsc = this.ctx.createOscillator();
+        const chimeGain = this.ctx.createGain();
+        chimeOsc.type = 'sine';
+        chimeOsc.frequency.setValueAtTime(587.33, now); // D5
+        chimeOsc.frequency.exponentialRampToValueAtTime(880.0, now + 0.35); // A5
+        chimeGain.gain.setValueAtTime(0.12, now);
+        chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+        chimeOsc.connect(chimeGain);
+        chimeGain.connect(this.dest);
+
+        subOsc.start(now);
+        chimeOsc.start(now);
+        subOsc.stop(now + 1.1);
+        chimeOsc.stop(now + 0.85);
     }
 
     playCombo(count) {
