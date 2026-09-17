@@ -2,47 +2,69 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { Pool } = require('pg');
 
-const PORT = parseInt(process.env.PORT || '4000', 10);
-const WS_PORT = parseInt(process.env.WS_PORT || '4001', 10);
 const BASE_DIR = __dirname;
 const PUBLIC_DIR = path.join(BASE_DIR, 'public');
-const DATA_DIR = path.join(BASE_DIR, 'data');
+const PORT = parseInt(process.env.PORT || '4000', 10);
+const WS_PORT = parseInt(process.env.WS_PORT || '4001', 10);
 
-// data qovluğunu təmin edirik
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+// ==========================================
+// 🛑 1. MÜHİT DƏYİŞƏNİ (DATABASE_URL) YOXLANIŞI
+// ==========================================
+// Mühit dəyişəni YALNIZ və YALNIZ sistemin mühitindən (process.env) oxunur.
+const DATABASE_URL = (process.env.DATABASE_URL || '').trim();
+
+if (!DATABASE_URL || (!DATABASE_URL.startsWith('postgresql://') && !DATABASE_URL.startsWith('postgres://'))) {
+    console.error('\n' + '!'.repeat(72));
+    console.error(' [KRİTİK XƏTA] DATABASE_URL MÜHİT DƏYİŞƏNİ TƏYİN EDİLMƏYİB!');
+    console.error(' Floor Escape serveri yalnız mərkəzi PostgreSQL bazası ilə işləyir.');
+    console.error(' Lokal yaddaş (JSON və ya SQLite) istifadəsi tamamilə qadağandır.');
+    console.error(' Server işə düşmədi və proses dayandırılır.');
+    console.error(' Zəhmət olmasa mühit dəyişənini təyin edin: DATABASE_URL=postgresql://user:pass@host:5432/dbname');
+    console.error('!'.repeat(72) + '\n');
+    process.exit(1);
 }
 
-const PLAYERS_FILE = path.join(DATA_DIR, 'players.json');
-const CHAT_FILE = path.join(DATA_DIR, 'chat_messages.json');
-const INBOX_FILE = path.join(DATA_DIR, 'inbox_messages.json');
-const CODES_FILE = path.join(DATA_DIR, 'gift_codes.json');
+// ==========================================
+// 🐘 2. POSTGRESQL POOL VƏ BAĞLANTI
+// ==========================================
+const pool = new Pool({
+    connectionString: DATABASE_URL,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 20
+});
 
-function readJson(file, defaultVal) {
+pool.on('error', (err) => {
+    console.error(' [PostgreSQL Gözlənilməz Xəta]:', err.message);
+});
+
+// Miqrasiya və Cədvəllərin yoxlanılması
+async function initDb() {
+    console.log(' [*] PostgreSQL verilənlər bazasına qoşulma yoxlanılır...');
     try {
-        if (!fs.existsSync(file)) {
-            fs.writeFileSync(file, JSON.stringify(defaultVal, null, 2), 'utf-8');
-            return defaultVal;
+        const client = await pool.connect();
+        const sqlFile = path.join(BASE_DIR, 'migrations', '001_init_postgres.sql');
+        if (fs.existsSync(sqlFile)) {
+            const sql = fs.readFileSync(sqlFile, 'utf-8');
+            await client.query(sql);
+            console.log(' [✓] PostgreSQL cədvəlləri uğurla yoxlanıldı və hazırlandı!');
         }
-        const data = fs.readFileSync(file, 'utf-8');
-        return JSON.parse(data || 'null') || defaultVal;
-    } catch (e) {
-        console.error(`Xəta [readJson: ${file}]:`, e.message);
-        return defaultVal;
+        client.release();
+    } catch (err) {
+        console.error('\n' + '!'.repeat(72));
+        console.error(' [KRİTİK XƏTA] PostgreSQL bazasına qoşulmaq mümkün olmadı:');
+        console.error(' ' + err.message);
+        console.error(' Server mərkəzi baza olmadan işləyə bilməz. Proses dayandırılır.');
+        console.error('!'.repeat(72) + '\n');
+        process.exit(1);
     }
 }
 
-function writeJson(file, data) {
-    try {
-        fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
-        return true;
-    } catch (e) {
-        console.error(`Xəta [writeJson: ${file}]:`, e.message);
-        return false;
-    }
-}
-
+// ==========================================
+// KÖMƏKÇİ FUNKSİYALAR
+// ==========================================
 function hashPin(pin) {
     return crypto.createHash('sha256').update(String(pin).trim()).digest('hex');
 }
@@ -59,23 +81,6 @@ function generateRandomCode() {
     return `GIFT-${seg1}-${seg2}-${seg3}`;
 }
 
-// İlkin inbox mesajı (əgər boşdursa)
-const initialInbox = readJson(INBOX_FILE, [
-    {
-        id: 1,
-        target_type: 'ALL',
-        player_id: 'ALL',
-        title: 'Floor Escape Serverinə Xoş Gəldiniz!',
-        note: 'Yeni server açılışı münasibətilə bütün qaçışçılara 50 Göy və 20 Qırmızı Almaz hədiyyə!',
-        gift_code: 'GIFT-WELCOME-2026',
-        blue_diamonds: 50,
-        red_diamonds: 20,
-        created_at: new Date().toISOString(),
-        claimed_by: []
-    }
-]);
-
-// MIME tipləri
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -91,7 +96,6 @@ const MIME_TYPES = {
     '.wav': 'audio/wav'
 };
 
-// WebSocket Müştəriləri
 const wsClients = new Set();
 const wsPlayerMap = new Map();
 
@@ -114,8 +118,10 @@ function broadcastInbox(targetType, playerId, msgData) {
     }
 }
 
-// Server
-const server = http.createServer((req, res) => {
+// ==========================================
+// 🚀 HTTP SERVER
+// ==========================================
+const server = http.createServer(async (req, res) => {
     // CORS Başlıqları
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -134,7 +140,6 @@ const server = http.createServer((req, res) => {
     const sendJson = (data, status = 200) => {
         res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify(data));
-        console.log(`[${req.method}] ${pathname} -> ${status}`);
     };
 
     // ==========================================
@@ -142,47 +147,47 @@ const server = http.createServer((req, res) => {
     // ==========================================
     if (req.method === 'GET') {
         if (pathname === '/api/realtime-config') return sendJson({ port: null });
+
         // 0. Oyunçuların Siyahısı (Admin Generator üçün)
         if (pathname === '/api/players/list') {
-            const players = readJson(PLAYERS_FILE, []);
-            const rows = players.map(p => ({
-                player_id: p.playerId,
-                username: p.username,
-                diamonds: p.diamonds || 0,
-                red_diamonds: p.redDiamonds || 0,
-                gold: p.gold || 0,
-                best_floor: p.bestFloor || 1,
-                last_login: p.lastLogin || p.createdAt,
-                created_at: p.createdAt
-            })).sort((a, b) => (new Date(b.last_login || 0) - new Date(a.last_login || 0)));
-            return sendJson({ success: true, players: rows });
+            try {
+                const result = await pool.query(
+                    `SELECT player_id, username, diamonds, red_diamonds, gold, best_floor, last_login, created_at 
+                     FROM players ORDER BY last_login DESC LIMIT 100`
+                );
+                return sendJson({ success: true, players: result.rows });
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
+            }
         }
 
         // 1. Liderlər Cədvəli
         if (pathname === '/api/leaderboard') {
-            const players = readJson(PLAYERS_FILE, []);
-            const rows = players
-                .map(p => ({
-                    player_id: p.playerId,
-                    username: p.username,
-                    best_floor: p.bestFloor || 1,
-                    diamonds: p.diamonds || 0,
-                    red_diamonds: p.redDiamonds || 0,
-                    gold: p.gold || 0,
-                    total_score: p.totalScore || 0,
-                    last_login: p.lastLogin || p.createdAt
-                }))
-                .sort((a, b) => (b.best_floor - a.best_floor) || (b.diamonds - a.diamonds) || (b.red_diamonds - a.red_diamonds) || (b.total_score - a.total_score))
-                .slice(0, 50);
-
-            return sendJson({ success: true, leaderboard: rows });
+            try {
+                const result = await pool.query(
+                    `SELECT player_id, username, best_floor, diamonds, red_diamonds, gold, total_score, last_login 
+                     FROM players 
+                     ORDER BY best_floor DESC, diamonds DESC, red_diamonds DESC, total_score DESC 
+                     LIMIT 50`
+                );
+                return sendJson({ success: true, leaderboard: result.rows });
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
+            }
         }
 
         // 2. Qlobal Çat Mesajları
         if (pathname === '/api/chat/messages') {
-            const messages = readJson(CHAT_FILE, []);
-            const rows = messages.slice(-50);
-            return sendJson({ success: true, messages: rows });
+            try {
+                const result = await pool.query(
+                    `SELECT id, player_id, username, message, created_at 
+                     FROM chat_messages 
+                     ORDER BY id DESC LIMIT 50`
+                );
+                return sendJson({ success: true, messages: result.rows.reverse() });
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
+            }
         }
 
         // 3. Oyunçunun İnbox / Məktub Qutusu
@@ -191,58 +196,68 @@ const server = http.createServer((req, res) => {
             if (!playerId) {
                 return sendJson({ success: false, message: 'Player ID tələb olunur!' }, 400);
             }
-            const allInbox = readJson(INBOX_FILE, []);
-            const rows = allInbox
-                .filter(m => (m.target_type === 'ALL' || m.player_id === playerId) && !(Array.isArray(m.deleted_by) && m.deleted_by.includes(playerId)))
-                .map(m => {
-                    const claimedList = Array.isArray(m.claimed_by) ? m.claimed_by : (m.claimed_by ? [m.claimed_by] : []);
-                    const isClaimed = claimedList.includes(playerId) || m.is_claimed === 1;
-                    return {
-                        id: m.id,
-                        target_type: m.target_type,
-                        player_id: m.player_id,
-                        title: m.title,
-                        note: m.note,
-                        gift_code: m.gift_code,
-                        blue_diamonds: m.blue_diamonds || 0,
-                        red_diamonds: m.red_diamonds || 0,
-                        created_at: m.created_at,
-                        is_claimed: isClaimed ? 1 : 0
-                    };
-                })
-                .sort((a, b) => b.id - a.id)
-                .slice(0, 50);
-
-            return sendJson({ success: true, messages: rows });
+            try {
+                const result = await pool.query(
+                    `SELECT m.id, m.target_type, m.player_id, m.title, m.note, m.gift_code, 
+                            m.blue_diamonds, m.red_diamonds, m.created_at,
+                            CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS is_claimed
+                     FROM inbox_messages m
+                     LEFT JOIN claimed_messages c ON c.message_id = m.id AND c.player_id = $1
+                     WHERE (m.target_type = 'ALL' OR m.player_id = $1)
+                       AND (m.expires_at IS NULL OR m.expires_at > CURRENT_TIMESTAMP)
+                     ORDER BY m.id DESC LIMIT 50`,
+                    [playerId]
+                );
+                return sendJson({ success: true, messages: result.rows });
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
+            }
         }
 
         // 4. Oyunçu Profili
         if (pathname === '/api/player/profile') {
             const playerId = (parsedUrl.searchParams.get('playerId') || '').trim();
-            const players = readJson(PLAYERS_FILE, []);
-            const p = players.find(x => x.playerId === playerId);
-            if (p) {
-                return sendJson({
-                    success: true,
-                    player: {
-                        playerId: p.playerId,
-                        username: p.username,
-                        diamonds: p.diamonds || 0,
-                        redDiamonds: p.redDiamonds || 0,
-                        gold: p.gold || 0,
-                        bestFloor: p.bestFloor || 1,
-                        permUpgrades: p.permUpgrades || {},
-                        claimedChests: p.claimedChests || []
-                    }
-                });
+            if (!playerId) return sendJson({ success: false, message: 'Player ID tələb olunur!' }, 400);
+            try {
+                const result = await pool.query(
+                    `SELECT player_id, username, gold, diamonds, red_diamonds, best_floor, total_score, perm_upgrades, claimed_chests 
+                     FROM players WHERE player_id = $1`,
+                    [playerId]
+                );
+                if (result.rows.length > 0) {
+                    const row = result.rows[0];
+                    return sendJson({
+                        success: true,
+                        player: {
+                            playerId: row.player_id,
+                            username: row.username,
+                            gold: row.gold,
+                            diamonds: row.diamonds,
+                            redDiamonds: row.red_diamonds,
+                            bestFloor: row.best_floor,
+                            totalScore: row.total_score,
+                            permUpgrades: row.perm_upgrades || {},
+                            claimedChests: row.claimed_chests || []
+                        }
+                    });
+                }
+                return sendJson({ success: false, message: 'Oyunçu tapılmadı!' }, 200);
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
             }
-            return sendJson({ success: false, message: 'Oyunçu tapılmadı!' }, 200);
         }
 
         // 5. Hədiyyə kodları siyahısı
         if (pathname === '/api/giftcode/list') {
-            const codes = readJson(CODES_FILE, []);
-            return sendJson({ success: true, codes });
+            try {
+                const result = await pool.query(
+                    `SELECT code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at, created_at, is_active 
+                     FROM gift_codes_advanced ORDER BY created_at DESC LIMIT 50`
+                );
+                return sendJson({ success: true, codes: result.rows });
+            } catch (err) {
+                return sendJson({ success: false, message: err.message }, 500);
+            }
         }
     }
 
@@ -252,7 +267,7 @@ const server = http.createServer((req, res) => {
     if (req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        req.on('end', async () => {
             let data = {};
             try { data = JSON.parse(body || '{}'); } catch (e) { data = {}; }
 
@@ -268,44 +283,37 @@ const server = http.createServer((req, res) => {
                     return sendJson({ success: false, message: 'PIN 3-12 simvol olmalıdır!' }, 400);
                 }
 
-                const players = readJson(PLAYERS_FILE, []);
-                if (players.some(p => p.username.toLowerCase() === username.toLowerCase())) {
-                    return sendJson({ success: false, message: 'Bu ad artıq istifadə olunur! Başqa ad seçin.' }, 400);
-                }
-
-                const playerId = generatePlayerId();
-                const newPlayer = {
-                    playerId,
-                    username,
-                    pinHash: hashPin(pin),
-                    gold: Math.max(75, parseFloat(data.gold) || 75),
-                    diamonds: Math.max(0, parseInt(data.diamonds) || 0),
-                    redDiamonds: Math.max(0, parseInt(data.redDiamonds) || 0),
-                    bestFloor: Math.max(1, parseInt(data.bestFloor) || 1),
-                    totalScore: Math.max(0, parseInt(data.totalScore) || 0),
-                    permUpgrades: data.permUpgrades || {},
-                    claimedChests: data.claimedChests || [],
-                    createdAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString()
-                };
-
-                players.push(newPlayer);
-                writeJson(PLAYERS_FILE, players);
-
-                return sendJson({
-                    success: true,
-                    message: 'Qeydiyyat uğurla tamamlandı!',
-                    player: {
-                        playerId: newPlayer.playerId,
-                        username: newPlayer.username,
-                        gold: newPlayer.gold,
-                        diamonds: newPlayer.diamonds,
-                        redDiamonds: newPlayer.redDiamonds,
-                        bestFloor: newPlayer.bestFloor,
-                        permUpgrades: newPlayer.permUpgrades,
-                        claimedChests: newPlayer.claimedChests
+                try {
+                    // Adın təkrar olub-olmaması
+                    const check = await pool.query('SELECT 1 FROM players WHERE lower(username) = lower($1)', [username]);
+                    if (check.rows.length > 0) {
+                        return sendJson({ success: false, message: 'Bu ad artıq istifadə olunur! Başqa ad seçin.' }, 400);
                     }
-                });
+
+                    const playerId = generatePlayerId();
+                    const pinH = hashPin(pin);
+                    const gold = Math.max(75, parseFloat(data.gold) || 75);
+                    const diamonds = Math.max(0, parseInt(data.diamonds) || 0);
+                    const redDiamonds = Math.max(0, parseInt(data.redDiamonds) || 0);
+                    const bestFloor = Math.max(1, parseInt(data.bestFloor) || 1);
+                    const totalScore = Math.max(0, parseInt(data.totalScore) || 0);
+                    const permUpgrades = JSON.stringify(data.permUpgrades || {});
+                    const claimedChests = JSON.stringify(data.claimedChests || []);
+
+                    await pool.query(
+                        `INSERT INTO players (player_id, username, pin_hash, gold, diamonds, red_diamonds, best_floor, total_score, perm_upgrades, claimed_chests)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                        [playerId, username, pinH, gold, diamonds, redDiamonds, bestFloor, totalScore, permUpgrades, claimedChests]
+                    );
+
+                    return sendJson({
+                        success: true,
+                        message: 'Qeydiyyat uğurla tamamlandı!',
+                        player: { playerId, username, gold, diamonds, redDiamonds, bestFloor, permUpgrades: data.permUpgrades || {}, claimedChests: data.claimedChests || [] }
+                    });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
             // 2. Oyunçu Girişi
@@ -317,34 +325,40 @@ const server = http.createServer((req, res) => {
                     return sendJson({ success: false, message: 'İstifadəçi adı və PIN daxil edilməlidir!' }, 400);
                 }
 
-                const players = readJson(PLAYERS_FILE, []);
-                const player = players.find(p => p.username.toLowerCase() === loginKey.toLowerCase() || p.playerId === loginKey);
-
-                if (!player) {
-                    return sendJson({ success: false, message: 'Bu adda və ya ID-də oyunçu tapılmadı! Əgər ilk dəfə daxil olursunuzsa, zəhmət olmasa Qeydiyyatdan keçin.' }, 400);
-                }
-                if (player.pinHash !== hashPin(pin)) {
-                    return sendJson({ success: false, message: 'PIN şifrə yanlışdır!' }, 400);
-                }
-
-                player.lastLogin = new Date().toISOString();
-                writeJson(PLAYERS_FILE, players);
-
-                return sendJson({
-                    success: true,
-                    message: `Xoş gəldin, ${player.username}!`,
-                    player: {
-                        playerId: player.playerId,
-                        username: player.username,
-                        gold: player.gold,
-                        diamonds: player.diamonds,
-                        redDiamonds: player.redDiamonds,
-                        bestFloor: player.bestFloor,
-                        totalScore: player.totalScore || 0,
-                        permUpgrades: player.permUpgrades || {},
-                        claimedChests: player.claimedChests || []
+                try {
+                    const result = await pool.query(
+                        `SELECT * FROM players WHERE lower(username) = lower($1) OR player_id = $1`,
+                        [loginKey]
+                    );
+                    if (result.rows.length === 0) {
+                        return sendJson({ success: false, message: 'Bu adda və ya ID-də oyunçu tapılmadı! Zəhmət olmasa Qeydiyyatdan keçin.' }, 400);
                     }
-                });
+
+                    const player = result.rows[0];
+                    if (player.pin_hash !== hashPin(pin)) {
+                        return sendJson({ success: false, message: 'PIN şifrə yanlışdır!' }, 400);
+                    }
+
+                    await pool.query('UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE player_id = $1', [player.player_id]);
+
+                    return sendJson({
+                        success: true,
+                        message: `Xoş gəldin, ${player.username}!`,
+                        player: {
+                            playerId: player.player_id,
+                            username: player.username,
+                            gold: player.gold,
+                            diamonds: player.diamonds,
+                            redDiamonds: player.red_diamonds,
+                            bestFloor: player.best_floor,
+                            totalScore: player.total_score || 0,
+                            permUpgrades: player.perm_upgrades || {},
+                            claimedChests: player.claimed_chests || []
+                        }
+                    });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
             // 3. Tərəqqinin Sinxronizasiyası (Sync)
@@ -352,27 +366,30 @@ const server = http.createServer((req, res) => {
                 const playerId = (data.playerId || data.player_id || '').trim();
                 if (!playerId) return sendJson({ success: false, message: 'ID tələb olunur' }, 200);
 
-                const players = readJson(PLAYERS_FILE, []);
-                const player = players.find(p => p.playerId === playerId);
-                if (!player) return sendJson({ success: false, message: 'Oyunçu tapılmadı' }, 200);
+                try {
+                    const gold = parseFloat(data.gold) || 0;
+                    const diamonds = Math.max(0, parseInt(data.diamonds) || 0);
+                    const redDiamonds = Math.max(0, parseInt(data.redDiamonds) || 0);
+                    const bestFloor = Math.max(1, parseInt(data.bestFloor) || 1);
+                    const totalScore = Math.max(0, parseInt(data.totalScore) || 0);
+                    const permUpgrades = JSON.stringify(data.permUpgrades || {});
+                    const claimedChests = JSON.stringify(data.claimedChests || []);
 
-                player.gold = parseFloat(data.gold) || player.gold;
-                player.diamonds = Math.max(0, parseInt(data.diamonds) || player.diamonds);
-                player.redDiamonds = Math.max(0, parseInt(data.redDiamonds) || player.redDiamonds);
-                player.bestFloor = Math.max(player.bestFloor || 1, parseInt(data.bestFloor) || 1);
-                player.totalScore = Math.max(player.totalScore || 0, parseInt(data.totalScore) || 0);
-                if (data.permUpgrades) player.permUpgrades = data.permUpgrades;
-                if (data.claimedChests) player.claimedChests = data.claimedChests;
-                player.lastLogin = new Date().toISOString();
+                    await pool.query(
+                        `UPDATE players 
+                         SET gold = $1, diamonds = $2, red_diamonds = $3, 
+                             best_floor = GREATEST(best_floor, $4), 
+                             total_score = GREATEST(total_score, $5),
+                             perm_upgrades = $6, claimed_chests = $7,
+                             last_login = CURRENT_TIMESTAMP
+                         WHERE player_id = $8`,
+                        [gold, diamonds, redDiamonds, bestFloor, totalScore, permUpgrades, claimedChests, playerId]
+                    );
 
-                writeJson(PLAYERS_FILE, players);
-                return sendJson({
-                    success: true,
-                    message: 'Məlumatlar saxlanıldı!',
-                    diamonds: player.diamonds,
-                    redDiamonds: player.redDiamonds,
-                    bestFloor: player.bestFloor
-                });
+                    return sendJson({ success: true, message: 'Məlumatlar PostgreSQL-də saxlanıldı!' });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
             // 4. Çata Mesaj Göndərmək
@@ -383,20 +400,15 @@ const server = http.createServer((req, res) => {
 
                 if (!msg) return sendJson({ success: false, message: 'Mesaj boş ola bilməz!' }, 400);
 
-                const messages = readJson(CHAT_FILE, []);
-                const nextId = messages.length > 0 ? (messages[messages.length - 1].id + 1) : 1;
-                const newMsg = {
-                    id: nextId,
-                    player_id: playerId,
-                    username: username,
-                    message: msg.slice(0, 200),
-                    created_at: new Date().toISOString()
-                };
-                messages.push(newMsg);
-                if (messages.length > 200) messages.shift();
-                writeJson(CHAT_FILE, messages);
-
-                return sendJson({ success: true, message: 'Mesaj göndərildi!' });
+                try {
+                    await pool.query(
+                        'INSERT INTO chat_messages (player_id, username, message) VALUES ($1, $2, $3)',
+                        [playerId, username, msg.slice(0, 200)]
+                    );
+                    return sendJson({ success: true, message: 'Mesaj göndərildi!' });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
             // 5. İnbox Mükafatını Götürmək (Claim)
@@ -408,132 +420,43 @@ const server = http.createServer((req, res) => {
                     return sendJson({ success: false, message: 'Mesaj ID və Oyunçu ID tələb olunur!' }, 400);
                 }
 
-                const allInbox = readJson(INBOX_FILE, []);
-                const msg = allInbox.find(m => m.id === msgId);
-                if (!msg) {
-                    return sendJson({ success: false, message: 'Məktub tapılmadı!' }, 404);
-                }
-
-                if (!Array.isArray(msg.claimed_by)) {
-                    msg.claimed_by = msg.claimed_by ? [msg.claimed_by] : [];
-                }
-                if (msg.claimed_by.includes(playerId)) {
-                    return sendJson({ success: false, message: 'Bu mükafat artıq götürülüb!' }, 400);
-                }
-
-                msg.claimed_by.push(playerId);
-                writeJson(INBOX_FILE, allInbox);
-
-                const blue = msg.blue_diamonds || 0;
-                const red = msg.red_diamonds || 0;
-
-                // Oyunçunun balansını artırırıq
-                const players = readJson(PLAYERS_FILE, []);
-                const player = players.find(p => p.playerId === playerId);
-                if (player) {
-                    player.diamonds = (player.diamonds || 0) + blue;
-                    player.redDiamonds = (player.redDiamonds || 0) + red;
-                    writeJson(PLAYERS_FILE, players);
-                }
-
-                return sendJson({
-                    success: true,
-                    message: 'Mükafat uğurla qəbul edildi!',
-                    blueDiamonds: blue,
-                    redDiamonds: red
-                });
-            }
-
-            // 5.1 İnbox Məktubunu Silmək (Delete)
-            if (pathname === '/api/inbox/delete') {
-                const msgId = parseInt(data.messageId || data.message_id, 10);
-                const playerId = (data.playerId || data.player_id || '').trim();
-
-                const allInbox = readJson(INBOX_FILE, []);
-                const msgIdx = allInbox.findIndex(m => m.id === msgId);
-                if (msgIdx !== -1) {
-                    const msg = allInbox[msgIdx];
-                    if (msg.player_id === playerId) {
-                        allInbox.splice(msgIdx, 1);
-                    } else {
-                        if (!Array.isArray(msg.deleted_by)) msg.deleted_by = [];
-                        if (!msg.deleted_by.includes(playerId)) msg.deleted_by.push(playerId);
+                try {
+                    // Məktubu tapırıq
+                    const msgRes = await pool.query('SELECT * FROM inbox_messages WHERE id = $1', [msgId]);
+                    if (msgRes.rows.length === 0) {
+                        return sendJson({ success: false, message: 'Məktub tapılmadı!' }, 404);
                     }
-                    writeJson(INBOX_FILE, allInbox);
-                }
+                    const msg = msgRes.rows[0];
 
-                return sendJson({ success: true, message: 'Məktub uğurla silindi!' });
-            }
-
-            // 6. Hədiyyə Kodu Yaratmaq (Admin)
-            if (pathname === '/api/giftcode/generate') {
-                const blue = Math.max(0, parseInt(data.blueDiamonds) || 0);
-                const red = Math.max(0, parseInt(data.redDiamonds) || 0);
-                if (blue === 0 && red === 0) {
-                    return sendJson({ success: false, message: 'Almaz sayı 0-dan böyük olmalıdır!' }, 400);
-                }
-                const custom = (data.customCode || '').trim().toUpperCase();
-                const codes = readJson(CODES_FILE, []);
-                let newCode = custom || generateRandomCode();
-                if (codes.some(c => c.code === newCode)) newCode = generateRandomCode();
-
-                const newEntry = {
-                    code: newCode,
-                    blueDiamonds: blue,
-                    redDiamonds: red,
-                    used: false,
-                    createdAt: new Date().toISOString()
-                };
-                codes.push(newEntry);
-                writeJson(CODES_FILE, codes);
-
-                return sendJson({ success: true, code: newEntry });
-            }
-
-            // 7. Hədiyyə Kodunu Aktivləşdirmək (Redeem)
-            if (pathname === '/api/giftcode/redeem') {
-                const targetCode = (data.code || '').trim().toUpperCase();
-                const playerId = (data.playerId || '').trim();
-
-                if (!targetCode) {
-                    return sendJson({ success: false, message: 'Kod daxil edilməyib!' }, 400);
-                }
-
-                const codes = readJson(CODES_FILE, []);
-                const item = codes.find(c => c.code === targetCode);
-
-                if (!item) {
-                    return sendJson({ success: false, message: 'Bu kod mövcud deyil!' }, 404);
-                }
-                if (item.used) {
-                    return sendJson({ success: false, message: 'Bu kod artıq istifadə edilib!' }, 400);
-                }
-
-                item.used = true;
-                item.usedAt = new Date().toISOString();
-                item.usedBy = playerId;
-                writeJson(CODES_FILE, codes);
-
-                // Oyunçunun balansını artırırıq
-                if (playerId) {
-                    const players = readJson(PLAYERS_FILE, []);
-                    const player = players.find(p => p.playerId === playerId);
-                    if (player) {
-                        player.diamonds = (player.diamonds || 0) + (item.blueDiamonds || 0);
-                        player.redDiamonds = (player.redDiamonds || 0) + (item.redDiamonds || 0);
-                        writeJson(PLAYERS_FILE, players);
+                    // Artıq götürülübmü?
+                    const claimCheck = await pool.query('SELECT 1 FROM claimed_messages WHERE message_id = $1 AND player_id = $2', [msgId, playerId]);
+                    if (claimCheck.rows.length > 0) {
+                        return sendJson({ success: false, message: 'Bu mükafat artıq götürülüb!' }, 400);
                     }
-                }
 
-                return sendJson({
-                    success: true,
-                    message: 'Kod uğurla aktivləşdirildi!',
-                    blueDiamonds: item.blueDiamonds || 0,
-                    redDiamonds: item.redDiamonds || 0
-                });
+                    // Claim əlavə edirik
+                    await pool.query('INSERT INTO claimed_messages (message_id, player_id) VALUES ($1, $2)', [msgId, playerId]);
+
+                    // Oyunçunun balansını artırırıq
+                    const blue = msg.blue_diamonds || 0;
+                    const red = msg.red_diamonds || 0;
+                    await pool.query(
+                        'UPDATE players SET diamonds = diamonds + $1, red_diamonds = red_diamonds + $2 WHERE player_id = $3',
+                        [blue, red, playerId]
+                    );
+
+                    return sendJson({
+                        success: true,
+                        message: 'Mükafat uğurla qəbul edildi!',
+                        blueDiamonds: blue,
+                        redDiamonds: red
+                    });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
-            // 8. Admin Hədiyyə Kodu Yaratmaq və Məktub Göndərmək (Generator üçün)
+            // 6. Admin Hədiyyə Kodu Yaratmaq və Məktub Göndərmək
             if (pathname === '/api/admin/send_gift') {
                 const targetType = (data.targetType || 'ALL').trim().toUpperCase();
                 const playerId = (data.playerId || 'ALL').trim();
@@ -548,53 +471,95 @@ const server = http.createServer((req, res) => {
                 }
 
                 const token = data.token || generateRandomCode();
-                const allInbox = readJson(INBOX_FILE, []);
-                const nextId = allInbox.length > 0 ? (Math.max(...allInbox.map(m => m.id || 0)) + 1) : 1;
 
-                const newMsg = {
-                    id: nextId,
-                    target_type: targetType,
-                    player_id: playerId,
-                    title,
-                    note,
-                    gift_code: token,
-                    blue_diamonds: blue,
-                    red_diamonds: red,
-                    expires_at: expiresAt,
-                    created_at: new Date().toISOString(),
-                    claimed_by: [],
-                    is_claimed: 0
-                };
+                try {
+                    const msgInsert = await pool.query(
+                        `INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+                        [targetType, playerId, title, note, token, blue, red, expiresAt]
+                    );
+                    const newMsgId = msgInsert.rows[0].id;
 
-                allInbox.push(newMsg);
-                writeJson(INBOX_FILE, allInbox);
+                    await pool.query(
+                        `INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
+                         VALUES ($1, $2, $3, $4, $5, $6)
+                         ON CONFLICT (code) DO NOTHING`,
+                        [token, targetType, playerId, blue, red, expiresAt]
+                    );
 
-                const codes = readJson(CODES_FILE, []);
-                codes.push({
-                    code: token,
-                    target_type: targetType,
-                    target_player_id: playerId,
-                    blueDiamonds: blue,
-                    redDiamonds: red,
-                    expires_at: expiresAt,
-                    used: false,
-                    createdAt: new Date().toISOString()
-                });
-                writeJson(CODES_FILE, codes);
+                    const newMsg = {
+                        id: newMsgId,
+                        target_type: targetType,
+                        player_id: playerId,
+                        title,
+                        note,
+                        gift_code: token,
+                        blue_diamonds: blue,
+                        red_diamonds: red,
+                        created_at: new Date().toISOString(),
+                        is_claimed: 0
+                    };
 
-                broadcastInbox(targetType, playerId, newMsg);
+                    broadcastInbox(targetType, playerId, newMsg);
 
-                return sendJson({
-                    success: true,
-                    message: `Hədiyyə yaradıldı və ${targetType === 'ALL' ? 'hamıya' : playerId + ' oyunçusuna'} göndərildi!`,
-                    code: token,
-                    messageId: nextId
-                });
+                    return sendJson({
+                        success: true,
+                        message: `Hədiyyə yaradıldı və ${targetType === 'ALL' ? 'hamıya' : playerId + ' oyunçusuna'} göndərildi!`,
+                        code: token,
+                        messageId: newMsgId
+                    });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
             }
 
-            // ==========================================
-            // 🗺️ YOLUN YADDA SAXLANILMASI (TRACK STUDIO API)
-            // ==========================================
+            // 7. Hədiyyə Kodunu Aktivləşdirmək (Redeem)
+            if (pathname === '/api/giftcode/redeem') {
+                const targetCode = (data.code || '').trim().toUpperCase();
+                const playerId = (data.playerId || '').trim();
+
+                if (!targetCode) return sendJson({ success: false, message: 'Kod daxil edilməyib!' }, 400);
+
+                try {
+                    const codeRes = await pool.query('SELECT * FROM gift_codes_advanced WHERE code = $1', [targetCode]);
+                    if (codeRes.rows.length === 0) {
+                        return sendJson({ success: false, message: 'Bu kod mövcud deyil!' }, 404);
+                    }
+                    const item = codeRes.rows[0];
+                    if (item.is_active === 0) {
+                        return sendJson({ success: false, message: 'Bu kod artıq deaktivdir və ya istifadə edilib!' }, 400);
+                    }
+
+                    if (item.target_type === 'SINGLE' && item.target_player_id !== playerId) {
+                        return sendJson({ success: false, message: 'Bu kod sizin üçün nəzərdə tutulmayıb!' }, 403);
+                    }
+
+                    if (item.target_type === 'SINGLE') {
+                        await pool.query('UPDATE gift_codes_advanced SET is_active = 0 WHERE code = $1', [targetCode]);
+                    }
+
+                    const blue = item.blue_diamonds || 0;
+                    const red = item.red_diamonds || 0;
+
+                    if (playerId) {
+                        await pool.query(
+                            'UPDATE players SET diamonds = diamonds + $1, red_diamonds = red_diamonds + $2 WHERE player_id = $3',
+                            [blue, red, playerId]
+                        );
+                    }
+
+                    return sendJson({
+                        success: true,
+                        message: 'Kod uğurla aktivləşdirildi!',
+                        blueDiamonds: blue,
+                        redDiamonds: red
+                    });
+                } catch (err) {
+                    return sendJson({ success: false, message: err.message }, 500);
+                }
+            }
+
+            // 8. Yol Yadda Saxlanılması (Track Studio API)
             if (pathname === '/api/tracks/save') {
                 const track = data.track;
                 const allTracks = data.allTracks;
@@ -604,7 +569,12 @@ const server = http.createServer((req, res) => {
 
                 let targetTracks = allTracks;
                 if (!targetTracks || !Array.isArray(targetTracks)) {
-                    const currentData = readJson(jsonPath, { tracks: [] });
+                    let currentData = { tracks: [] };
+                    try {
+                        if (fs.existsSync(jsonPath)) {
+                            currentData = JSON.parse(fs.readFileSync(jsonPath, 'utf-8') || '{"tracks":[]}');
+                        }
+                    } catch (e) {}
                     targetTracks = currentData.tracks || [];
                     if (track && track.id) {
                         const idx = targetTracks.findIndex(t => t.id === track.id);
@@ -619,9 +589,8 @@ const server = http.createServer((req, res) => {
                     tracks: targetTracks
                 };
 
-                // JSON və JS fayllarını yazırıq
-                writeJson(jsonPath, payload);
                 try {
+                    fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), 'utf-8');
                     const jsContent = `// Avtomatik yenilənmiş Floor Escape Sınaq Yolları\nwindow.FLOOR_PATTERNS = ${JSON.stringify(payload, null, 2)};\n`;
                     fs.writeFileSync(jsPath, jsContent, 'utf-8');
                 } catch (e) {
@@ -635,7 +604,6 @@ const server = http.createServer((req, res) => {
                 });
             }
 
-            // Əgər heç bir POST marşrutuna uyğun gəlmirsə
             return sendJson({ success: false, message: 'Marşrut tapılmadı' }, 404);
         });
         return;
@@ -667,17 +635,18 @@ const server = http.createServer((req, res) => {
     });
 });
 
-// Serveri Dinləyirik
-server.listen(PORT, '0.0.0.0', () => {
-    console.log('======================================================');
-    console.log(`  ⚡ Floor Escape Universal Node Server Aktivdir!`);
-    console.log(`  Port: ${PORT}`);
-    console.log(`  Qovluq: ${PUBLIC_DIR}`);
-    console.log(`  Məlumat Bazası: ${DATA_DIR}`);
-    console.log('======================================================');
+// Serveri Dinləyirik və Baza Yoxlanışını Başladırıq
+initDb().then(() => {
+    server.listen(PORT, '0.0.0.0', () => {
+        console.log('======================================================');
+        console.log(`  ⚡ Floor Escape Universal Node Server Aktivdir!`);
+        console.log(`  Port: ${PORT}`);
+        console.log(`  🐘 PostgreSQL Verilənlər Bazası Tam Bağlandı!`);
+        console.log('======================================================');
+    });
 });
 
-// Könüllü WebSocket Serveri (Əsas HTTP server üzərində eyni portda işləyir)
+// WebSocket Serveri
 try {
     const WebSocket = require('ws');
     const wss = new WebSocket.Server({ server });

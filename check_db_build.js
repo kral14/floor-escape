@@ -7,23 +7,8 @@ console.log('\n' + '='.repeat(72));
 console.log(' [BUILD MƏRHƏLƏSİ] POSTGRESQL VERİLƏNLƏR BAZASI YOXLANIŞI BAŞLADILIR...');
 console.log('='.repeat(72));
 
-// .env faylını oxumaq (əgər mövcuddursa)
-const envFile = path.join(__dirname, '.env');
-if (fs.existsSync(envFile)) {
-    try {
-        const envContent = fs.readFileSync(envFile, 'utf-8');
-        envContent.split('\n').forEach(line => {
-            line = line.trim();
-            if (line && !line.startsWith('#') && line.includes('=')) {
-                const [k, ...v] = line.split('=');
-                if (!process.env[k.trim()]) {
-                    process.env[k.trim()] = v.join('=').trim();
-                }
-            }
-        });
-    } catch (e) {}
-}
-
+// Mühit dəyişəni YALNIZ və YALNIZ sistemin özündən (process.env) oxunur.
+// Heç bir fayldan (.env) oxunmur, kodun içinə yazıla bilməz!
 const dbUrl = (process.env.DATABASE_URL || '').trim();
 
 function abortBuild(errorMsg) {

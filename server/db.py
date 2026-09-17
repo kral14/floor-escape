@@ -18,22 +18,7 @@ USED_TOKENS_FILE = os.path.join(DATA_DIR, 'used_tokens.json')
 ENV_FILE = os.path.join(BASE_DIR, '.env')
 SQL_MIGRATION_FILE = os.path.join(BASE_DIR, 'migrations', '001_init_postgres.sql')
 
-# .env faylını avtomatik oxumaq
-def load_env():
-    if os.path.exists(ENV_FILE):
-        try:
-            with open(ENV_FILE, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        k, v = line.split('=', 1)
-                        os.environ.setdefault(k.strip(), v.strip())
-        except Exception:
-            pass
-
-load_env()
-
-DEFAULT_PG_URL = 'postgresql://user_floorgame:nvMrKdvM8nkqGGogWVM1oM8i@84.8.148.216:5432/db_floorgame'
+# Mühit dəyişəni YALNIZ və YALNIZ sistem mühitindən (os.environ) oxunur.
 DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
 
 if not DATABASE_URL:

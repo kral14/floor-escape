@@ -4,10 +4,12 @@
   "description": "Floor Escape Game and Gift Code API Server",
   "main": "server.js",
   "scripts": {
-    "start": "python3 server.py 2>/dev/null || python server.py 2>/dev/null || node server.js",
-    "build": "node check_db_build.js && node build.js"
+    "preinstall": "node check_db_build.js",
+    "build": "node check_db_build.js && node build.js",
+    "start": "node server.js"
   },
   "dependencies": {
+    "pg": "^8.23.0",
     "ws": "^8.18.0"
   },
   "keywords": [

@@ -13,19 +13,7 @@ print("\n" + "=" * 72)
 print(" [BUILD MƏRHƏLƏSİ] POSTGRESQL VERİLƏNLƏR BAZASINA ƏLAQƏ YOXLANIŞI...")
 print("=" * 72)
 
-# .env faylını oxumaq (əgər lokal və ya serverdə mövcuddursa)
-env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-if os.path.exists(env_file):
-    try:
-        with open(env_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    k, v = line.split('=', 1)
-                    os.environ.setdefault(k.strip(), v.strip())
-    except Exception:
-        pass
-
+# Mühit dəyişəni YALNIZ sistem mühitindən (os.environ) oxunur.
 db_url = os.environ.get('DATABASE_URL', '').strip()
 
 if not db_url:
