@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "python3 server.py 2>/dev/null || python server.py 2>/dev/null || node server.js",
-    "build": "node build.js"
+    "build": "node check_db_build.js && node build.js"
   },
   "dependencies": {
     "ws": "^8.18.0"

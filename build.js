@@ -1,7 +1,22 @@
 const { execFileSync } = require('child_process');
-execFileSync(process.execPath, [require.resolve('tailwindcss/lib/cli.js'), '-c', 'tailwind.config.cjs', '-i', 'public/css/tailwind-input.css', '-o', 'public/css/tailwind.css', '--minify'], { cwd: __dirname, stdio: 'inherit' });
-const fs = require('fs');
 const path = require('path');
+
+// 🛑 0. BUILD MƏRHƏLƏSİNDƏ POSTGRESQL YOXLANIŞI (Qoşulma yoxdursa BUILD DƏRHAL DAYANIR!)
+try {
+    execFileSync(process.execPath, [path.join(__dirname, 'check_db_build.js')], { stdio: 'inherit' });
+} catch (e) {
+    console.error('\n[FATAL] Baza yoxlanışı uğursuz oldu. Build prosesi dayandırılır.\n');
+    process.exit(1);
+}
+
+try {
+    const tailwindCli = require.resolve('tailwindcss/lib/cli.js');
+    execFileSync(process.execPath, [tailwindCli, '-c', 'tailwind.config.cjs', '-i', 'public/css/tailwind-input.css', '-o', 'public/css/tailwind.css', '--minify'], { cwd: __dirname, stdio: 'inherit' });
+} catch (twErr) {
+    console.log('ℹ Tailwind CLI tapılmadı və ya atlandı, mövcud CSS faylları saxlanılır.');
+}
+
+const fs = require('fs');
 
 const publicDir = path.join(__dirname, 'public');
 const cssFile = path.join(publicDir, 'css', 'style.css');
