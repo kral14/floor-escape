@@ -6,7 +6,6 @@ import time
 import secrets
 import sys
 import os
-import sqlite3
 from datetime import datetime, timezone, timedelta
 
 # Windows konsol kodlaşdırması
@@ -31,18 +30,9 @@ if os.path.exists(ENV_FILE):
 
 SECRET_KEY = "FLOOR_ESCAPE_SECRET_KEY_2026_AGY_SECURE_TOKEN_SYSTEM"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-DB_FILE = os.path.join(DATA_DIR, 'floor_escape.db')
 
-try:
-    from server.db import get_db, DATABASE_URL, USE_POSTGRES
-except Exception:
-    DATABASE_URL = os.environ.get('DATABASE_URL', '')
-    USE_POSTGRES = False
-    def get_db():
-        conn = sqlite3.connect(DB_FILE, timeout=15)
-        conn.row_factory = sqlite3.Row
-        return conn
+from server.db import get_db, DATABASE_URL
+USE_POSTGRES = True
 
 def create_signed_gift_code(blue_diamonds, red_diamonds):
     nonce = secrets.token_hex(4).upper() # 8 simvol
@@ -137,25 +127,7 @@ def get_all_players_from_db(server_url=None):
             except Exception:
                 continue
 
-    # 3. Lokal SQLite bazasından oxumaq (Fallback)
-    try:
-        if not os.path.exists(DB_FILE):
-            return []
-        import sqlite3
-        conn = sqlite3.connect(DB_FILE, timeout=15)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT player_id, username, diamonds, red_diamonds, gold, best_floor, last_login
-            FROM players
-            ORDER BY last_login DESC
-        ''')
-        rows = [dict(r) for r in cursor.fetchall()]
-        conn.close()
-        return rows
-    except Exception as e:
-        print(f"Oyunçuları oxuyarkən xəta: {e}")
-        return []
+    return []
 
 def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, expires_hours=None, server_url=None):
     token, _ = create_signed_gift_code(blue, red)
@@ -219,52 +191,10 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
                     print(f"  [✔] Hədiyyə və məktub HTTP serverinə ({url}) göndərildi!")
                     return token, expires_at, True
         except Exception as e:
-            print(f"  [!] HTTP serverinə göndərmə xətası: {e}. Lokal SQLite bazasına yazılır...")
+            print(f"  [!] HTTP serverinə göndərmə xətası: {e}")
 
-    # 3. Lokal SQLite bazası (Ən son ehtiyat variant)
-    import sqlite3
-    conn = sqlite3.connect(DB_FILE, timeout=15)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS gift_codes_advanced (
-            code TEXT PRIMARY KEY,
-            target_type TEXT NOT NULL DEFAULT 'ALL',
-            target_player_id TEXT DEFAULT 'ALL',
-            blue_diamonds INTEGER DEFAULT 0,
-            red_diamonds INTEGER DEFAULT 0,
-            expires_at TIMESTAMP DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_active INTEGER DEFAULT 1
-        )
-    ''')
-    cursor.execute('''
-        INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (token, target_type, player_id, blue, red, expires_at))
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS inbox_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            target_type TEXT NOT NULL DEFAULT 'ALL',
-            player_id TEXT DEFAULT 'ALL',
-            title TEXT NOT NULL,
-            note TEXT,
-            gift_code TEXT NOT NULL,
-            blue_diamonds INTEGER DEFAULT 0,
-            red_diamonds INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP DEFAULT NULL,
-            is_claimed INTEGER DEFAULT 0,
-            claimed_by TEXT DEFAULT NULL,
-            claimed_at TIMESTAMP DEFAULT NULL
-        )
-    ''')
-    cursor.execute('''
-        INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-    ''', (target_type, player_id, title, note, token, blue, red, expires_at))
-    conn.commit()
-    conn.close()
-    return token, expires_at, False
+    print("  [✘] Xəta: Hədiyyə göndərilə bilmədi (PostgreSQL və ya HTTP serveri əlçatmazdır).")
+    return None, None, False
 
 # ============================================================================
 # 🖥️ TKINTER ULTRA-MÜASİR KİBER ADMİN GUI PƏNCƏRƏSİ

@@ -10,3 +10,6 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://user_floorgame:nvMrKdvM8nkqGGogWVM1oM8i@84.8.148.216:5432/db_floorgame
+      - IS_REMOTE_SERVER=1
+      - DB_STRICT=1

@@ -4,5 +4,8 @@ nixPkgs = ["python311", "nodejs_20"]
 [phases.install]
 cmds = ["python3 -m pip install -r requirements.txt", "node build.js"]
 
+[phases.build]
+cmds = ["python3 check_db_build.py"]
+
 [start]
 cmd = "python3 server.py"

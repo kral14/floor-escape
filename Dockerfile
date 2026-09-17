@@ -10,6 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# 🛑 BUILD MƏRHƏLƏSİNDƏ POSTGRESQL YOXLANIŞI (Qoşulma yoxdursa build dayanır!)
+RUN python check_db_build.py
+
 RUN mkdir -p /app/data
 
 EXPOSE 4000 4001 8082
