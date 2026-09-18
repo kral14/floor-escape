@@ -45,13 +45,122 @@ let cameraY = 0;
 window.cameraY = cameraY;
 
 // ============================================================================
-// SABİT SÜRƏT VƏ FPS İDARƏETMƏ SİSTEMİ (FIXED TIMESTEP & FPS STABILIZATION)
+// SABİT SÜRƏT, DİNAMİK DELTA VƏ GPU/CPU AVTOMATİK OPTİMİZASİYA SİSTEMİ
 // ============================================================================
 
-let targetFPS = parseInt(localStorage.getItem('floor_escape_target_fps') || '60', 10);
-if (targetFPS !== 30 && targetFPS !== 60) targetFPS = 60;
+// 1. 🛡️ GPU VƏ CPU AVTOMATİK TƏYİNATI (HARDWARE DETECTION & FALLBACK)
+function detectHardwareCapability() {
+    let hasHardwareGPU = false;
+    let rendererInfo = "Standart CPU Render";
+    try {
+        const testCanvas = document.createElement('canvas');
+        const gl = testCanvas.getContext('webgl', { powerPreference: 'high-performance' }) || 
+                   testCanvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                rendererInfo = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+                const lower = rendererInfo.toLowerCase();
+                // Əgər software/CPU renderer (SwiftShader, Mesa, llvmpipe, Microsoft Basic, VirtualBox) deyilsə, deməli real GPU var
+                const isSoftware = lower.includes('software') || 
+                                   lower.includes('llvmpipe') || 
+                                   lower.includes('basic render') || 
+                                   lower.includes('swiftshader') ||
+                                   lower.includes('gdi generic') ||
+                                   lower.includes('virtualbox') ||
+                                   lower.includes('vmware');
+                if (!isSoftware && rendererInfo.trim().length > 0) {
+                    hasHardwareGPU = true;
+                }
+            } else {
+                // Extension olmasa belə WebGL mövcuddursa
+                hasHardwareGPU = true;
+                rendererInfo = "WebGL Hardware";
+            }
+        }
+    } catch(e) {
+        hasHardwareGPU = false;
+        rendererInfo = "Software Canvas 2D";
+    }
+    return { hasHardwareGPU, rendererInfo };
+}
 
-let frameInterval = 1000 / targetFPS;
+const hwInfo = detectHardwareCapability();
+window.HAS_HARDWARE_GPU = hwInfo.hasHardwareGPU;
+window.HW_RENDERER_INFO = hwInfo.rendererInfo;
+
+// Qrafika Rejimi ('high', 'low', 'auto')
+let savedQuality = localStorage.getItem('floor_escape_graphics_quality') || 'auto';
+let activeQuality = savedQuality;
+if (activeQuality === 'auto') {
+    // 4-CÜ QAYDA: Əgər GPU yoxdursa, avtomatik olaraq CPU (low/yüngül) rejimindən istifadə et!
+    activeQuality = hwInfo.hasHardwareGPU ? 'high' : 'low';
+}
+window.GRAPHICS_QUALITY = activeQuality;
+
+// ⚡ CPU REJİMİ OPTİMİZASİYASI: Bütün ctx.shadowBlur çağırışlarını CPU rejimində 0 edən ağıllı proxy
+(function installShadowOptimization(c) {
+    try {
+        const proto = CanvasRenderingContext2D.prototype;
+        const origDesc = Object.getOwnPropertyDescriptor(proto, 'shadowBlur');
+        if (origDesc && origDesc.set) {
+            Object.defineProperty(c, 'shadowBlur', {
+                set: function(val) {
+                    // Əgər CPU rejimindədirsə (GPU yoxdursa və ya low seçilibsə) kölgə hesablamalarını sıfırla
+                    if (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto')) {
+                        origDesc.set.call(this, 0);
+                    } else {
+                        origDesc.set.call(this, val);
+                    }
+                },
+                get: function() {
+                    if (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto')) {
+                        return 0;
+                    }
+                    return origDesc.get.call(this);
+                },
+                configurable: true
+            });
+        }
+    } catch(e) {
+        console.warn('Shadow optimization hook:', e);
+    }
+})(ctx);
+
+// Əgər GPU varsa - kətanı və konteyneri GPU qatına veririk; Yoxdursa - CPU yükünü sıfırlayırıq
+function applyHardwareLayerSettings() {
+    const screenCont = document.getElementById('game-screen-container');
+    const cEl = document.getElementById('gameCanvas');
+    const isGPUActive = (window.GRAPHICS_QUALITY === 'high') || (window.GRAPHICS_QUALITY === 'auto' && window.HAS_HARDWARE_GPU);
+    
+    if (isGPUActive) {
+        if (screenCont) {
+            screenCont.style.transform = (screenCont.style.transform || '').replace(' translateZ(0)', '') + ' translateZ(0)';
+            screenCont.style.willChange = 'transform';
+        }
+        if (cEl) {
+            cEl.style.transform = 'translateZ(0)';
+            cEl.style.willChange = 'transform';
+        }
+    } else {
+        // CPU Rejimi: qat çevrilmələrini və willChange-i ləğv et, prosessoru artıq kompozisiya işlərindən azad et
+        if (screenCont) {
+            screenCont.style.transform = (screenCont.style.transform || '').replace(' translateZ(0)', '');
+            screenCont.style.willChange = 'auto';
+        }
+        if (cEl) {
+            cEl.style.transform = 'none';
+            cEl.style.willChange = 'auto';
+        }
+    }
+}
+setTimeout(applyHardwareLayerSettings, 100);
+
+// 2. ⚡ DİNAMİK DELTA VƏ TEZLİK İDARƏETMƏSİ (0 = Auto/Monitor Hz, 60, 120, 144, 30)
+let targetFPS = parseInt(localStorage.getItem('floor_escape_target_fps') || '0', 10);
+if (![0, 30, 60, 120, 144].includes(targetFPS)) targetFPS = 0; // 0 = Auto Monitor Refresh Rate
+
+let frameInterval = targetFPS > 0 ? (1000 / targetFPS) : 0;
 const FIXED_PHYSICS_DELTA = 1000 / 60; // Dəqiq 60Hz fizika addımı (16.66667 ms)
 let lastFrameTime = performance.now();
 let physicsAccumulator = 0;
@@ -59,35 +168,62 @@ let physicsAccumulator = 0;
 // Canlı FPS Hesablama
 let fpsFramesCount = 0;
 let fpsLastTime = performance.now();
-let currentMeasuredFPS = targetFPS;
+let currentMeasuredFPS = 60;
 
 function setTargetFPS(fps) {
-    if (fps !== 30 && fps !== 60) return;
+    if (![0, 30, 60, 120, 144].includes(fps)) return;
     targetFPS = fps;
-    frameInterval = 1000 / targetFPS;
+    window.targetFPS = targetFPS;
+    frameInterval = targetFPS > 0 ? (1000 / targetFPS) : 0;
     localStorage.setItem('floor_escape_target_fps', targetFPS.toString());
     updateFpsUI();
     if (typeof showToast === 'function') {
-        if (targetFPS === 60) {
-            showToast('⚡ 60 FPS Rejimi aktivdir (Maksimum səlislik və sabit sürət)', 'success');
-        } else {
-            showToast('🔋 30 FPS Rejimi aktivdir (Zəif cihazlar üçün qənaət, oyun sürəti tam sabit qalır)', 'info');
-        }
+        const labels = {
+            0: '🔄 Auto (Monitorun təbii Hz tezliyinə uyğun tam səlislik)',
+            60: '⚡ 60 FPS Sabit rejim',
+            120: '🚀 120 FPS Yüksək tezlik rejimi',
+            144: '🏎️ 144 FPS Ultra səlislik rejimi',
+            30: '🔋 30 FPS Qənaət rejimi'
+        };
+        showToast(labels[targetFPS] || 'Tezlik yeniləndi', 'info');
     }
 }
+window.setTargetFPS = setTargetFPS;
+window.targetFPS = targetFPS;
 
-function toggleFpsMode() {
-    setTargetFPS(targetFPS === 60 ? 30 : 60);
+function setGraphicsQuality(mode) {
+    if (!['auto', 'high', 'low'].includes(mode)) return;
+    savedQuality = mode;
+    window.savedQuality = savedQuality;
+    localStorage.setItem('floor_escape_graphics_quality', mode);
+    if (mode === 'auto') {
+        // GPU yoxdursa avtomatik CPU (low) rejiminə keçir
+        activeQuality = hwInfo.hasHardwareGPU ? 'high' : 'low';
+    } else {
+        activeQuality = mode;
+    }
+    window.GRAPHICS_QUALITY = activeQuality;
+    applyHardwareLayerSettings();
+    updateFpsUI();
+    if (typeof showToast === 'function') {
+        showToast(`🎨 Qrafika: ${mode === 'high' ? 'Yüksək (GPU Neon)' : mode === 'low' ? 'Yüngül (CPU Sürətli)' : 'Avtomatik'} rejim seçildi`, 'success');
+    }
 }
+window.setGraphicsQuality = setGraphicsQuality;
+window.savedQuality = savedQuality;
 
 function updateFpsUI() {
     const fpsEl = document.getElementById('stat-fps');
     const fpsBtn = document.getElementById('btn-fps-toggle');
     if (fpsEl) {
-        fpsEl.innerText = `${targetFPS} FPS`;
+        fpsEl.innerText = targetFPS === 0 ? `${currentMeasuredFPS} FPS (Auto)` : `${currentMeasuredFPS} / ${targetFPS} FPS`;
     }
     if (fpsBtn) {
-        if (targetFPS === 60) {
+        if (targetFPS === 0 || targetFPS >= 120) {
+            fpsBtn.className = "px-2.5 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:border-cyan-400 text-cyan-300 font-orbitron font-bold text-xs flex items-center gap-1.5 shadow transition select-none cursor-pointer";
+            const icon = fpsBtn.querySelector('i');
+            if (icon) icon.className = "fa-solid fa-bolt text-cyan-400 text-xs";
+        } else if (targetFPS === 60) {
             fpsBtn.className = "px-2.5 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 hover:border-emerald-400 text-emerald-300 font-orbitron font-bold text-xs flex items-center gap-1.5 shadow transition select-none cursor-pointer";
             const icon = fpsBtn.querySelector('i');
             if (icon) icon.className = "fa-solid fa-gauge-high text-emerald-400 text-xs";
@@ -98,6 +234,7 @@ function updateFpsUI() {
         }
     }
 }
+window.updateFpsUI = updateFpsUI;
 
 // 1. DƏQİQ FİZİKA VƏ OYUN MƏNTİQİ ADDIMI (Həmişə 60Hz sabit addımla hesablanır)
 function updatePhysicsStep() {
@@ -461,7 +598,11 @@ function renderGame() {
     ctx.save();
     ctx.translate(0, -Math.round(cameraY));
 
-    // 3. 🏔️ Qayalar və Animasiyalı Axan Lava Blokları
+    // 🎯 2-Cİ VƏ 3-CÜ BƏND: EK RANDAN KƏNAR OBYEKTLƏRİN GİZLƏDİLMƏSİ (OFF-SCREEN CULLING)
+    const viewTop = cameraY - 70;
+    const viewBottom = cameraY + canvasHeight + 70;
+
+    // 3. 🏔️ Qayalar və Animasiyalı Axan Lava Blokları (Daxili culling aktivdir)
     if (typeof drawPlatforms === 'function') {
         drawPlatforms(ctx);
     }
@@ -471,8 +612,13 @@ function renderGame() {
         drawBorderLine();
     }
 
-    // 5. Gücləndiricilər
-    powerUps.forEach(p => p.draw(ctx));
+    // 5. Gücləndiricilər (Yalnız ekranda görünənlər çəkilir)
+    for (let i = 0; i < powerUps.length; i++) {
+        const p = powerUps[i];
+        if (p.y >= viewTop && p.y <= viewBottom) {
+            p.draw(ctx);
+        }
+    }
 
     // 6. 📜 Keçid Kağızı (Escape Pass)
     if (typeof drawEscapePass === 'function') {
@@ -488,23 +634,55 @@ function renderGame() {
     if (typeof twinTurrets !== 'undefined' && twinTurrets.draw) {
         twinTurrets.draw();
     }
-    coins.forEach(c => c.draw());
-    monster.draw();
-    bullets.forEach(b => b.draw());
-    particles.forEach(p => p.draw());
 
-    // Uçan Neon Mətnlər (Dünya məkanında)
-    floatingTexts.forEach(ft => {
-        ctx.save();
-        ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
-        ctx.fillStyle = ft.color;
-        ctx.textAlign = 'center';
-        ctx.shadowColor = ft.color;
-        ctx.shadowBlur = 14;
-        ctx.globalAlpha = ft.alpha;
-        ctx.fillText(ft.text, ft.x, ft.y);
-        ctx.restore();
-    });
+    // 🎯 SİKKƏLƏR (Yalnız kamera baxış sahəsində olan sikkələr çəkilir)
+    for (let i = 0; i < coins.length; i++) {
+        const c = coins[i];
+        if (c.y >= viewTop && c.y <= viewBottom) {
+            c.draw();
+        }
+    }
+
+    // Canavar həmişə lava səthindədir, kamera sahəsindədirsə çəkilir
+    if (monster.y >= viewTop - 120 && monster.y <= viewBottom + 120) {
+        monster.draw();
+    }
+
+    // 🎯 MƏRMİLƏR (Kamerada görünənlər çəkilir)
+    for (let i = 0; i < bullets.length; i++) {
+        const b = bullets[i];
+        if (b.y >= viewTop && b.y <= viewBottom) {
+            b.draw();
+        }
+    }
+
+    // 🎯 ZƏRRƏCİKLƏR (Culling və CPU rejimində yükü qoruyan limitləmə)
+    const isCPUMode = (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto'));
+    const maxParticles = isCPUMode ? Math.min(particles.length, 30) : particles.length;
+    for (let i = 0; i < maxParticles; i++) {
+        const p = particles[i];
+        if (p.y >= viewTop && p.y <= viewBottom) {
+            p.draw();
+        }
+    }
+
+    // 🎯 UÇAN NEON MƏTNLƏR (Culling və kölgə optimizasiyası)
+    for (let i = 0; i < floatingTexts.length; i++) {
+        const ft = floatingTexts[i];
+        if (ft.y >= viewTop && ft.y <= viewBottom) {
+            ctx.save();
+            ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
+            ctx.fillStyle = ft.color;
+            ctx.textAlign = 'center';
+            if (!isCPUMode) {
+                ctx.shadowColor = ft.color;
+                ctx.shadowBlur = 14;
+            }
+            ctx.globalAlpha = ft.alpha;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+    }
 
     ctx.restore(); // ==================== DÜNYA MƏKANININ SONU ====================
 
@@ -582,12 +760,13 @@ function gameLoop(timestamp) {
 
     let elapsed = timestamp - lastFrameTime;
 
-    if (elapsed < frameInterval - 1.5) {
+    // Əgər sabit FPS (30/60/120/144) seçilibsə interval gözlənilir, Auto (0) olduqda isə monitorun tam təbii tezliyində işləyir
+    if (targetFPS > 0 && elapsed < frameInterval - 1.5) {
         requestAnimationFrame(gameLoop);
         return;
     }
 
-    lastFrameTime = timestamp - (elapsed % frameInterval);
+    lastFrameTime = targetFPS > 0 ? (timestamp - (elapsed % frameInterval)) : timestamp;
     if (elapsed > 100) elapsed = 100;
 
     physicsAccumulator += elapsed;

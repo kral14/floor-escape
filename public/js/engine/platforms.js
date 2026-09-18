@@ -494,14 +494,18 @@ function drawPlatforms(ctx) {
     // Kaskad şüalarını hesablayırıq
     const cascadePaths = traceLavaCascadePaths(initialLavaSources, currentRocks, monsterBottomY);
 
+    const camY = (typeof window !== 'undefined' && typeof window.cameraY === 'number') ? window.cameraY : 0;
+    const viewH = 750;
+    const enableShadows = (typeof window === 'undefined' || window.GRAPHICS_QUALITY !== 'low');
+
     // ========================================================================
     // A) ŞƏLALƏLƏR VƏ QAYALARIN ÜZƏRİNDƏN AXAN LAVA
     // ========================================================================
     for (let pIdx = 0; pIdx < cascadePaths.length; pIdx++) {
         const path = cascadePaths[pIdx];
 
-        // Mənbə oyuqu
-        if (useEngine) {
+        // Mənbə oyuqu (Off-screen culling)
+        if (useEngine && path.source.y + 40 >= camY - 50 && path.source.y <= camY + viewH + 50) {
             LavaEngine.drawLavaSourceRock(c, path.source.x, path.source.y, path.source.w, path.source.seed, t);
         }
 
@@ -512,6 +516,19 @@ function drawPlatforms(ctx) {
             const isTerminatedFall = !!(path.terminated && isLastFall);
             const isMidAir = !!fall.isMidAir;
 
+            // Şaquli lava şəlaləsinin faktiki zərər zonası həmişə aktiv qalır
+            activeLavaHazardBoxes.push({
+                x: fall.x + 4,
+                y: fall.y,
+                w: Math.max(12, fall.w - 8),
+                h: fall.h
+            });
+
+            // 🎯 OFF-SCREEN CULLING: Yalnız ekranda görünən şəlalə qrafikası çəkilir
+            if (fall.y + fall.h < camY - 80 || fall.y > camY + viewH + 80) {
+                continue;
+            }
+
             if (useEngine) {
                 LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h, isTerminatedFall, isMidAir);
                 if (isMidAir && typeof LavaEngine.drawMidAirLavaTip === 'function') {
@@ -521,18 +538,10 @@ function drawPlatforms(ctx) {
                     LavaEngine.drawSpillwayLip(c, fall.x, fall.w, fall.y + 2);
                 }
             }
-
-            // Şaquli lava şəlaləsinin faktiki zərər zonası (ədalətli dar hitbox)
-            activeLavaHazardBoxes.push({
-                x: fall.x + 4,
-                y: fall.y,
-                w: Math.max(12, fall.w - 8),
-                h: fall.h
-            });
         }
 
         // Canavara tökülən nöqtədə qaynayan dalğa
-        if (path.monsterImpact && useEngine) {
+        if (path.monsterImpact && useEngine && monsterBottomY >= camY - 50 && monsterBottomY <= camY + viewH + 50) {
             c.save();
             c.fillStyle = '#ffd567';
             c.beginPath();
@@ -543,15 +552,22 @@ function drawPlatforms(ctx) {
     }
 
     // ========================================================================
-    // B) QAYA PLATFORMALARI (Obsidian Dizaynı)
+    // B) QAYA PLATFORMALARI (Obsidian Dizaynı) (Off-Screen Culling & GPU/CPU Optimizasiyası)
     // ========================================================================
     for (const rock of currentRocks) {
+        // 🎯 OFF-SCREEN CULLING: Ekrandan kənardakı qayalar çəkilmir
+        if (rock.y + rock.h < camY - 80 || rock.y > camY + viewH + 80) {
+            continue;
+        }
+
         c.save();
 
-        // 1. Qaya xarici kölgəsi
-        c.shadowColor = 'rgba(0, 0, 0, 0.7)';
-        c.shadowBlur = 18;
-        c.shadowOffsetY = 8;
+        // 1. Qaya xarici kölgəsi (Zəif PC / CPU rejimində söndürülür)
+        if (enableShadows) {
+            c.shadowColor = 'rgba(0, 0, 0, 0.6)';
+            c.shadowBlur = 12;
+            c.shadowOffsetY = 6;
+        }
 
         // 2. Əsas Qaya Gövdəsi
         const rockGrad = c.createLinearGradient(rock.x, rock.y, rock.x, rock.y + rock.h);
@@ -589,14 +605,17 @@ function drawPlatforms(ctx) {
         c.lineTo(rock.x + rock.w * 0.75, rock.y + rock.h - 3);
         c.stroke();
 
-        // 5. Kiber işıqlar
+        // 5. Kiber işıqlar (GPU/CPU optimallaşdırılmış)
         c.fillStyle = '#38bdf8';
-        c.shadowColor = '#38bdf8';
-        c.shadowBlur = 8;
+        if (enableShadows) {
+            c.shadowColor = '#38bdf8';
+            c.shadowBlur = 8;
+        }
         c.beginPath();
         c.arc(rock.x + 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
         c.arc(rock.x + rock.w - 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
         c.fill();
+        c.shadowBlur = 0;
 
         c.restore();
 

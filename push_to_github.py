@@ -43,8 +43,13 @@ def run_cmd(cmd, check=True, capture=False):
         return None
 
 def main():
+    # Həmişə Floor Escape qovluğuna keçid edir ki, səhvən ana layihə göndərilməsin
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
+
     print("=" * 60)
     print("       FLOOR ESCAPE - GITHUB PUSH SKRİPTİ")
+    print(f" İş qovluğu: {script_dir}")
     print(f" Hədəf Repo: {REPO_URL}")
     print("=" * 60)
 
