@@ -123,7 +123,9 @@ function adjustViewportFit() {
     gameScreen.style.top = '50%';
     gameScreen.style.margin = '0';
     gameScreen.style.transformOrigin = 'center center';
-    gameScreen.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    const gpuZ = (typeof window !== 'undefined' && window.GRAPHICS_QUALITY !== 'low') ? ' translateZ(0)' : '';
+    gameScreen.style.transform = `translate(-50%, -50%) scale(${scale})${gpuZ}`;
+    gameScreen.style.willChange = 'transform';
 }
 
 window.updateUI = updateUI;
