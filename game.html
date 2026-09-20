@@ -138,17 +138,21 @@
                     <span class="stat-red-diamonds font-orbitron text-rose-400 font-bold text-sm sm:text-base tabular-nums">0</span>
                 </div>
 
-                <!-- KİBER ULDUZ -->
-                <div class="w-20 shrink-0 flex items-center justify-center gap-1.5 stat-panel px-2 py-1.5 rounded-xl border border-cyan-400/40 bg-cyan-950/25 cursor-help hover:border-cyan-300/70 transition" title="Kiber Ulduz Ehtiyatı [E] (Lavaya Zərbə)">
-                    <i class="fa-solid fa-star text-amber-400 text-sm animate-pulse"></i>
-                    <span id="stat-cyber-stars" class="font-orbitron text-cyan-300 font-bold text-sm sm:text-base tabular-nums">5</span>
-                </div>
+                <!-- KİBER ULDUZ (HUD-dan götürüldü, animasiyanın üzərinə köçürüldü) -->
+                <div id="hud-cyber-stars-box" class="hidden" style="display: none !important;"><span id="stat-cyber-stars">5</span></div>
 
                 <!-- QAT -->
                 <div class="w-16 shrink-0 flex items-center justify-center gap-2 stat-panel px-2 py-1.5 rounded-xl border border-slate-700 cursor-help hover:border-slate-500 transition" title="Cari Qat Səviyyəsi">
                     <i class="fa-solid fa-stairs text-slate-300 text-sm"></i>
                     <span id="stat-floor" class="font-orbitron text-white font-bold text-sm sm:text-base tabular-nums text-center">1</span>
                 </div>
+
+                <!-- 🛡️ QAT QORUMASI BADGE -->
+                <div id="stat-floor-protection-badge" class="hidden shrink-0 flex items-center justify-center gap-1 stat-panel px-2 py-1.5 rounded-xl border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 font-orbitron font-bold text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-pulse" title="Aktiv Qat Qoruması: Öldükdə 1-ci qata qayıtmır, cari qatdan davam edir!">
+                    <i class="fa-solid fa-shield-halved text-emerald-400 text-xs"></i>
+                    <span id="stat-floor-protection-count" class="tabular-nums">1</span>
+                </div>
+
 
                 <!-- TƏLƏB -->
                 <div class="w-20 shrink-0 flex items-center justify-center gap-1.5 stat-panel px-2 py-1.5 rounded-xl border border-slate-700 cursor-help hover:border-slate-500 transition" title="Qat Tələbi (Sərhədin açılması üçün)">
@@ -206,6 +210,10 @@
                 </button>
                 <button tabindex="-1" id="btn-pause" onclick="togglePause(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-amber-400 transition" title="Fasilə">
                     <i class="fa-solid fa-pause text-sm"></i>
+                </button>
+                <!-- ⚙️ MONITOR TEZLİYİ VƏ QRAFİKA AYARLARI -->
+                <button tabindex="-1" id="btn-perf-settings" onclick="openPerfModal(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 transition" title="Monitor Tezliyi və Qrafika Ayarları">
+                    <i class="fa-solid fa-sliders text-sm"></i>
                 </button>
             </div>
         </header>
@@ -299,7 +307,11 @@
                         <i class="fa-solid fa-skull"></i>
                     </div>
                     <h2 class="font-orbitron font-black text-3xl text-rose-500 mb-2">MƏĞLUB OLDUNUZ!</h2>
-                    <p class="text-slate-300 max-w-md text-sm mb-6">Lava dalğası sizi yaxaladı! Qalıcı yüksəltmələrdən istifadə edərək daha güclü başlayın.</p>
+                    <p class="text-slate-300 max-w-md text-sm mb-3">Lava dalğası sizi yaxaladı!</p>
+                    <div class="mb-5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-950/80 via-cyan-950/60 to-sky-950/80 border border-sky-400/50 text-sky-200 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 shadow-[0_0_15px_rgba(56,189,248,0.2)] animate-pulse">
+                        <i class="fa-solid fa-flask text-sky-400 text-base"></i>
+                        <span>Laboratoriyadan yüksəltmələr edərək daha çox nailiyyətlər əldə etməlisiniz!</span>
+                    </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full max-w-lg mb-6">
                         <div class="stat-panel p-2.5 rounded-xl text-center">
@@ -708,6 +720,29 @@
 
             <!-- TAB 2: MƏRMİ QƏNAƏTİ / İNFİYASİYA AZALTMASI (QIRMIZI ALMAZLA) -->
             <div id="lab-tab-content-econ" class="hidden flex flex-col gap-2.5 overflow-y-auto pr-1">
+                                <!-- 🛡️ QAT QORUMASI (RESURRECTION CHECKPOINT) -->
+                <div class="glass-card p-3 rounded-2xl flex items-center justify-between border-2 border-emerald-500/40 bg-emerald-950/20 mb-2 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                    <div class="max-w-[70%]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🛡️</span>
+                            <h3 class="font-orbitron font-bold text-xs text-emerald-300">Qat Qoruması (Floor Protection)</h3>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">VIP CHECKPOINT</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-rajdhani mt-0.5 leading-tight">
+                            Boss məğlub olanda Keçid Kağızı yanında çıxır. Öldükdə 1-ci qata qayıtmır, cari qatdan davam edir!
+                        </p>
+                        <p id="lab-pct-floor-protection" class="text-[10px] text-emerald-400 font-orbitron font-bold mt-1">
+                            Çıxma Şansı: 0% (Deaktiv)
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <span id="lab-lvl-floor-protection" class="font-orbitron text-xs text-emerald-400 font-bold">Lv.0/5</span>
+                        <button tabindex="-1" id="lab-btn-floor-protection" onclick="upgradeFloorProtection()" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
+                            <span id="lab-cost-floor-protection" class="flex items-center gap-1">40 <span data-icon="103" data-size="13"></span></span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 1. BARRİKADA QƏNAƏTİ -->
                 <div class="glass-card p-3 rounded-2xl flex items-center justify-between border border-slate-800">
                     <div>
@@ -908,6 +943,7 @@
     <script src="js/entities/powerup.js?v=6.0"></script>
     <script src="js/entities/turrets.js?v=3.2"></script>
     <script src="js/entities/escape-pass.js?v=1.0"></script>
+    <script src="js/entities/floor-protection.js?v=1.0"></script>
     <script src="js/giftcodes.js?v=3.2"></script>
     <script src="js/auth.js?v=3.3"></script>
     <script src="js/inbox.js?v=3.4"></script>
@@ -925,10 +961,129 @@
     <script src="js/engine/traps.js?v=1.0"></script>
     <script src="js/engine/intro.js?v=1.0"></script>
     <script src="js/engine/background.js?v=1"></script>
-    <script src="js/game.js?v=6.6"></script>
-    
+    <script src="js/game.js?v=6.7"></script>
+
+    <!-- ⚙️ TEZLİK VƏ QRAFİKA TƏNZİMLƏMƏLƏRİ MODALI -->
+    <div id="settings-perf-modal" onclick="if (event.target === this) closePerfModal();" class="hidden fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl relative text-white">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <h3 class="font-orbitron font-bold text-base text-cyan-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> MONİTOR VƏ QRAFİKA AYARLARI
+                </h3>
+                <button onclick="closePerfModal()" class="text-slate-400 hover:text-rose-400 text-2xl font-bold leading-none cursor-pointer p-1">&times;</button>
+            </div>
+
+            <!-- 1. Monitor Tezliyi -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold font-orbitron text-slate-300 uppercase tracking-wider mb-2">
+                    ⚡ Monitor Tezliyi / Kadr Sürəti:
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setTargetFPS(0); updateModalActiveState();" id="btn-hz-0" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        🔄 Auto (Hz)
+                    </button>
+                    <button onclick="setTargetFPS(60); updateModalActiveState();" id="btn-hz-60" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        60 FPS
+                    </button>
+                    <button onclick="setTargetFPS(120); updateModalActiveState();" id="btn-hz-120" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        120 FPS
+                    </button>
+                    <button onclick="setTargetFPS(144); updateModalActiveState();" id="btn-hz-144" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        144 FPS
+                    </button>
+                    <button onclick="setTargetFPS(30); updateModalActiveState();" id="btn-hz-30" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        30 FPS (Qənaət)
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2">Auto rejimində oyun monitorunuzun təbii tezliyinə (60/120/144Hz) tam uyğunlaşır və mikro-donmalar itir.</p>
+            </div>
+
+            <!-- 2. Qrafika və Aparat Təyinatı (GPU vs CPU) -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold font-orbitron text-slate-300 uppercase tracking-wider mb-2">
+                    🎨 Qrafika & Prosessor Rejimi:
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setGraphicsQuality('auto'); updateModalActiveState();" id="btn-q-auto" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        🤖 Avtomatik
+                    </button>
+                    <button onclick="setGraphicsQuality('high'); updateModalActiveState();" id="btn-q-high" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        🚀 GPU (Neon)
+                    </button>
+                    <button onclick="setGraphicsQuality('low'); updateModalActiveState();" id="btn-q-low" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        ⚡ CPU (Sürətli)
+                    </button>
+                </div>
+                <div id="hardware-detected-info" class="text-[11px] text-emerald-400 mt-2 flex items-center gap-1.5 font-semibold">
+                    <i class="fa-solid fa-microchip"></i> <span id="hw-status-text">Aparat Statusu yoxlanılır...</span>
+                </div>
+            </div>
+
+            <button onclick="closePerfModal()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 font-orbitron font-bold text-sm text-slate-950 hover:brightness-110 shadow-lg shadow-cyan-500/25 transition cursor-pointer">
+                YADDA SAXLA VƏ BAĞLA
+            </button>
+        </div>
+    </div>
 
     <script>
+        function openPerfModal() {
+            var m = document.getElementById('settings-perf-modal');
+            if (m) {
+                m.classList.remove('hidden');
+                m.style.display = 'flex';
+            }
+            updateModalActiveState();
+        }
+        function closePerfModal() {
+            var m = document.getElementById('settings-perf-modal');
+            if (m) {
+                m.classList.add('hidden');
+                m.style.display = 'none';
+            }
+        }
+        function updateModalActiveState() {
+            var curFPS = (typeof targetFPS === 'number') ? targetFPS : 0;
+            var curQ = (typeof savedQuality === 'string') ? savedQuality : 'auto';
+
+            [0, 30, 60, 120, 144].forEach(function(hz) {
+                var btn = document.getElementById('btn-hz-' + hz);
+                if (btn) {
+                    if (curFPS === hz) {
+                        btn.className = "perf-btn py-2 px-2 rounded-xl border border-cyan-400 bg-cyan-950/70 text-cyan-300 text-xs font-bold font-orbitron shadow-md shadow-cyan-500/20 text-center cursor-pointer";
+                    } else {
+                        btn.className = "perf-btn py-2 px-2 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer";
+                    }
+                }
+            });
+
+            ['auto', 'high', 'low'].forEach(function(q) {
+                var btn = document.getElementById('btn-q-' + q);
+                if (btn) {
+                    if (curQ === q) {
+                        btn.className = "perf-btn py-2 px-2 rounded-xl border border-cyan-400 bg-cyan-950/70 text-cyan-300 text-xs font-bold font-orbitron shadow-md shadow-cyan-500/20 text-center cursor-pointer";
+                    } else {
+                        btn.className = "perf-btn py-2 px-2 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer";
+                    }
+                }
+            });
+
+            var hwText = document.getElementById('hw-status-text');
+            if (hwText && typeof hwInfo !== 'undefined') {
+                var isCPU = (window.GRAPHICS_QUALITY === 'low') || (!hwInfo.hasHardwareGPU && window.GRAPHICS_QUALITY === 'auto');
+                var rend = hwInfo.rendererInfo || 'Naməlum';
+                if (!hwInfo.hasHardwareGPU) {
+                    hwText.innerHTML = "⚡ CPU Rejimi: " + rend + " (GPU tapılmadı, bütün kölgələr və qat yükləri avtomatik sıfırlandı)";
+                    hwText.className = "text-[11px] text-amber-400 font-semibold";
+                } else if (isCPU) {
+                    hwText.innerHTML = "⚡ CPU Rejimi (Seçildi): Maksimum sürət üçün kölgələr deaktivdir";
+                    hwText.className = "text-[11px] text-amber-400 font-semibold";
+                } else {
+                    hwText.innerHTML = "🚀 GPU Aktivdir: " + rend + " (Neon effektlər və tam səlislik)";
+                    hwText.className = "text-[11px] text-emerald-400 font-semibold";
+                }
+            }
+        }
+
         function returnToDashboard() {
             try {
                 if (typeof gameState !== 'undefined' && !gameState.gameOver) {

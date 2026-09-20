@@ -7,9 +7,15 @@ console.log('\n' + '='.repeat(72));
 console.log(' [BUILD MƏRHƏLƏSİ] POSTGRESQL VERİLƏNLƏR BAZASI YOXLANIŞI BAŞLADILIR...');
 console.log('='.repeat(72));
 
-// Mühit dəyişəni YALNIZ və YALNIZ sistemin özündən (process.env) oxunur.
-// Heç bir fayldan (.env) oxunmur, kodun içinə yazıla bilməz!
-const dbUrl = (process.env.DATABASE_URL || '').trim();
+let dbUrl = (process.env.DATABASE_URL || '').trim();
+if (!dbUrl) {
+    const envPath = path.join(__dirname, '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        const match = envContent.match(/DATABASE_URL\s*=\s*(.+)/);
+        if (match) dbUrl = match[1].trim();
+    }
+}
 
 function abortBuild(errorMsg) {
     console.error('\n' + '!'.repeat(72));

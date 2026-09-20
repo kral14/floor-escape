@@ -393,7 +393,10 @@ def handle_post(req, parsed, data):
             req.send_json({'success': False, 'message': 'Fərdi oyunçu üçün Player ID seçilməlidir!'}, 400)
             return True
 
-        if create_signed_gift_code:
+        custom_token = (data.get('token') or '').strip()
+        if custom_token:
+            token = custom_token
+        elif create_signed_gift_code:
             token, _ = create_signed_gift_code(blue, red)
         else:
             token = generate_random_code()
@@ -409,6 +412,32 @@ def handle_post(req, parsed, data):
                         req.send_json({'success': False, 'message': f'ID {player_id} olan oyunçu tapılmadı!'}, 404)
                         return True
                     target_name = p_row['username']
+
+                # Dublikatın qarşısını almaq: əgər eyni kodla məktub artıq varsa, təkrar bazaya INSERT etmə!
+                cursor.execute('SELECT id FROM inbox_messages WHERE gift_code = ?', (token,))
+                existing_msg = cursor.fetchone()
+                if existing_msg:
+                    new_msg_id = existing_msg['id']
+                    broadcast_inbox_message(target_type, player_id, {
+                        'id': new_msg_id,
+                        'title': title,
+                        'note': note,
+                        'gift_code': token,
+                        'blue_diamonds': blue,
+                        'red_diamonds': red,
+                        'expires_at': expires_at,
+                        'created_at': datetime.now(timezone.utc).isoformat(),
+                        'is_claimed': 0
+                    })
+                    req.send_json({
+                        'success': True,
+                        'message': f'Hədiyyə artıq mövcuddur və {"hamıya" if target_type == "ALL" else target_name + "-a"} canlı çatdırıldı!',
+                        'code': token,
+                        'target': target_name,
+                        'blueDiamonds': blue,
+                        'redDiamonds': red
+                    })
+                    return True
 
                 cursor.execute('''
                     INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)

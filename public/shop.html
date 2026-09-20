@@ -739,6 +739,29 @@
 
             <!-- TAB 4: MƏRMİ QƏNAƏTİ -->
             <div id="lab-tab-content-econ" class="hidden grid-cols-1 md:grid-cols-2 gap-3.5">
+                                <!-- 🛡️ QAT QORUMASI (RESURRECTION CHECKPOINT) -->
+                <div class="col-span-1 md:col-span-2 glass-card p-4 rounded-2xl flex items-center justify-between border-2 border-emerald-500/40 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                    <div class="max-w-[70%]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🛡️</span>
+                            <h3 class="font-orbitron font-bold text-sm text-emerald-300">Qat Qoruma Kağızı (Floor Protection)</h3>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">VIP CHECKPOINT</span>
+                        </div>
+                        <p class="text-xs text-slate-400 font-rajdhani mt-1">
+                            Boss məğlub olanda Keçid Kağızı yanında çıxır. Üzərinizdə olduqda ölsəniz, 1-ci qata qayıtmır, cari qatdan davam edir!
+                        </p>
+                        <p id="lab-pct-floor-protection" class="text-xs text-emerald-400 font-orbitron font-bold mt-1">
+                            Çıxma Şansı: 0% (Deaktiv)
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="lab-lvl-floor-protection" class="font-orbitron text-sm text-emerald-400 font-bold">Lv.0/5</span>
+                        <button tabindex="-1" id="lab-btn-floor-protection" onclick="upgradeFloorProtection(); if (typeof updateShopPageHeader === 'function') updateShopPageHeader();" class="btn-red-diamond px-4 py-2 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1.5">
+                            <span id="lab-cost-floor-protection" class="flex items-center gap-1">40 <span data-icon="103" data-size="13"></span></span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 1. Barrikada -->
                 <div class="glass-card p-4 rounded-2xl flex items-center justify-between border border-slate-800">
                     <div>
@@ -1157,7 +1180,8 @@
         <script src="js/engine/intro.js?v=5.0"></script>
         <script src="js/ui/toasts.js?v=5.0"></script>
         <script src="js/ui/chest-modal.js?v=5.0"></script>
-        <script src="js/ui/lab-panel.js?v=5.0"></script>
+        <script src="js/entities/floor-protection.js?v=1.0"></script>
+    <script src="js/ui/lab-panel.js?v=5.0"></script>
         <script src="js/ui/turrets-panel.js?v=5.0"></script>
         <script src="js/ui/skins-shop.js?v=10.5"></script>
         <script src="js/ui.js?v=5.0"></script>

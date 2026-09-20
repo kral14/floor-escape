@@ -171,8 +171,7 @@ class MonsSpawnEffect {
             fxModule.resetFlight();
         }
         this.maxAnimTime = (fxModule && fxModule.duration) ? fxModule.duration : 7.0;
-        // 🌀 Tam ardıcıl sıfırdan doğuluş animasiyası (İstifadəçinin tam kodu: 5.6s tam onlayn)
-        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : (['glacial','tesseract'].includes(this.animType) ? 6.8 : 5.6));
+        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : (this.animType === 'seed' ? 6.2 : (['glacial','tesseract'].includes(this.animType) ? 6.8 : 5.6)));
         this.finished = false;
         this.scale = 0.56; // İKİNCİ ŞƏKİLDƏKİ REAL OYUNÇU ÖLÇÜSÜ
         this._burstPlayed = false;

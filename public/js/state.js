@@ -257,6 +257,7 @@ const DEFAULT_PERM_UPGRADES = {
     equippedSpawnAnim: null, // Aktiv doğuluş animasiyası (alındıqda təchiz edilir)
     ownedSpawnAnims: [], // Sahib olunan animasiyalar (hər birinin öz dəyəri var)
     glacialReloadLvl: 0,
+    tesseractAmmoCap: 1, // ⚛️ 4D Kvant Tesseraktı Mərmi Tutumu (Lv.1: 1, maks 6)
     seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
     hasTwinTurrets: false,
@@ -273,6 +274,7 @@ const DEFAULT_PERM_UPGRADES = {
     bulletShockEconLvl: 0,
     bulletMineEconLvl: 0,
     bulletPlasmaEconLvl: 0,
+    floorProtectionLvl: 0, // 🛡️ Qat Qoruması (Lv.0: Deaktiv, Lv.1: 5%, Lv.2: 8%, Lv.3: 12%, Lv.4: 16%, Lv.5: 20%)
     // ⚡ Kiber Ulduz Ehtiyatı (Başlanğıcda 5 ədəd, Göy Almazla artırılır)
     cyberStars: 5,
     maxCyberStars: 5
@@ -377,7 +379,7 @@ function loadPermanentData() {
                 localStorage.setItem('floor_escape_quantum_clean_v3', 'true');
                 savePermanentData();
             }
-            if (permUpgrades.equippedSpawnAnim && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal'].includes(permUpgrades.equippedSpawnAnim)) {
+            if (permUpgrades.equippedSpawnAnim && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim)) {
                 permUpgrades.equippedSpawnAnim = null;
             }
             if (typeof permUpgrades.cyberStars !== 'number' || isNaN(permUpgrades.cyberStars)) {
@@ -495,6 +497,7 @@ let gameState = {
     totalTrapsPlaced: 0,
     totalTrapsDestroyed: 0,
     floorTime: 0,
+    floorProtection: 0, // 🛡️ Aktiv qat qoruma kağızı sayı (öldükdə cari qatdan başlamaq üçün)
 
     // Mərmi istifadə sayğacları (hər atışda inflyasiya üçün)
     bulletUsage: { wall: 0, ice: 0, shock: 0, mine: 0, plasma: 0 },
@@ -527,6 +530,7 @@ function saveActiveRun() {
         scoreProgress: gameState.scoreProgress,
         scoreReq: gameState.scoreReq,
         borderOpen: gameState.borderOpen,
+        floorProtection: gameState.floorProtection || 0,
         inGameSpeedLvl: gameState.inGameSpeedLvl,
         inGameMagnetLvl: gameState.inGameMagnetLvl,
         totalTrapsPlaced: gameState.totalTrapsPlaced,
@@ -583,6 +587,7 @@ function loadActiveRun() {
             gameState.scoreProgress = Math.max(0, parseInt(saved.scoreProgress) || 0);
             gameState.scoreReq = gameState.getFloorRequirement(gameState.floor);
             gameState.borderOpen = !!saved.borderOpen;
+    gameState.floorProtection = Math.max(0, parseInt(saved.floorProtection) || 0);
             gameState.inGameSpeedLvl = Math.max(0, parseInt(saved.inGameSpeedLvl) || 0);
             gameState.inGameMagnetLvl = Math.max(0, parseInt(saved.inGameMagnetLvl) || 0);
             gameState.magnetRadius = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
@@ -709,9 +714,98 @@ function buyGlacialReload() {
     savePermanentData();
     if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
     if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
     if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
     if (typeof showToast === 'function') showToast(`❄️ Buz Tutumu artırıldı: ${permUpgrades.glacialReloadLvl}/6`, 'success');
     return true;
 }
 window.buyGlacialReload = buyGlacialReload;
 window.getGlacialReloadLevel = getGlacialReloadLevel;
+
+// ============================================================================
+// ⚛️ 4D KVANT TESSERAKTI MƏRMİ TUTUMU YÜKSƏLTMƏSİ (Fancy Elmasla)
+// ============================================================================
+const TESSERACT_AMMO_PRICES = [0, 90, 140, 210, 310, 450]; // cap: 1->2: 90, 2->3: 140, 3->4: 210, 4->5: 310, 5->6: 450 Fancy
+function getTesseractAmmoCap() {
+    if (typeof permUpgrades === 'undefined') return 1;
+    return Math.max(1, Math.min(6, Math.floor(Number(permUpgrades.tesseractAmmoCap) || 1)));
+}
+
+function buyTesseractAmmoUpgrade() {
+    const cap = getTesseractAmmoCap();
+    if (cap >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('tesseract')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə 4D Kvant Tesseraktı animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
+    const price = TESSERACT_AMMO_PRICES[cap] || 100;
+    if (redDiamonds < price) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning');
+        return false;
+    }
+    redDiamonds -= price;
+    permUpgrades.tesseractAmmoCap = cap + 1;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof showToast === 'function') showToast(`⚛️ Qraviton Mərmi Tutumu artırıldı: ${permUpgrades.tesseractAmmoCap}/6`, 'success');
+    return true;
+}
+window.buyTesseractAmmoUpgrade = buyTesseractAmmoUpgrade;
+window.getTesseractAmmoCap = getTesseractAmmoCap;
+window.TESSERACT_AMMO_PRICES = TESSERACT_AMMO_PRICES;
+
+
+// ============================================================================
+// 🛡️ QAT QORUMASI YÜKSƏLTMƏLƏRİ VƏ VALYUTA SİSTEMİ (Fancy Elmasla)
+// ============================================================================
+const FLOOR_PROTECTION_CHANCES = [0, 0.05, 0.08, 0.12, 0.16, 0.20];
+const FLOOR_PROTECTION_COSTS = [40, 65, 95, 135, 180]; // Fancy Elmas (redDiamonds)
+const MAX_FLOOR_PROTECTION_LVL = 5;
+
+function getFloorProtectionDropChance(lvl = null) {
+    if (lvl === null) {
+        lvl = (typeof permUpgrades !== 'undefined' && permUpgrades.floorProtectionLvl) ? permUpgrades.floorProtectionLvl : 0;
+    }
+    return FLOOR_PROTECTION_CHANCES[Math.min(lvl, MAX_FLOOR_PROTECTION_LVL)] || 0;
+}
+
+function getFloorProtectionCost(lvl = null) {
+    if (lvl === null) {
+        lvl = (typeof permUpgrades !== 'undefined' && permUpgrades.floorProtectionLvl) ? permUpgrades.floorProtectionLvl : 0;
+    }
+    return FLOOR_PROTECTION_COSTS[lvl] || 0;
+}
+
+function upgradeFloorProtection() {
+    if (typeof permUpgrades === 'undefined') permUpgrades = { ...DEFAULT_PERM_UPGRADES };
+    const curLvl = permUpgrades.floorProtectionLvl || 0;
+    if (curLvl >= MAX_FLOOR_PROTECTION_LVL) {
+        if (typeof showToast === 'function') showToast('Qat Qoruması artıq maksimum səviyyədədir (20%)!', 'info');
+        return;
+    }
+    const cost = getFloorProtectionCost(curLvl);
+    if (redDiamonds < cost) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy Elmas yoxdur! Lazımdır: ${cost} 💎, Balans: ${redDiamonds} 💎`, 'error');
+        return;
+    }
+    redDiamonds -= cost;
+    permUpgrades.floorProtectionLvl = curLvl + 1;
+    savePermanentData();
+    if (typeof audio !== 'undefined' && audio.playDiamond) audio.playDiamond();
+    if (typeof updatePermUpgradesUI === 'function') updatePermUpgradesUI();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    const newChance = Math.round(getFloorProtectionDropChance(permUpgrades.floorProtectionLvl) * 100);
+    if (typeof showToast === 'function') {
+        showToast(`🛡️ Qat Qoruması Səviyyə ${permUpgrades.floorProtectionLvl}-ə yüksəldildi! Çıxma şansı: ${newChance}%`, 'success');
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.getFloorProtectionDropChance = getFloorProtectionDropChance;
+    window.getFloorProtectionCost = getFloorProtectionCost;
+    window.upgradeFloorProtection = upgradeFloorProtection;
+}

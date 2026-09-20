@@ -1257,6 +1257,40 @@
                                     data-icon="103" data-size="13"></span></span>
                         </button>
                     </div>
+                    <!-- 6. 🛡️ Qat Qoruması (VIP Resurrection Checkpoint) -->
+                    <div
+                        class="glass-card p-4 rounded-2xl border-2 border-emerald-500/50 hover:border-emerald-400/80 bg-emerald-950/20 transition-all duration-200 flex flex-col justify-between gap-3 relative overflow-hidden group shadow-lg shadow-emerald-950/30">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-2.5">
+                                <div
+                                    class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-base shrink-0 shadow-sm">
+                                    🛡️
+                                </div>
+                                <div>
+                                    <h3
+                                        class="font-orbitron font-bold text-xs sm:text-sm text-emerald-300 group-hover:text-emerald-200 transition-colors">
+                                        Qat Qoruması</h3>
+                                    <p class="text-[10px] text-slate-400 font-mono">VIP Qat Dirilişi | Checkpoint</p>
+                                </div>
+                            </div>
+                            <span id="lab-lvl-floor-protection"
+                                class="font-orbitron text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">Lv.0/5</span>
+                        </div>
+
+                        <div
+                            class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400 font-mono">Boss Düşmə Şansı:</span>
+                            <span id="lab-pct-floor-protection" class="font-orbitron font-bold text-xs text-emerald-400">0%
+                                (Deaktiv)</span>
+                        </div>
+
+                        <button tabindex="-1" id="lab-btn-floor-protection" onclick="upgradeFloorProtection()"
+                            class="btn-red-diamond w-full py-2 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md shadow-rose-950/40 flex items-center justify-center gap-1.5 cursor-pointer transition hover:scale-[1.02] active:scale-[0.98]">
+                            <span id="lab-cost-floor-protection" class="flex items-center gap-1 font-extrabold">40 <span
+                                    data-icon="103" data-size="13"></span></span>
+                        </button>
+                    </div>
+
                 </div>
 
                 <!-- TAB 3: ƏKİZ AVTO-QÜLLƏLƏR -->
@@ -1599,6 +1633,29 @@
 
             <!-- TAB 2: MƏRMİ QƏNAƏTİ / İNFİYASİYA AZALTMASI (QIRMIZI ALMAZLA) -->
             <div id="modal-lab-tab-content-econ" class="hidden flex flex-col gap-2.5 overflow-y-auto pr-1">
+                                <!-- 🛡️ QAT QORUMASI (RESURRECTION CHECKPOINT) -->
+                <div class="glass-card p-3 rounded-2xl flex items-center justify-between border-2 border-emerald-500/40 bg-emerald-950/20 mb-2 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                    <div class="max-w-[70%]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🛡️</span>
+                            <h3 class="font-orbitron font-bold text-xs text-emerald-300">Qat Qoruması (Floor Protection)</h3>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">VIP CHECKPOINT</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 font-rajdhani mt-0.5 leading-tight">
+                            Boss məğlub olanda Keçid Kağızı yanında çıxır. Öldükdə 1-ci qata qayıtmır, cari qatdan davam edir!
+                        </p>
+                        <p id="lab-pct-floor-protection-modal" class="text-[10px] text-emerald-400 font-orbitron font-bold mt-1">
+                            Çıxma Şansı: 0% (Deaktiv)
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <span id="lab-lvl-floor-protection-modal" class="font-orbitron text-xs text-emerald-400 font-bold">Lv.0/5</span>
+                        <button tabindex="-1" onclick="upgradeFloorProtection()" class="btn-red-diamond px-3 py-1.5 rounded-xl text-slate-950 font-orbitron font-bold text-xs shadow-md flex items-center gap-1">
+                            <span>40 <span data-icon="103" data-size="13"></span></span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 1. BARRİKADA QƏNAƏTİ -->
                 <div class="glass-card p-3 rounded-2xl flex items-center justify-between border border-slate-800">
                     <div>
@@ -2135,6 +2192,7 @@
 
     <script src="js/ui/toasts.js?v=5.0"></script>
     <script src="js/ui/chest-modal.js?v=5.0"></script>
+    <script src="js/entities/floor-protection.js?v=1.0"></script>
     <script src="js/ui/lab-panel.js?v=5.0"></script>
     <script src="js/ui/turrets-panel.js?v=5.0"></script>
     <script src="js/ui/skins-shop.js?v=10.0"></script>

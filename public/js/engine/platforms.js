@@ -9,7 +9,7 @@
 //    LAVA CANAVARINA tökülür.
 // ============================================================================
 
-let currentWorldHeight = 1800;
+let currentWorldHeight = 3600;
 let currentRocks = [];         // Prosedural üzən qaya adacıqları
 let initialLavaSources = [];   // Prosedural lava mənbələri
 let activeLavaHazardBoxes = []; // Dəqiq və ədalətli toqquşma zonaları
@@ -78,9 +78,9 @@ if (typeof window !== 'undefined') {
 // 1. Qat hündürlüyü
 function getFloorWorldHeight(floor = 1) {
     if (currentTrackInfo && currentTrackInfo.worldHeight) {
-        return currentTrackInfo.worldHeight;
+        return currentTrackInfo.worldHeight * 2;
     }
-    return 1800;
+    return 3600;
 }
 window.getFloorWorldHeight = getFloorWorldHeight;
 
@@ -150,9 +150,11 @@ function initFloorPlatforms(floor = 1) {
 
     if (selectedTrack) {
         currentTrackInfo = selectedTrack;
-        currentWorldHeight = selectedTrack.worldHeight || 1800;
+        const baseH = selectedTrack.worldHeight || 1800;
+        currentWorldHeight = baseH * 2; // 2 QAT UZADILMIŞ YOL
 
-        // Qayaları tam yükləyirik
+        // Qayaları 2 qat hündürlük boyunca (həm aşağı, həm yuxarı mərhələdə) tam yükləyirik
+        // 1-ci mərhələ: Yuxarı yarı (y: 0 ... baseH)
         for (const r of (selectedTrack.rocks || [])) {
             currentRocks.push({
                 x: Number(r.x),
@@ -162,8 +164,19 @@ function initFloorPlatforms(floor = 1) {
                 type: 'rock'
             });
         }
+        // 2-ci mərhələ: Aşağı yarı (y: baseH ... baseH * 2)
+        for (const r of (selectedTrack.rocks || [])) {
+            currentRocks.push({
+                x: Number(r.x),
+                y: Number(r.y) + baseH,
+                w: Number(r.w),
+                h: Number(r.h),
+                type: 'rock'
+            });
+        }
 
-        // Lava mənbələrini və xüsusi istiqamət/kəsilmə xassələrini tam yükləyirik
+        // Lava mənbələrini 2 qat hündürlük boyunca yükləyirik
+        // Yuxarı yarı
         for (let i = 0; i < (selectedTrack.lavaSources || []).length; i++) {
             const src = selectedTrack.lavaSources[i];
             initialLavaSources.push({
@@ -179,17 +192,36 @@ function initFloorPlatforms(floor = 1) {
                 seed: i + floor * 13
             });
         }
+        // Aşağı yarı
+        for (let i = 0; i < (selectedTrack.lavaSources || []).length; i++) {
+            const src = selectedTrack.lavaSources[i];
+            initialLavaSources.push({
+                x: Number(src.x),
+                y: Number(src.y) + baseH,
+                w: Number(src.w || 24),
+                direction: src.direction || 'auto',
+                endY: src.endY !== undefined ? Number(src.endY) + baseH : undefined,
+                customBottomY: src.customBottomY !== undefined ? Number(src.customBottomY) + baseH : undefined,
+                stopOnHit: !!src.stopOnHit,
+                shelfOffsets: src.shelfOffsets || null,
+                customOutX: src.customOutX !== undefined ? Number(src.customOutX) : undefined,
+                seed: i + floor * 13 + 500
+            });
+        }
 
-        console.log(`🗺️ [CANLI YOL ${targetTrackId}/30] "${selectedTrack.name}" aktivdir! Platforma: ${currentRocks.length}, Lava: ${initialLavaSources.length}`);
+        console.log(`🗺️ [CANLI YOL ${targetTrackId}/30 - 2X UZUNLUQ: ${currentWorldHeight}px] "${selectedTrack.name}" aktivdir! Platforma: ${currentRocks.length}, Lava: ${initialLavaSources.length}`);
     } else {
-        // Fallback əgər fayl yüklənməyibsə
-        currentWorldHeight = 1800;
-        currentRocks.push({ x: 100, y: 1360, w: 240, h: 42, type: 'rock' });
-        currentRocks.push({ x: 460, y: 1360, w: 240, h: 42, type: 'rock' });
-        currentRocks.push({ x: 250, y: 900,  w: 300, h: 42, type: 'rock' });
-        currentRocks.push({ x: 220, y: 440,  w: 360, h: 42, type: 'rock' });
-        initialLavaSources.push({ x: 160, y: 280, w: 24, direction: 'auto', seed: 1 });
-        initialLavaSources.push({ x: 620, y: 380, w: 24, direction: 'auto', seed: 2 });
+        // Fallback əgər fayl yüklənməyibsə (2 qat)
+        currentWorldHeight = 3600;
+        const fbBase = 1800;
+        [0, fbBase].forEach(offset => {
+            currentRocks.push({ x: 100, y: 1360 + offset, w: 240, h: 42, type: 'rock' });
+            currentRocks.push({ x: 460, y: 1360 + offset, w: 240, h: 42, type: 'rock' });
+            currentRocks.push({ x: 250, y: 900  + offset, w: 300, h: 42, type: 'rock' });
+            currentRocks.push({ x: 220, y: 440  + offset, w: 360, h: 42, type: 'rock' });
+            initialLavaSources.push({ x: 160, y: 280 + offset, w: 24, direction: 'auto', seed: 1 + offset });
+            initialLavaSources.push({ x: 620, y: 380 + offset, w: 24, direction: 'auto', seed: 2 + offset });
+        });
     }
 }
 window.initFloorPlatforms = initFloorPlatforms;

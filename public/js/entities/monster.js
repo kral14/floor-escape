@@ -1228,9 +1228,26 @@ class Monster {
             }
 
             // Keçid Kağızını arenaya salırıq (Oyunçunun çatacağı əlçatan nöqtəyə)
+            const passY = Math.max(120, Math.min(worldH - 220, (typeof player !== 'undefined' && player ? player.y - 120 : worldH / 2)));
             if (typeof spawnEscapePass === 'function') {
-                const passY = Math.max(120, Math.min(worldH - 220, (typeof player !== 'undefined' && player ? player.y - 120 : worldH / 2)));
-                spawnEscapePass(w / 2, passY);
+                spawnEscapePass(w / 2 - 45, passY);
+            }
+
+            // 🛡️ QAT QORUMA KAĞIZI ÇIXMA ŞANSI (Qat Keçmə Kağızının dərhal yanında)
+            // Yalnız Mağazada Fancy Elmasla alınıb aktiv edildikdə (floorProtectionLvl >= 1) şans açılır!
+            const fpLvl = (typeof permUpgrades !== 'undefined' && permUpgrades.floorProtectionLvl) ? permUpgrades.floorProtectionLvl : 0;
+            if (fpLvl >= 1 && typeof spawnFloorProtection === 'function') {
+                // Səviyyə 1: 5%, Səviyyə 2: 8%, Səviyyə 3: 12%, Səviyyə 4: 16%, Səviyyə 5: 20%
+                const dropChances = [0, 0.05, 0.08, 0.12, 0.16, 0.20];
+                const chance = dropChances[Math.min(fpLvl, 5)] || 0.05;
+                if (Math.random() < chance) {
+                    spawnFloorProtection(w / 2 + 45, passY);
+                    setTimeout(() => {
+                        if (typeof showToast === 'function') {
+                            showToast('✨ ƏLA HADİSƏ: Qat Keçmə Kağızının yanında Qat Qoruması düşdü! 🛡️📜', 'success');
+                        }
+                    }, 800);
+                }
             }
 
             setTimeout(() => {

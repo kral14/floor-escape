@@ -617,17 +617,14 @@
           if (jet.alpha <= 0) this.cryoVaporJets.splice(v, 1);
         }
 
-        // KINETIC RECHARGE MECHANISM:
-        // When moving fast (high speedFactor), cryo charge rapidly builds up!
-        if (this.engine.currentPhase >= 4) {
+        // KINETIC RECHARGE MECHANISM (Only in preview/cards, disabled during gameplay):
+        if (this.engine.currentPhase >= 4 && !this.engine.isGame) {
           const currentAmmo = this.getAmmoCount();
-          const reloadLimit = this.engine.isGame ? (typeof getGlacialReloadLevel === 'function' ? getGlacialReloadLevel() : 0) : 6;
+          const reloadLimit = 6;
           if (currentAmmo < reloadLimit) {
-            // When moving fast, recharge quickly!
             if (this.engine.speedFactor > 0.25) {
               const chargeRate = (this.engine.speedFactor * 1.65);
               this.chargeProgress += chargeRate * dt;
-
               if (this.chargeProgress >= 1.0) {
                 this.chargeProgress = 0;
                 this.forgeNewIceCrystal();
@@ -1271,12 +1268,24 @@
             if (typeof saveActiveRun==='function') saveActiveRun();
             return e.javelinSystem.getAmmoCount()<before;
         },
+        collectAmmo(p) {
+            const e=this.syncGame(p);
+            const before=e.javelinSystem.getAmmoCount();
+            if (before < 6) {
+                const emptyIdx = e.javelinSystem.slots.indexOf(false);
+                if (emptyIdx !== -1) {
+                    e.javelinSystem.slots[emptyIdx] = true;
+                    p.glacialSlots = e.javelinSystem.slots.slice();
+                    return true;
+                }
+            }
+            return false;
+        },
         drawPlayer(c, p) {
             const e=getEngine('game');
             e.x=p.x/.54-e.w/2; e.y=p.y/.54-e.h/2;e.ctx=c;e.drawCustomMonster=()=>{};
             c.save();c.scale(.54,.54);e.render();c.restore();
-            c.save();c.font='11px monospace';c.textAlign='center';c.fillStyle='#a5f3fc';
-            c.fillText('❄ '+p.glacialSlots.filter(Boolean).length+'/6',p.x,p.y+32);c.restore();
+            // Badge rendered centrally via Player.drawAnimBadge
         }
 
     };

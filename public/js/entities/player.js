@@ -55,7 +55,11 @@ class Player {
 
     reset(isNewRun = true) {
         if (window.GlacialSpawnEffect) window.GlacialSpawnEffect.resetGame();
-        if (isNewRun) { this.glacialSlots = Array(6).fill(true); this.glacialCharge = 0; }
+        if (window.TesseractSpawnEffect) window.TesseractSpawnEffect.resetGame();
+        if (isNewRun) { this.glacialSlots = Array(6).fill(true); this.glacialCharge = 0;
+            const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+            this.tesseractSlots = Array(tessCap).fill(true);
+        }
         this.x = canvasWidth / 2;
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
         this.y = worldH - 180;
@@ -70,6 +74,8 @@ class Player {
         this.dustBudget = 0;
         this.singularityAngles = { r1: 0, r2: 0, r3: 0 };
         this.singularityRot = { rx: 0, ry: 0, rz: 0 };
+        this.hasSingularity = (typeof permUpgrades !== 'undefined' && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(permUpgrades.equippedSpawnAnim));
+        this.singularityTheme = this.hasSingularity ? permUpgrades.equippedSpawnAnim : null;
         this.starDropCooldown = 1.0;
         this._eKeyLocked = false;
 
@@ -77,24 +83,26 @@ class Player {
         const maxCapacity = (typeof getMaxLifeFlowers === 'function') ? getMaxLifeFlowers() : ((permUpgrades && permUpgrades.seedLifeLvl) || 1);
         this.maxLifeFlowers = Math.max(1, Math.min(3, maxCapacity));
 
-        if (isNewRun || !isSeedEquipped) {
-            // Yalnız yeni oyunda tam bərpa olunur
-            this.lifeFlowers = isSeedEquipped ? this.maxLifeFlowers : 0;
-            this.hasLifeFlower = this.lifeFlowers > 0;
-            this.lifeFlowerState = this.hasLifeFlower ? 'active' : 'none';
-            this.lifeFlowerWitherAge = 0;
-            this.lifeFlowerTrail = [];
-            this.lifeFlowerBudget = 0;
-            if (typeof SeedSpawnEffect !== 'undefined' && typeof SeedSpawnEffect.resetLifeFlower === 'function') {
-                SeedSpawnEffect.resetLifeFlower();
+        if (isSeedEquipped) {
+            // Əgər Yaşam Çiçəyi aktivdirsə, yeni oyunda və ya can sıfırlandıqda həmişə tam bərpa edilir
+            if (isNewRun || this.lifeFlowers === undefined || this.lifeFlowers <= 0 || !this.hasLifeFlower) {
+                this.lifeFlowers = this.maxLifeFlowers;
+                this.hasLifeFlower = true;
+                this.lifeFlowerState = 'active';
+                this.lifeFlowerWitherAge = 0;
+                this.lifeFlowerTrail = [];
+                this.lifeFlowerBudget = 0;
+                if (typeof SeedSpawnEffect !== 'undefined' && typeof SeedSpawnEffect.resetLifeFlower === 'function') {
+                    SeedSpawnEffect.resetLifeFlower();
+                }
+            } else {
+                this.hasLifeFlower = (this.lifeFlowers > 0);
+                this.lifeFlowerState = this.hasLifeFlower ? 'active' : 'removed';
             }
         } else {
-            // Qat keçidində mövcud can statusu QALICIDIR (qorunur):
-            // Əgər can bitibsə və ya solub yox olubsa, qat keçəndə geri qayıtmır!
-            this.hasLifeFlower = ((this.lifeFlowers || 0) > 0);
-            if (!this.hasLifeFlower && this.lifeFlowerState !== 'withering') {
-                this.lifeFlowerState = 'removed';
-            }
+            this.lifeFlowers = 0;
+            this.hasLifeFlower = false;
+            this.lifeFlowerState = 'none';
         }
         this.vx = 0;
         this.vy = 0;
@@ -167,6 +175,7 @@ class Player {
         const speedRatio = Math.min(1, speedLen / (currentSpeed || 1));
         const dt = 1 / 60;
         if (permUpgrades.equippedSpawnAnim === 'glacial' && window.GlacialSpawnEffect) window.GlacialSpawnEffect.updateGame(dt, this);
+        if (permUpgrades.equippedSpawnAnim === 'tesseract' && window.TesseractSpawnEffect) window.TesseractSpawnEffect.updateGame(dt, this);
         this.flapPhase = (this.flapPhase || 0) + dt * (2.5 + speedRatio * 7.0);
 
         // 🦇 DRAKULA QANADLARINDAN TÖKÜLƏN QIZILI, BƏNÖVŞƏYİ VƏ FİRUZƏYİ TOZ ZƏRRƏCİKLƏRİ:
@@ -261,7 +270,7 @@ class Player {
                 SingularitySpawnEffect.updateInGame(dt, this);
             }
 
-            // Hərəkət zamanı tematik parıltı hissəcikləri
+            // Hərəkət zamanı tematik parıltı hissəcikləri (yalnız kvant aktiv olduqda)
             if (speedRatio > 0.15 && Math.random() < 0.28 && typeof particles !== 'undefined') {
                 const colorsByTheme = {
                     singularity: ['#38bdf8', '#06b6d4', '#e0f2fe'],
@@ -277,6 +286,9 @@ class Player {
                     2.8
                 ));
             }
+        } else {
+            this.hasSingularity = false;
+            this.singularityTheme = null;
         }
 
         this.x += dx;
@@ -760,7 +772,102 @@ class Player {
 
             ctx.restore();
         }
+
+        // 🏷️ Animasiya Üzərindəki Status Badge-i (Ulduz, Kvant Buz Zirehi və s.)
+        this.drawAnimBadge(ctx);
     }
+    // 🏷️ Doğuluş Animasiyası Resurs & Status Göstəricisi (Ulduz, Kvant Buz Zirehi, Tesserakt, Yaşam Çiçəyi)
+    drawAnimBadge(ctx) {
+        if (typeof gameState !== 'undefined' && gameState.gameOver) return;
+
+        const anim = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'default';
+        let icon = null;
+        let text = null;
+        let color = '#38bdf8';
+        let glowColor = '#00f0ff';
+        let borderColor = 'rgba(56, 189, 248, 0.6)';
+        let isZero = false;
+
+        // 1. Kiber Ulduz Animasiyaları (Singularity, Supernova, Synapse, Abyssal, Stellar)
+        if (['singularity', 'supernova', 'synapse', 'abyssal', 'stellar'].includes(anim)) {
+            const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 0;
+            icon = '⭐';
+            text = `${count}`;
+            isZero = count <= 0;
+            color = isZero ? '#f87171' : '#facc15';
+            glowColor = isZero ? '#ef4444' : '#eab308';
+            borderColor = isZero ? 'rgba(239, 68, 68, 0.7)' : 'rgba(250, 204, 21, 0.7)';
+        }
+        // 2. Kvant Buz Zirehi (Glacial)
+        else if (anim === 'glacial') {
+            const slots = this.glacialSlots || [true, true, true, true, true, true];
+            const count = slots.filter(Boolean).length;
+            icon = '❄';
+            text = `${count}/6`;
+            isZero = count <= 0;
+            color = isZero ? '#f87171' : '#38bdf8';
+            glowColor = isZero ? '#ef4444' : '#0ea5e9';
+            borderColor = isZero ? 'rgba(239, 68, 68, 0.7)' : 'rgba(56, 189, 248, 0.7)';
+        }
+        // 3. 4D Kvant Tesseraktı (Tesseract)
+        else if (anim === 'tesseract') {
+            const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+            const slots = this.tesseractSlots || Array(tessCap).fill(true);
+            const count = slots.filter(Boolean).length;
+            icon = '⚛';
+            text = `${count}/${tessCap}`;
+            isZero = count <= 0;
+            color = isZero ? '#f87171' : '#c084fc';
+            glowColor = isZero ? '#ef4444' : '#a855f7';
+            borderColor = isZero ? 'rgba(239, 68, 68, 0.7)' : 'rgba(192, 132, 252, 0.7)';
+        }
+        // 4. Yaşam Çiçəyi (Seed)
+        else if (anim === 'seed') {
+            if (typeof SeedSpawnEffect !== 'undefined' && SeedSpawnEffect.flowerState === 'active') {
+                icon = '🌸';
+                text = '1';
+                color = '#f472b6';
+                glowColor = '#ec4899';
+                borderColor = 'rgba(244, 114, 182, 0.7)';
+            }
+        }
+
+        if (!icon || text === null) return;
+
+        // Futuristik Sci-Fi Badge (Oyunçunun və animasiyanın üzərində: y + 36px)
+        ctx.save();
+        const bx = Math.round(this.x);
+        const by = Math.round(this.y + this.radius + 13);
+
+        ctx.font = 'bold 11px "Orbitron", -apple-system, sans-serif';
+        const label = `${icon} ${text}`;
+        const textW = ctx.measureText(label).width;
+        const padX = 14;
+        const bw = Math.max(40, textW + padX);
+        const bh = 18;
+
+        // Arxa Fon Kapsulu (Tünd şüşə efekti)
+        ctx.fillStyle = 'rgba(8, 14, 28, 0.88)';
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.3;
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = isZero ? 12 : 7;
+
+        ctx.beginPath();
+        ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, 9);
+        ctx.fill();
+        ctx.stroke();
+
+        // Daxili Mətn və İkon
+        ctx.shadowBlur = isZero ? 8 : 4;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, bx, by + 0.5);
+
+        ctx.restore();
+    }
+
 }
 
 class Particle {

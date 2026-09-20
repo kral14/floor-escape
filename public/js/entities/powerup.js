@@ -20,6 +20,26 @@ class PowerUp {
             weights.push(missingLife ? 0.35 : 0.15);
         }
 
+        // ⚛️ 4D Kvant Tesseraktı aktivdirsə, arenada toplanan Qraviton Mərmiləri çıxır
+        const isTesseractEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'tesseract');
+        if (isTesseractEquipped) {
+            types.push('tesseractAmmo');
+            const missingAmmo = (typeof player !== 'undefined' && player && player.tesseractSlots)
+                ? player.tesseractSlots.filter(s => !s).length
+                : 3;
+            weights.push(missingAmmo > 0 ? 0.55 : 0.22);
+        }
+
+        // ❄️ Kvant Buz Zirehi aktivdirsə, arenada toplanan Buz Mərmiləri çıxır
+        const isGlacialEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'glacial');
+        if (isGlacialEquipped) {
+            types.push('iceAmmo');
+            const missingAmmo = (typeof player !== 'undefined' && player && player.glacialSlots)
+                ? player.glacialSlots.filter(s => !s).length
+                : 3;
+            weights.push(missingAmmo > 0 ? 0.55 : 0.22);
+        }
+
         const totalWeight = weights.reduce((a, b) => a + b, 0);
         
         if (type && types.includes(type)) {
@@ -79,6 +99,20 @@ class PowerUp {
                 bg: 'rgba(98, 230, 160, 0.25)',
                 icon: '🌸',
                 name: 'Yaşam Çiçəyi'
+            },
+            tesseractAmmo: {
+                color: '#d946ef',              // Parlaq Kvant Fuksiya / Bənövşəyi (Qalxanla qarışmır!)
+                glow: '#f0abfc',               // Neon Kosmik Parıltı
+                bg: 'rgba(217, 70, 239, 0.32)', // Tesserakt Aurası
+                icon: '⚛️',
+                name: 'Qraviton Mərmisi'
+            },
+            iceAmmo: {
+                color: '#38bdf8',
+                glow: '#0ea5e9',
+                bg: 'rgba(56, 189, 248, 0.30)',
+                icon: '❄️',
+                name: 'Buz Mərmisi'
             }
         };
 
@@ -88,6 +122,10 @@ class PowerUp {
     update() {
         this.age++;
         this.rotation += 0.04;
+        // ⚛️ Mərmi orbları (Qraviton və Buz) vaxtla heç vaxt itmir, oyunçu götürənə qədər qalır!
+        if (this.type === 'tesseractAmmo' || this.type === 'iceAmmo') {
+            return true;
+        }
         return this.age < this.lifeTime;
     }
 
@@ -95,9 +133,11 @@ class PowerUp {
         const c = context || (typeof ctx !== 'undefined' ? ctx : null);
         if (!c) return;
 
-        // Ömrün son 2.5 saniyəsində (150 frame) yanıb-sönmə
-        if (this.lifeTime - this.age < 150) {
-            if (Math.floor(this.age / 8) % 2 === 0) return;
+        // Ömrün son 2.5 saniyəsində (150 frame) yanıb-sönmə (Mərmi orbları heç vaxt sönmür)
+        if (this.type !== 'tesseractAmmo' && this.type !== 'iceAmmo') {
+            if (this.lifeTime - this.age < 150) {
+                if (Math.floor(this.age / 8) % 2 === 0) return;
+            }
         }
 
         const bob = Math.sin(Date.now() * 0.004 + this.bobOffset) * 3;

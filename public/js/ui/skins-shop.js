@@ -927,6 +927,21 @@ function renderSpawnAnimsShop() {
                         </div>
                     `;
                 })() : ''}
+                ${anim.id === 'tesseract' ? (() => {
+                    const cap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+                    const isMax = cap >= 6;
+                    const price = !isMax ? ((typeof TESSERACT_AMMO_PRICES !== 'undefined') ? TESSERACT_AMMO_PRICES[cap] : 90) : 0;
+                    const ruby = (typeof ICONS !== 'undefined') ? ICONS.rubyDiamond({ size: 10 }) : '💎';
+                    return `
+                        <div class="w-full my-1 px-2 py-1 rounded-xl bg-purple-950/70 border border-purple-500/30 text-[9px] text-fuchsia-100 flex items-center justify-between gap-1.5 shadow-inner" onclick="event.stopPropagation()">
+                            <span class="font-mono text-slate-300">⚛️ Tutum: <strong class="text-fuchsia-300 font-bold">${cap}/6</strong></span>
+                            <button type="button" class="px-2 py-0.5 rounded-lg font-orbitron font-bold text-[8.5px] shrink-0 transition active:scale-95 cursor-pointer ${isMax ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:from-purple-400 hover:to-fuchsia-400 text-slate-950 shadow-sm flex items-center gap-1'}" onclick="buyTesseractAmmoUpgrade()" ${isMax ? 'disabled' : ''}>
+                                <span>${isMax ? 'MAKS' : `+1: ${price}`}</span>
+                                ${!isMax ? ruby : ''}
+                            </button>
+                        </div>
+                    `;
+                })() : ''}
                 ${multiVariantControls}
 
                 ${isMulti ? `

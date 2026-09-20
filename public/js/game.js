@@ -463,6 +463,50 @@ function updatePhysicsStep() {
                         }
                     }
                 }
+            } else if (p.type === 'tesseractAmmo') {
+                let collected = false;
+                if (window.TesseractSpawnEffect && typeof window.TesseractSpawnEffect.collectAmmo === 'function') {
+                    collected = window.TesseractSpawnEffect.collectAmmo(player);
+                } else if (player.tesseractSlots) {
+                    const emptyIdx = player.tesseractSlots.indexOf(false);
+                    if (emptyIdx !== -1) {
+                        player.tesseractSlots[emptyIdx] = true;
+                        collected = true;
+                    }
+                }
+                const curCount = (player.tesseractSlots || []).filter(Boolean).length;
+                if (collected) {
+                    addFloatingText(player.x, player.y - 20, `⚛️ +1 QRAVİTON MƏRMİSİ! [${curCount}/6]`, '#c084fc', 16);
+                    if (typeof showToast === 'function') {
+                        showToast(`⚛️ Qraviton Mərmisi toplandı! [${curCount}/6]`, 'success');
+                    }
+                } else {
+                    gameState.gold += 35;
+                    gameState.runGold = (gameState.runGold || 0) + 35;
+                    addFloatingText(player.x, player.y - 20, '⚛️ MƏRMİLƏR TAM DOLUDUR! +35 🪙', '#f0abfc', 15);
+                }
+            } else if (p.type === 'iceAmmo') {
+                let collected = false;
+                if (window.GlacialSpawnEffect && typeof window.GlacialSpawnEffect.collectAmmo === 'function') {
+                    collected = window.GlacialSpawnEffect.collectAmmo(player);
+                } else if (player.glacialSlots) {
+                    const emptyIdx = player.glacialSlots.indexOf(false);
+                    if (emptyIdx !== -1) {
+                        player.glacialSlots[emptyIdx] = true;
+                        collected = true;
+                    }
+                }
+                const curCount = (player.glacialSlots || []).filter(Boolean).length;
+                if (collected) {
+                    addFloatingText(player.x, player.y - 20, `❄️ +1 BUZ MƏRMİSİ! [${curCount}/6]`, '#38bdf8', 16);
+                    if (typeof showToast === 'function') {
+                        showToast(`❄️ Buz Mərmisi toplandı! [${curCount}/6]`, 'success');
+                    }
+                } else {
+                    gameState.gold += 35;
+                    gameState.runGold = (gameState.runGold || 0) + 35;
+                    addFloatingText(player.x, player.y - 20, '❄️ MƏRMİLƏR TAM DOLUDUR! +35 🪙', '#a5f3fc', 15);
+                }
             }
 
             powerUps.splice(i, 1);
@@ -480,6 +524,7 @@ function updatePhysicsStep() {
         gameState.powerUpCountdown -= 1 / 60;
         if (gameState.powerUpCountdown <= 0) {
             autoSpawnPowerUp();
+        if (typeof ensureAmmoSpawn === 'function') ensureAmmoSpawn();
             gameState.powerUpCountdown = baseInterval + Math.random() * 4;
         }
     }
@@ -498,6 +543,10 @@ function updatePhysicsStep() {
     // 📜 Keçid Kağızının yenilənməsi
     if (typeof updateEscapePass === 'function') {
         updateEscapePass(FIXED_PHYSICS_DELTA / 1000);
+    }
+    // 🛡️ Qat Qoruma Kağızının yenilənməsi
+    if (typeof updateFloorProtection === 'function') {
+        updateFloorProtection(FIXED_PHYSICS_DELTA / 1000);
     }
 
     // 🏔️ Qayalar və Axan Lava Fizikası
@@ -624,12 +673,17 @@ function renderGame() {
     if (typeof drawEscapePass === 'function') {
         drawEscapePass(ctx);
     }
+    // 🛡️ Qat Qoruma Kağızı (Floor Protection)
+    if (typeof drawFloorProtection === 'function') {
+        drawFloorProtection(ctx);
+    }
 
     // 7. Oyunçu, Qüllələr, Sikkələr, Mərmilər, Canavar və Zərrəciklər
     if (gameState.isIntroPlaying && typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
         monsPortal.draw(ctx);
     } else {
         player.draw();
+        drawMonsAmmoArrow(ctx);
     }
     if (typeof twinTurrets !== 'undefined' && twinTurrets.draw) {
         twinTurrets.draw();
@@ -687,6 +741,8 @@ function renderGame() {
     ctx.restore(); // ==================== DÜNYA MƏKANININ SONU ====================
 
     // ==================== B) EKRAN MƏKANI (SCREEN SPACE HUD) ====================
+    // 🧭 Mərmi Naviqasiya Oxları (Wayfinder)
+    // Arrow rendered directly on Mons
     // 1. 👾 Boss HP Bar (Ekranın yuxarısında həmişə sabit)
     if (typeof monster !== 'undefined' && typeof monster.drawBossHpBar === 'function') {
         monster.drawBossHpBar(ctx);
@@ -800,6 +856,22 @@ function gameLoop(timestamp) {
 }
 
 function triggerGameOver() {
+    // 🛡️ QAT QORUMASI YOXLANIŞI (RESURRECTION CHECKPOINT)
+    // Əgər oyunçunun üzərində Qat Qoruma Kağızı varsa və 1-ci qatdan yuxarıdadırsa, 1-ci qata qayıtmır!
+    if (gameState.floorProtection && gameState.floorProtection > 0 && gameState.floor > 1) {
+        gameState.floorProtection--;
+        if (typeof showToast === 'function') {
+            showToast(`🛡️ QAT QORUMASI İSTİFADƏ OLUNDU! Qat ${gameState.floor}-dən davam edilir! (Qalan qoruma: ${gameState.floorProtection})`, 'success');
+        }
+        if (typeof addFloatingText === 'function' && typeof player !== 'undefined' && player) {
+            addFloatingText(player.x, player.y - 40, `🛡️ QAT ${gameState.floor} QORUNDU!`, '#34d399', 24);
+        }
+        if (typeof audio !== 'undefined' && typeof audio.playDiamond === 'function') {
+            audio.playDiamond();
+        }
+        respawnOnCurrentFloor();
+        return;
+    }
     gameState.gameOver = true;
     gameState.coinCountdown = getCoinSpawnInterval();
     if (typeof clearBullets === 'function') clearBullets();
@@ -808,6 +880,9 @@ function triggerGameOver() {
     if (typeof audio !== 'undefined') {
         if (typeof audio.stopPauseTheme === 'function') audio.stopPauseTheme();
         if (typeof audio.playGameOver === 'function') audio.playGameOver();
+        if (typeof showToast === 'function') {
+            showToast('🔬 Laboratoriyadan yüksəltmələr edərək daha çox nailiyyətlər əldə etməlisiniz!', 'info');
+        }
     }
     if (typeof cancelRebinding === 'function') cancelRebinding();
 
@@ -828,6 +903,78 @@ function triggerGameOver() {
         syncPlayerDataCloud(true);
     }
 }
+
+
+// 🛡️ CARİ QATDAN DİRİLMƏ VƏ BƏRPA FUNKSİYASI (RESPAWN ON CURRENT FLOOR)
+function respawnOnCurrentFloor() {
+    lastFrameTime = performance.now();
+    physicsAccumulator = 0;
+    gameState.gameOver = false;
+    gameState.paused = false;
+    gameState.transitioning = false;
+    hasPassedBorder = false;
+    gameState.borderOpen = false;
+    keys = {};
+
+    const targetFloor = gameState.floor || 1;
+    gameState.scoreProgress = 0;
+    gameState.scoreReq = gameState.getFloorRequirement(targetFloor);
+    gameState.combo = 0;
+    gameState.floorTime = 0;
+
+    // Platformaları və dünyanı həmin qata uyğun bərpa edirik
+    if (typeof initFloorPlatforms === 'function') {
+        initFloorPlatforms(targetFloor);
+    }
+
+    const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(targetFloor) : canvasHeight;
+    cameraY = Math.max(0, Math.min(worldH - canvasHeight, (worldH - 200) - canvasHeight / 2));
+    window.cameraY = cameraY;
+
+    // Oyunçu və canavarı həmin qatın başlanğıcına yerləşdiririk
+    if (typeof player !== 'undefined' && player) {
+        player.x = 400;
+        player.y = worldH - 200;
+        player.reset(true);
+        gameState.dashInvulnerable = 180; // Diriləndə 3s təhlükəsizlik
+    }
+
+    if (typeof monster !== 'undefined' && monster) {
+        monster.reset();
+        monster.y = worldH - 38;
+    }
+
+    if (typeof twinTurrets !== 'undefined' && twinTurrets && twinTurrets.reset) {
+        twinTurrets.reset();
+    }
+
+    if (typeof clearBullets === 'function') clearBullets();
+    if (typeof clearEscapePass === 'function') clearEscapePass();
+    if (typeof clearFloorProtection === 'function') clearFloorProtection();
+    if (typeof particles !== 'undefined') particles.length = 0;
+    if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
+
+    coins = [];
+    powerUps = [];
+    if (typeof spawnCoins === 'function') spawnCoins();
+    if (typeof spawnPowerUps === 'function') spawnPowerUps();
+
+    if (typeof updateUI === 'function') updateUI(true);
+    if (typeof saveActiveRun === 'function') saveActiveRun();
+
+    // Zümrüd dirilmə aurası zərrəcikləri
+    if (typeof particles !== 'undefined' && player) {
+        for (let i = 0; i < 40; i++) {
+            particles.push(new Particle(
+                player.x + (Math.random() - 0.5) * 60,
+                player.y + (Math.random() - 0.5) * 60,
+                '#34d399',
+                3.5
+            ));
+        }
+    }
+}
+window.respawnOnCurrentFloor = respawnOnCurrentFloor;
 
 function restartGame() {
     lastFrameTime = performance.now();
@@ -911,8 +1058,7 @@ function playSummonIntro(onFinish) {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
-    if (!animType || animType === 'portal') animType = 'singularity';
+    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
 
     gameState.isIntroPlaying = true;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
@@ -940,6 +1086,7 @@ function playSummonIntro(onFinish) {
                 gameState.dashInvulnerable = 90; // Doğuluş bitdikdə 1.5s qoruma
                 lastFrameTime = performance.now();
                 physicsAccumulator = 0;
+                initIngameQuantumTheme();
                 if (typeof onFinish === 'function') onFinish();
             }
         });
@@ -1031,8 +1178,7 @@ function playFloorTeleportTransition() {
     if (typeof clearBullets === 'function') clearBullets();
 
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
-    if (!animType || animType === 'portal') animType = 'singularity';
+    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
 
     const startX = player.x;
@@ -1152,7 +1298,7 @@ if (typeof activeTestTrackId === 'number' && activeTestTrackId >= 1) {
 }
 
 if (typeof initFloorPlatforms === 'function') initFloorPlatforms(gameState.floor || 1);
-player.reset();
+player.reset(true);
 monster.reset();
 if (typeof twinTurrets !== 'undefined' && twinTurrets.reset) twinTurrets.reset();
 applyFloorModifier();
@@ -1202,8 +1348,12 @@ try {
         shouldPlayIntro = sessionStorage.getItem('floor_escape_play_intro') === 'true' || !hasLoadedRun;
         sessionStorage.removeItem('floor_escape_play_intro');
     }
-    if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim && Array.isArray(permUpgrades.ownedSpawnAnims) && !permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
-        permUpgrades.equippedSpawnAnim = null;
+    if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) {
+        if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
+            permUpgrades.ownedSpawnAnims = [permUpgrades.equippedSpawnAnim];
+        } else if (!permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
+            permUpgrades.ownedSpawnAnims.push(permUpgrades.equippedSpawnAnim);
+        }
     }
 } catch (e) {}
 if (shouldPlayIntro) {
@@ -1227,13 +1377,21 @@ adjustViewportFit();
 requestAnimationFrame(gameLoop);
 
 function initIngameQuantumTheme() {
-    const equipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
-    const key = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(equipped) ? equipped : 'singularity';
-    if (typeof SingularitySpawnEffect !== 'undefined') {
-        SingularitySpawnEffect.setTheme(key);
-    }
-    if (typeof player !== 'undefined' && player) {
-        player.singularityTheme = key;
+    const equipped = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+    const isQuantum = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(equipped);
+    if (isQuantum) {
+        if (typeof SingularitySpawnEffect !== 'undefined') {
+            SingularitySpawnEffect.setTheme(equipped);
+        }
+        if (typeof player !== 'undefined' && player) {
+            player.hasSingularity = true;
+            player.singularityTheme = equipped;
+        }
+    } else {
+        if (typeof player !== 'undefined' && player) {
+            player.hasSingularity = false;
+            player.singularityTheme = null;
+        }
     }
 }
 
@@ -1264,3 +1422,270 @@ window.toggleAudio = toggleAudio;
 window.setTargetFPS = setTargetFPS;
 window.toggleFpsMode = toggleFpsMode;
 window.playSummonIntro = playSummonIntro;
+
+
+// 🧭 MƏRMİ NAVİQASİYA VƏ YÖN GÖSTƏRİCİ OX SİSTEMİ (AMMO WAYFINDER / COMPASS)
+function drawAmmoNavigationIndicators(ctx) {
+    if (typeof player === 'undefined' || !player || gameState.gameOver || gameState.paused || gameState.transitioning) return;
+    const anim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+    if (anim !== 'tesseract' && anim !== 'glacial') return;
+
+    const ammoType = anim === 'tesseract' ? 'tesseractAmmo' : 'iceAmmo';
+    if (typeof powerUps === 'undefined' || !powerUps) return;
+    const activeAmmos = powerUps.filter(p => p.type === ammoType);
+    if (activeAmmos.length === 0) return;
+
+    // Ən yaxın mərmini tapırıq
+    let nearest = null;
+    let minDist = Infinity;
+    for (let i = 0; i < activeAmmos.length; i++) {
+        const p = activeAmmos[i];
+        const d = Math.hypot(p.x - player.x, p.y - player.y);
+        if (d < minDist) {
+            minDist = d;
+            nearest = p;
+        }
+    }
+    if (!nearest) return;
+
+    const isTess = anim === 'tesseract';
+    const mainColor = isTess ? '#c084fc' : '#38bdf8';
+    const glowColor = isTess ? '#e879f9' : '#0ea5e9';
+    const icon = isTess ? '⚛️' : '❄️';
+    const ammoName = isTess ? 'QRAVİTON' : 'BUZ';
+
+    const pScreenX = nearest.x;
+    const pScreenY = nearest.y - cameraY;
+    const isOffScreen = pScreenY < 45 || pScreenY > canvasHeight - 45;
+
+    const now = performance.now();
+    const pulse = Math.sin(now * 0.007) * 4;
+
+    ctx.save();
+
+    // 1. OYUNÇUNUN ƏTRAFINDA DÖNƏN KOMPAS OXU
+    if (minDist > 65) {
+        const angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+        const playerScreenX = player.x;
+        const playerScreenY = player.y - cameraY;
+        const orbitR = player.radius + 18 + pulse * 0.4;
+
+        const ox = playerScreenX + Math.cos(angle) * orbitR;
+        const oy = playerScreenY + Math.sin(angle) * orbitR;
+
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(angle);
+
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = mainColor;
+
+        ctx.beginPath();
+        ctx.moveTo(9, 0);
+        ctx.lineTo(-6, -5.5);
+        ctx.lineTo(-2, 0);
+        ctx.lineTo(-6, 5.5);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // 2. ƏGƏR MƏRMİ EKRANDAN KƏNARDADIRSA -> EKRANIN KƏNARINDA NAVİQASİYA KAPSULU
+    if (isOffScreen) {
+        const isAbove = pScreenY < 45;
+        const edgeY = isAbove ? 65 : canvasHeight - 50;
+        const edgeX = Math.max(95, Math.min(canvasWidth - 95, pScreenX));
+
+        ctx.save();
+        ctx.translate(edgeX, edgeY + pulse * (isAbove ? -1 : 1));
+
+        const distM = Math.round(minDist / 10);
+        const label = `${isAbove ? '▲' : '▼'} ${icon} ${ammoName} [${distM}m]`;
+
+        ctx.font = '900 11px Orbitron, sans-serif';
+        const tw = ctx.measureText(label).width;
+        const bw = tw + 20;
+        const bh = 22;
+
+        ctx.fillStyle = 'rgba(10, 15, 29, 0.92)';
+        ctx.strokeStyle = mainColor;
+        ctx.lineWidth = 1.4;
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 12;
+
+        ctx.beginPath();
+        ctx.roundRect(-bw / 2, -bh / 2, bw, bh, 11);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 6;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, 0, 1);
+
+        ctx.restore();
+    } 
+    // 3. ƏGƏR MƏRMİ EKRANDADIRSA -> MƏRMİNİN ÜZƏRİNDƏ ENƏN İŞARƏTLƏYİCİ OX
+    else {
+        ctx.save();
+        ctx.translate(pScreenX, pScreenY - 32 + pulse);
+
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 12;
+
+        ctx.fillStyle = mainColor;
+        ctx.beginPath();
+        ctx.moveTo(0, 8);
+        ctx.lineTo(-6, -2);
+        ctx.lineTo(6, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = 'bold 9px Orbitron, sans-serif';
+        const tag = `${icon} GÖTÜR`;
+        const tw = ctx.measureText(tag).width;
+        const bw = tw + 12;
+
+        ctx.fillStyle = 'rgba(8, 14, 28, 0.88)';
+        ctx.strokeStyle = mainColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(-bw / 2, -18, bw, 14, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tag, 0, -10.5);
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+
+// 🧭 MONS VƏ ANİMASİYA ÜZƏRİNDƏKİ İSTİQAMƏT OXU (Mərmiyə tərəf tuşlanır)
+function drawMonsAmmoArrow(ctx) {
+    if (typeof player === 'undefined' || !player || gameState.gameOver || gameState.paused || gameState.transitioning) return;
+    const anim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+    if (anim !== 'tesseract' && anim !== 'glacial') return;
+
+    const ammoType = anim === 'tesseract' ? 'tesseractAmmo' : 'iceAmmo';
+    if (typeof powerUps === 'undefined' || !powerUps) return;
+    const activeAmmos = powerUps.filter(p => p.type === ammoType);
+    if (activeAmmos.length === 0) return;
+
+    // Ən yaxın mərmini tapırıq
+    let nearest = null;
+    let minDist = Infinity;
+    for (let i = 0; i < activeAmmos.length; i++) {
+        const p = activeAmmos[i];
+        const d = Math.hypot(p.x - player.x, p.y - player.y);
+        if (d < minDist) {
+            minDist = d;
+            nearest = p;
+        }
+    }
+    if (!nearest) return;
+
+    const isTess = anim === 'tesseract';
+    const mainColor = isTess ? '#f0abfc' : '#38bdf8';
+    const glowColor = isTess ? '#c084fc' : '#0ea5e9';
+    const accentColor = '#ffffff';
+
+    const dx = nearest.x - player.x;
+    const dy = nearest.y - player.y;
+    const angle = Math.atan2(dy, dx);
+
+    const now = performance.now();
+    const pulse = Math.sin(now * 0.008) * 3;
+
+    // 🎯 1. MONS-UN VƏ ANİMASİYASININ DÜZ ÜSTÜNDƏ PARLAQ İSTİQAMƏT OXU
+    ctx.save();
+    const arrowCenterY = player.y - player.radius - 18;
+    ctx.translate(player.x, arrowCenterY);
+
+    // Zərif neon halqa
+    ctx.strokeStyle = isTess ? 'rgba(192, 132, 252, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 13 + pulse * 0.4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Mərmiyə tərəf fırlanan neon ox
+    ctx.save();
+    ctx.rotate(angle);
+
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 14;
+
+    // Ox Gövdəsi (Stealth Arrowhead)
+    ctx.fillStyle = mainColor;
+    ctx.beginPath();
+    ctx.moveTo(14 + pulse, 0);
+    ctx.lineTo(-6, -7);
+    ctx.lineTo(-2, 0);
+    ctx.lineTo(-6, 7);
+    ctx.closePath();
+    ctx.fill();
+
+    // Daxili neon xətt
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(11 + pulse, 0);
+    ctx.lineTo(-1, 0);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Mini Məsafə İndikatoru
+    const distM = Math.round(minDist / 10);
+    ctx.font = 'bold 9px "Orbitron", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 6;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${distM}m`, 0, -18);
+
+    ctx.restore();
+
+    // 🎯 2. MƏRMİNİN ÜSTÜNDƏKİ İŞARƏTLƏYİCİ ENƏN OX (Mərminin yerini uzaqdan parıldadır)
+    ctx.save();
+    const pPulse = Math.sin(now * 0.009) * 4;
+    ctx.translate(nearest.x, nearest.y - 28 + pPulse);
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = mainColor;
+    ctx.beginPath();
+    ctx.moveTo(0, 8);
+    ctx.lineTo(-6, -3);
+    ctx.lineTo(6, -3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.font = 'bold 9px "Orbitron", monospace';
+    const tag = isTess ? '⚛️ MƏRMİ' : '❄️ BUZ';
+    const tw = ctx.measureText(tag).width;
+    const bw = tw + 10;
+    ctx.fillStyle = 'rgba(10, 15, 29, 0.88)';
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2, -18, bw, 13, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tag, 0, -11);
+
+    ctx.restore();
+}

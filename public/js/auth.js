@@ -359,6 +359,10 @@ function applyPlayerDataFromCloud(player) {
         gameState.bestFloor = Math.max(1, parseInt(player.bestFloor) || 1);
     }
     if (player.permUpgrades && typeof player.permUpgrades === 'object') {
+        const localSaved = JSON.parse(localStorage.getItem('floor_escape_perm_upgrades') || '{}');
+        const localEquipped = localSaved.equippedSpawnAnim;
+        const localOwned = Array.isArray(localSaved.ownedSpawnAnims) ? localSaved.ownedSpawnAnims : [];
+
         permUpgrades = { ...DEFAULT_PERM_UPGRADES, ...player.permUpgrades };
         if (!Array.isArray(permUpgrades.ownedSkins) || permUpgrades.ownedSkins.length === 0) {
             permUpgrades.ownedSkins = ['default'];
@@ -366,13 +370,19 @@ function applyPlayerDataFromCloud(player) {
         if (!permUpgrades.equippedSkin || (typeof SKINS !== 'undefined' && !SKINS[permUpgrades.equippedSkin])) {
             permUpgrades.equippedSkin = 'default';
         }
-        if (!Array.isArray(permUpgrades.ownedSpawnAnims) || permUpgrades.ownedSpawnAnims.length === 0) {
-            permUpgrades.ownedSpawnAnims = ['singularity', 'portal'];
-        } else if (!permUpgrades.ownedSpawnAnims.includes('singularity')) {
-            permUpgrades.ownedSpawnAnims.push('singularity');
+        
+        const cloudOwned = Array.isArray(permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : [];
+        permUpgrades.ownedSpawnAnims = Array.from(new Set([...cloudOwned, ...localOwned, 'singularity', 'portal', 'seed']));
+
+        if (localEquipped && (typeof SPAWN_ANIMS === 'undefined' || SPAWN_ANIMS[localEquipped] || ['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(localEquipped))) {
+            permUpgrades.equippedSpawnAnim = localEquipped;
+        } else if (!permUpgrades.equippedSpawnAnim || (typeof SPAWN_ANIMS !== 'undefined' && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim))) {
+            permUpgrades.equippedSpawnAnim = 'seed';
         }
-        if (!permUpgrades.equippedSpawnAnim || (typeof SPAWN_ANIMS !== 'undefined' && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim])) {
-            permUpgrades.equippedSpawnAnim = 'singularity';
+
+        if (typeof player !== 'undefined' && player && typeof player.reset === 'function') {
+            player.reset();
+            if (typeof initIngameQuantumTheme === 'function') initIngameQuantumTheme();
         }
     }
     if (Array.isArray(player.claimedChests)) {

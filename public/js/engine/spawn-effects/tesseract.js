@@ -490,8 +490,8 @@
         this.chronoWaveTime += dt;
         const floorY = this.engine.h - 6;
 
-        // Kinetic Recharge when moving fast
-        if (this.engine.currentPhase >= 4) {
+        // Auto Kinetic Recharge DISABLED in-game (Ammo is collected from the arena)
+        if (this.engine.currentPhase >= 4 && !this.engine.isGame) {
           const ammo = this.getAmmoCount();
           if (ammo < this.maxAmmo) {
             if (this.engine.speedFactor > 0.22) {
@@ -1279,21 +1279,119 @@
         return instances[surface];
     }
     const effect = {
-        id:'tesseract', name:'4D Kvant Tesseraktı', duration:6.8, getEngine,
-        resetFlight() { for (const [surface,e] of Object.entries(instances)) if(surface!=='game') e.restartIntro(); },
-        draw(c,w,h,t,drawMonster,isIngame=false,surface='preview') {
-            if(w<=200&&h<=200)surface='card';
-            const e=getEngine(surface),now=performance.now();
-            const dt=e.drawAt===undefined?0:Math.min(.04,Math.max(0,(now-e.drawAt)/1000));e.drawAt=now;
-            e.ctx=c;e.w=600;e.h=500;e.drawCustomMonster=drawMonster||(()=>{});e.isGame=surface==='game';
-            e.timeline=surface==='card'||e.isGame?6.8:t;e.step(dt);
-            if(surface!=='fullscreen'){e.x=0;e.y=0;}
-            const scale=Math.min(w/600,h/500);
-            c.save();c.translate(w/2,h/2);c.scale(scale,scale);c.translate(-300,-250);e.render();c.restore();
+        id: 'tesseract', name: '4D Kvant Tesseraktı', duration: 6.8, getEngine,
+        resetFlight() { for (const [surface, e] of Object.entries(instances)) if (surface !== 'game') e.restartIntro(); },
+        resetGame() { if (instances.game) instances.game.singularitySystem.reset(); },
+        syncGame(p) {
+            const e = getEngine('game'); e.isGame = true;
+            const wH = (typeof getFloorWorldHeight === 'function' && typeof gameState !== 'undefined') ? getFloorWorldHeight(gameState.floor) : 3600;
+            const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+            e.w = (typeof canvasWidth === 'number' ? canvasWidth : 800) / .54;
+            e.h = wH / .54;
+            e.x = p.x / .54 - e.w / 2;
+            e.y = p.y / .54 - e.h / 2;
+            e.timeline = 6.8;
+            e.currentPhase = 4;
+            e.singularitySystem.maxAmmo = tessCap;
+            if (!p.tesseractSlots || p.tesseractSlots.length !== tessCap) {
+                p.tesseractSlots = Array(tessCap).fill(true);
+            }
+            e.singularitySystem.slots = p.tesseractSlots.slice();
+            return e;
         },
-        drawPlayer(c,p) {
-            const e=getEngine('game');e.keys={KeyD:p.vx>0,KeyA:p.vx<0,KeyW:p.vy<0,KeyS:p.vy>0};
-            c.save();c.translate(p.x-162,p.y-135);this.draw(c,324,270,6.8,()=>{},true,'game');c.restore();
+        updateGame(dt, p) {
+            const e = this.syncGame(p);
+            e.vx = (p.vx || 0) * 60;
+            e.vy = (p.vy || 0) * 60;
+            e.keys = {KeyD: p.vx > 0, KeyA: p.vx < 0, KeyW: p.vy < 0, KeyS: p.vy > 0};
+            e.step(dt);
+            p.tesseractSlots = e.singularitySystem.slots.slice();
+            const boss = window.monster;
+            if (boss && !boss.isDefeated) {
+                for (let i = e.singularitySystem.projectiles.length - 1; i >= 0; i--) {
+                    const pr = e.singularitySystem.projectiles[i], x = pr.x * .54, y = pr.y * .54;
+                    const lavaY = typeof boss.surface === 'function' ? boss.surface(x, boss.y) : boss.y;
+                    if (y >= lavaY - 15) {
+                        e.singularitySystem.triggerFloorImplosion(pr.x, lavaY / .54);
+                        e.singularitySystem.projectiles.splice(i, 1);
+                        if (typeof boss.takeDamage === 'function') boss.takeDamage(350, 'shock', x, lavaY);
+                    }
+                }
+            }
+        },
+        fireGame(p) {
+            const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+            if (!p.tesseractSlots || p.tesseractSlots.length !== tessCap) {
+                p.tesseractSlots = Array(tessCap).fill(true);
+            }
+            const loaded = [];
+            for (let i = 0; i < p.tesseractSlots.length; i++) {
+                if (p.tesseractSlots[i]) loaded.push(i);
+            }
+            if (loaded.length === 0) return false;
+
+            p.tesseractSlots[loaded[0]] = false;
+            const e = this.syncGame(p);
+            e.singularitySystem.slots = p.tesseractSlots.slice();
+
+            const cx = e.w / 2 + e.x;
+            const cy = e.h / 2 + e.y;
+            e.singularitySystem.projectiles.push({
+                x: cx + MathUtils.randomRange(-15, 15),
+                y: cy + 25,
+                vx: MathUtils.randomRange(-35, 35) + e.vx * 0.15,
+                vy: MathUtils.randomRange(460, 600),
+                gravity: 860,
+                size: 8,
+                spin: MathUtils.randomRange(-15, 15),
+                angle: 0,
+                tail: [],
+                color: '#f0abfc'
+            });
+
+            audio.playGravitonLaunch();
+            if (typeof saveActiveRun === 'function') saveActiveRun();
+            return true;
+        },
+        collectAmmo(p) {
+            const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
+            if (!p.tesseractSlots || p.tesseractSlots.length !== tessCap) {
+                p.tesseractSlots = Array(tessCap).fill(true);
+            }
+            const currentCount = p.tesseractSlots.filter(Boolean).length;
+            if (currentCount < tessCap) {
+                const emptyIdx = p.tesseractSlots.indexOf(false);
+                if (emptyIdx !== -1) {
+                    p.tesseractSlots[emptyIdx] = true;
+                    const e = this.syncGame(p);
+                    e.singularitySystem.slots = p.tesseractSlots.slice();
+                    return true;
+                }
+            }
+            return false;
+        },
+        draw(c, w, h, t, drawMonster, isIngame = false, surface = 'preview') {
+            if (w <= 200 && h <= 200) surface = 'card';
+            const e = getEngine(surface), now = performance.now();
+            const dt = e.drawAt === undefined ? 0 : Math.min(.04, Math.max(0, (now - e.drawAt) / 1000));
+            e.drawAt = now;
+            e.ctx = c; e.w = 600; e.h = 500; e.drawCustomMonster = drawMonster || (() => {}); e.isGame = surface === 'game';
+            e.timeline = surface === 'card' || e.isGame ? 6.8 : t;
+            e.step(dt);
+            if (surface !== 'fullscreen') { e.x = 0; e.y = 0; }
+            const scale = Math.min(w / 600, h / 500);
+            c.save(); c.translate(w / 2, h / 2); c.scale(scale, scale); c.translate(-300, -250); e.render(); c.restore();
+        },
+        drawPlayer(c, p) {
+            const e = getEngine('game');
+            e.x = p.x / .54 - e.w / 2;
+            e.y = p.y / .54 - e.h / 2;
+            e.ctx = c;
+            e.drawCustomMonster = () => {};
+            c.save();
+            c.scale(.54, .54);
+            e.render();
+            c.restore();
         }
     };
     window.TesseractSpawnEffect=effect;

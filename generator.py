@@ -139,39 +139,8 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
 
     url = (server_url or get_current_server_url()).strip().rstrip('/')
 
-    # 1. BİRBAŞA POSTGRESQL BAZASINA YAZMAQ
-    if USE_POSTGRES:
-        try:
-            with get_db() as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (token, target_type, player_id, blue, red, expires_at))
-                cursor.execute('''
-                    INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-                ''', (target_type, player_id, title, note, token, blue, red, expires_at))
-                conn.commit()
-                print(f"  [✔] Hədiyyə və məktub BİRBAŞA PostgreSQL bazasına yazıldı! (Kod: {token})")
-
-            # Real-time WebSocket üçün HTTP serverə də bildiriş atırıq (əgər server açıqdırsa)
-            if url:
-                try:
-                    payload = json.dumps({
-                        'targetType': target_type, 'playerId': player_id,
-                        'blueDiamonds': blue, 'redDiamonds': red,
-                        'title': title, 'note': note, 'expiresAt': expires_at, 'token': token
-                    }).encode('utf-8')
-                    req = urllib.request.Request(f"{url}/api/admin/send_gift", data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'FloorEscapeAdmin/1.0'})
-                    urllib.request.urlopen(req, timeout=1.5)
-                except Exception:
-                    pass
-            return token, expires_at, True
-        except Exception as e:
-            print(f"  [!] PostgreSQL bazasına yazarkən xəta: {e}. Digər kanallara keçilir...")
-
-    # 2. Uzaq HTTP Serverinə göndərmək
+    # 1. İlk öncə HTTP Server API vasitəsilə göndərmək
+    # Server həm bazaya tək nüsxədə yazır, həm də canlı oyunda olan oyunçuya anında WebSocket ilə çatdırır!
     if url:
         try:
             payload = json.dumps({
@@ -188,10 +157,30 @@ def send_gift_code_and_inbox(target_type, player_id, blue, red, title, note, exp
             with urllib.request.urlopen(req, timeout=4.5) as resp:
                 res_data = json.loads(resp.read().decode('utf-8'))
                 if res_data.get('success'):
-                    print(f"  [✔] Hədiyyə və məktub HTTP serverinə ({url}) göndərildi!")
-                    return token, expires_at, True
+                    returned_token = res_data.get('code') or token
+                    print(f"  [✔] Hədiyyə və məktub server ({url}) vasitəsilə uğurla göndərildi! Kod: {returned_token}")
+                    return returned_token, expires_at, True
         except Exception as e:
-            print(f"  [!] HTTP serverinə göndərmə xətası: {e}")
+            print(f"  [!] HTTP serverə göndərilmədi ({e}). Birbaşa bazaya keçilir...")
+
+    # 2. Server əlçatmazdırsa - Fallback olaraq birbaşa PostgreSQL bazasına yazmaq
+    if USE_POSTGRES:
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (token, target_type, player_id, blue, red, expires_at))
+                cursor.execute('''
+                    INSERT INTO inbox_messages (target_type, player_id, title, note, gift_code, blue_diamonds, red_diamonds, expires_at, is_claimed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ''', (target_type, player_id, title, note, token, blue, red, expires_at))
+                conn.commit()
+                print(f"  [✔] Hədiyyə və məktub BİRBAŞA PostgreSQL bazasına yazıldı! (Kod: {token})")
+            return token, expires_at, True
+        except Exception as e:
+            print(f"  [!] PostgreSQL bazasına yazarkən xəta: {e}")
 
     print("  [✘] Xəta: Hədiyyə göndərilə bilmədi (PostgreSQL və ya HTTP serveri əlçatmazdır).")
     return None, None, False

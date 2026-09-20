@@ -242,8 +242,8 @@ const SeedSpawnEffect = {
         this.updateLifeFlower(dt);
         this.updateFlight(dt, t, w, h);
 
-        // +1 Can hadisəsi (t >= 6.2 çatdıqda 1 dəfə verilir)
-        if (t >= 6.2 && !this.healthGranted) {
+        // +1 Can hadisəsi (t >= 4.5 çatdıqda və ya oyuna keçiddə 1 dəfə verilir)
+        if (t >= 4.5 && !this.healthGranted) {
             this.healthGranted = true;
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('mons-health-bonus', { detail: { amount: 1, source: 'life-flower' } }));

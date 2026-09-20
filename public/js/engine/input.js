@@ -157,6 +157,7 @@ window.addEventListener('keydown', e => {
     if (!e.repeat && (e.code === 'KeyE' || k === 'e') && keybinds.wall !== 'e' && keybinds.ice !== 'e' && keybinds.shock !== 'e' && keybinds.mine !== 'e' && keybinds.plasma !== 'e') {
         if (typeof SingularitySpawnEffect !== 'undefined' && typeof player !== 'undefined' && !gameState.gameOver && !gameState.paused) {
             if (permUpgrades.equippedSpawnAnim === 'glacial' && window.GlacialSpawnEffect) window.GlacialSpawnEffect.fireGame(player);
+            else if (permUpgrades.equippedSpawnAnim === 'tesseract' && window.TesseractSpawnEffect) window.TesseractSpawnEffect.fireGame(player);
             else if (['singularity','supernova','synapse','abyssal'].includes(permUpgrades.equippedSpawnAnim)) SingularitySpawnEffect.launchInGameStar(player, true);
         }
     }

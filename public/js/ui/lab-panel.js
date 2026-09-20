@@ -147,6 +147,31 @@ function updatePermUpgradesUI() {
             }
         }
     });
+
+    // 3. 🛡️ QAT QORUMASI YÜKSƏLTMƏSİ (Fancy Elmas / Qırmızı Almaz)
+    const fpLvl = (typeof permUpgrades !== 'undefined' && permUpgrades.floorProtectionLvl) ? permUpgrades.floorProtectionLvl : 0;
+    const fpLvlEl = document.getElementById('lab-lvl-floor-protection');
+    const fpPctEl = document.getElementById('lab-pct-floor-protection');
+    const fpCostEl = document.getElementById('lab-cost-floor-protection');
+    const fpBtn = document.getElementById('lab-btn-floor-protection');
+
+    if (fpLvlEl) fpLvlEl.innerText = `Lv.${fpLvl}/5`;
+    if (fpPctEl) {
+        const chancePct = Math.round((typeof getFloorProtectionDropChance === 'function' ? getFloorProtectionDropChance(fpLvl) : 0) * 100);
+        fpPctEl.innerText = fpLvl === 0 ? 'Çıxma Şansı: 0% (Deaktiv)' : `Çıxma Şansı: ${chancePct}% (Hər Bossda)`;
+    }
+
+    if (fpLvl >= 5) {
+        if (fpCostEl) fpCostEl.innerText = 'MAKS';
+        if (fpBtn) fpBtn.classList.add('disabled');
+    } else {
+        const cost = typeof getFloorProtectionCost === 'function' ? getFloorProtectionCost(fpLvl) : 40;
+        if (fpCostEl) fpCostEl.innerHTML = `${cost} ${rubyIcon}`;
+        if (fpBtn) {
+            if (redDiamonds >= cost) fpBtn.classList.remove('disabled');
+            else fpBtn.classList.add('disabled');
+        }
+    }
 }
 
 function buyBulletEconUpgrade(type) {

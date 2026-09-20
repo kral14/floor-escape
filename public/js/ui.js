@@ -1,52 +1,94 @@
 // ƏSAS İSTİFADƏÇİ İNTERFEYSİ (UI) VƏ EKRAN TƏNZİMLƏNMƏSİ KOORDİNATORU
 
-function updateUI() {
-    const goldEl = document.getElementById('stat-gold');
-    if (goldEl) goldEl.innerText = Math.floor(gameState.gold);
+let _lastUIUpdateTime = 0;
+let _lastUICache = {};
 
-    const diamondsEl = document.getElementById('stat-diamonds');
-    if (diamondsEl) diamondsEl.innerText = diamonds;
+function updateUI(force = false) {
+    const now = performance.now();
+    // DOM reflow yükünü sıfırlamaq üçün hər kadrda deyil, maksimum 100ms-dən bir yenilənir
+    if (!force && (now - _lastUIUpdateTime < 85)) {
+        return;
+    }
+    _lastUIUpdateTime = now;
+
+    const goldVal = Math.floor(gameState.gold);
+    if (_lastUICache.gold !== goldVal) {
+        _lastUICache.gold = goldVal;
+        const goldEl = document.getElementById('stat-gold');
+        if (goldEl) goldEl.innerText = goldVal;
+    }
+
+    if (_lastUICache.diamonds !== diamonds) {
+        _lastUICache.diamonds = diamonds;
+        const diamondsEl = document.getElementById('stat-diamonds');
+        if (diamondsEl) diamondsEl.innerText = diamonds;
+        const headerDiamonds = document.getElementById('stat-header-diamonds');
+        if (headerDiamonds) headerDiamonds.innerText = `${diamonds} 💎`;
+    }
     
     // Qırmızı Almaz Sayı
-    const redDiamEls = document.querySelectorAll('.stat-red-diamonds');
-    redDiamEls.forEach(el => el.innerText = redDiamonds);
+    if (_lastUICache.redDiamonds !== redDiamonds) {
+        _lastUICache.redDiamonds = redDiamonds;
+        const redDiamEls = document.querySelectorAll('.stat-red-diamonds');
+        redDiamEls.forEach(el => el.innerText = redDiamonds);
+    }
 
     // Kiber Ulduz Sayı
-    const cyberStarsEl = document.getElementById('stat-cyber-stars');
-    if (cyberStarsEl) {
-        const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5;
-        cyberStarsEl.innerText = count;
-        if (count === 0) {
-            cyberStarsEl.className = 'font-orbitron text-rose-400 font-bold text-sm sm:text-base tabular-nums animate-pulse';
-        } else {
-            cyberStarsEl.className = 'font-orbitron text-cyan-300 font-bold text-sm sm:text-base tabular-nums';
+    const count = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.cyberStars === 'number') ? permUpgrades.cyberStars : 5;
+    if (_lastUICache.cyberStars !== count) {
+        _lastUICache.cyberStars = count;
+        const cyberStarsEl = document.getElementById('stat-cyber-stars');
+        if (cyberStarsEl) {
+            cyberStarsEl.innerText = count;
+            if (count === 0) {
+                cyberStarsEl.className = 'font-orbitron text-rose-400 font-bold text-sm sm:text-base tabular-nums animate-pulse';
+            } else {
+                cyberStarsEl.className = 'font-orbitron text-cyan-300 font-bold text-sm sm:text-base tabular-nums';
+            }
         }
     }
 
-    const headerDiamonds = document.getElementById('stat-header-diamonds');
-    if (headerDiamonds) headerDiamonds.innerText = `${diamonds} 💎`;
+    if (_lastUICache.floor !== gameState.floor) {
+        _lastUICache.floor = gameState.floor;
+        const floorEl = document.getElementById('stat-floor');
+        if (floorEl) floorEl.innerText = gameState.floor;
+    }
 
-    const floorEl = document.getElementById('stat-floor');
-    if (floorEl) floorEl.innerText = gameState.floor;
+    // 🛡️ Qat Qoruması Sayğacı (HUD Badge)
+    const fpCount = (typeof gameState !== 'undefined' && gameState.floorProtection) ? gameState.floorProtection : 0;
+    const fpBadge = document.getElementById('stat-floor-protection-badge');
+    const fpCountEl = document.getElementById('stat-floor-protection-count');
+    if (fpBadge) {
+        if (fpCount > 0) {
+            fpBadge.classList.remove('hidden');
+            if (fpCountEl) fpCountEl.innerText = fpCount;
+        } else {
+            fpBadge.classList.add('hidden');
+        }
+    }
 
-    const comboEl = document.getElementById('stat-combo');
-    if (comboEl) {
-        const comboMult = gameState.combo >= 10 ? '3.0x 🔥' : (gameState.combo >= 5 ? '2.0x ⚡' : (gameState.combo >= 3 ? '1.5x' : '1.0x'));
-        comboEl.innerHTML = `${gameState.combo} <span class="text-[10px] text-amber-400 font-normal">(${comboMult})</span>`;
+    const comboKey = `${gameState.combo}_${gameState.borderOpen}`;
+    if (_lastUICache.combo !== comboKey) {
+        _lastUICache.combo = comboKey;
+        const comboEl = document.getElementById('stat-combo');
+        if (comboEl) {
+            const comboMult = gameState.combo >= 10 ? '3.0x 🔥' : (gameState.combo >= 5 ? '2.0x ⚡' : (gameState.combo >= 3 ? '1.5x' : '1.0x'));
+            comboEl.innerHTML = `${gameState.combo} <span class="text-[10px] text-amber-400 font-normal">(${comboMult})</span>`;
+        }
     }
 
     // Oyundaxili gücləndirmə kartlarında real yekun səviyyələr
     const lvlSpeedEl = document.getElementById('lvl-speed');
     if (lvlSpeedEl) {
-        const totalSpeedLvl = permUpgrades.speedLvl + gameState.inGameSpeedLvl;
-        const currentSpeedVal = (getBaseSpeed() + gameState.inGameSpeedLvl * 0.5).toFixed(1);
+        const totalSpeedLvl = (permUpgrades.speedLvl || 0) + (gameState.inGameSpeedLvl || 0);
+        const currentSpeedVal = (getBaseSpeed() + (gameState.inGameSpeedLvl || 0) * 0.5).toFixed(1);
         lvlSpeedEl.innerText = `Lv.${totalSpeedLvl} (${currentSpeedVal})`;
     }
 
     const lvlMagnetEl = document.getElementById('lvl-magnet');
     if (lvlMagnetEl) {
-        const totalMagnetLvl = permUpgrades.magnetLvl + gameState.inGameMagnetLvl;
-        const currentMagnetVal = getBaseMagnetRadius() + gameState.inGameMagnetLvl * 25;
+        const totalMagnetLvl = (permUpgrades.magnetLvl || 0) + (gameState.inGameMagnetLvl || 0);
+        const currentMagnetVal = getBaseMagnetRadius() + (gameState.inGameMagnetLvl || 0) * 25;
         lvlMagnetEl.innerText = `Lv.${totalMagnetLvl} (${currentMagnetVal}px)`;
     }
 

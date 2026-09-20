@@ -73,6 +73,9 @@ function startGameFromDashboard(forceNew = false) {
     if (forceNew) {
         localStorage.removeItem('floor_escape_active_run');
     }
+    if (typeof savePermanentData === 'function') {
+        savePermanentData();
+    }
     sessionStorage.setItem('floor_escape_play_intro', 'true');
     // Daşborddan oyuna eyni tabda birbaşa keçid
     window.location.href = 'game.html';

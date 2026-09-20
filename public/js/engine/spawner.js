@@ -79,7 +79,9 @@ function spawnPowerUps() {
 
 function autoSpawnPowerUp() {
     if (gameState.gameOver || gameState.paused || gameState.transitioning || gameState.borderOpen) return;
-    if (powerUps.length >= 2) return;
+        const activeAnim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+    const maxAllowed = (activeAnim === 'tesseract' || activeAnim === 'glacial') ? 4 : 2;
+    if (powerUps.length >= maxAllowed) return;
     const canvasWidth = 800;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 680;
     if (typeof PowerUp !== 'undefined') {
@@ -242,3 +244,36 @@ window.autoSpawnPowerUp = autoSpawnPowerUp;
 window.applyFloorModifier = applyFloorModifier;
 window.checkBorderUnlock = checkBorderUnlock;
 window.nextFloor = nextFloor;
+
+
+// 🎯 ZƏMANƏTLİ MƏRMİ SPAWN (Mərmisi bitən oyunçu üçün dərhal arenada mərmi çıxarır)
+function ensureAmmoSpawn() {
+    if (typeof player === 'undefined' || !player || gameState.gameOver || gameState.paused || gameState.transitioning) return;
+    const anim = (typeof permUpgrades !== 'undefined') ? permUpgrades.equippedSpawnAnim : null;
+    if (anim !== 'tesseract' && anim !== 'glacial') return;
+
+    const ammoType = anim === 'tesseract' ? 'tesseractAmmo' : 'iceAmmo';
+    const slots = anim === 'tesseract' ? player.tesseractSlots : player.glacialSlots;
+    const currentAmmo = (slots || []).filter(Boolean).length;
+    const maxCap = anim === 'tesseract'
+        ? ((typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1)
+        : 6;
+
+    if (currentAmmo < maxCap) {
+        const existing = powerUps.filter(p => p.type === ammoType);
+        if (existing.length === 0) {
+            const canvasWidth = (typeof window.canvasWidth === 'number' ? window.canvasWidth : 800);
+            const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : 3600;
+            
+            // Oyunçudan 200-380px məsafədə platforma yaxınlığında çıxarırıq
+            let spawnY = player.y + (Math.random() > 0.45 ? -260 : 220);
+            spawnY = Math.max(140, Math.min(worldH - 240, spawnY));
+            const spawnX = Math.max(80, Math.min(canvasWidth - 80, player.x + (Math.random() - 0.5) * 260));
+            
+            powerUps.push(new PowerUp(spawnX, spawnY, ammoType));
+            if (typeof showToast === 'function') {
+                showToast(anim === 'tesseract' ? '⚡ Qraviton Mərmisi peyda oldu! Oxu izləyin ➔' : '❄️ Buz Mərmisi peyda oldu! Oxu izləyin ➔', 'info');
+            }
+        }
+    }
+}
