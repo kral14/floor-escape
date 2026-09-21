@@ -30,15 +30,7 @@ class PowerUp {
             weights.push(missingAmmo > 0 ? 0.55 : 0.22);
         }
 
-        // ❄️ Kvant Buz Zirehi aktivdirsə, arenada toplanan Buz Mərmiləri çıxır
-        const isGlacialEquipped = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'glacial');
-        if (isGlacialEquipped) {
-            types.push('iceAmmo');
-            const missingAmmo = (typeof player !== 'undefined' && player && player.glacialSlots)
-                ? player.glacialSlots.filter(s => !s).length
-                : 3;
-            weights.push(missingAmmo > 0 ? 0.55 : 0.22);
-        }
+        // ❄️ Kvant Buz Zirehi artıq yerdən yığılmır — vaxt keçdikcə öz-özünə bərpa olunur.
 
         const totalWeight = weights.reduce((a, b) => a + b, 0);
         

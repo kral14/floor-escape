@@ -257,6 +257,11 @@ const DEFAULT_PERM_UPGRADES = {
     equippedSpawnAnim: null, // Aktiv doğuluş animasiyası (alındıqda təchiz edilir)
     ownedSpawnAnims: [], // Sahib olunan animasiyalar (hər birinin öz dəyəri var)
     glacialReloadLvl: 0,
+    glacialSpeedLvl: 0, // ❄️ Kvant Buz Zirehi Kristal Bərpa Sürəti (0: 5.0s, maks 6: 2.0s)
+    glacialDamageLvl: 0, // 💥 Kvant Buz Zirehi Zərər Səviyyəsi (0: 300, maks 6: 2100)
+    glacialFreezePowerLvl: 0, // 🧊 Lava Yavaşlatma / Dondurma Faizi (0: 5%, maks 6: 100%)
+    glacialFreezeDurationLvl: 0, // ⏱️ Dondurma Vaxtı / Müddəti (0: 1.0s, maks 6: 3.0s)
+    glacialFreezeLvl: 0, // Geriyə uyğunluq üçün
     tesseractAmmoCap: 1, // ⚛️ 4D Kvant Tesseraktı Mərmi Tutumu (Lv.1: 1, maks 6)
     seedLifeLvl: 1,       // 🌸 Yaşam Çiçəyi Can Tutumu (Lv.1: 1 Can, Lv.2: 2 Can, Lv.3: 3 Can)
     // Əkiz Qüllələr (Twin Turrets)
@@ -551,9 +556,11 @@ function saveActiveRun() {
         monsterSlowTimer: typeof monster !== 'undefined' && monster ? monster.slowTimer : 0,
         monsterStunTimer: typeof monster !== 'undefined' && monster ? monster.stunTimer : 0,
         monsterPlasmaTimer: typeof monster !== 'undefined' && monster ? monster.plasmaTimer : 0,
-        // Oyunçunun koordinatları, qalxanı və kvant sıçrayışı
+        // Oyunçunun koordinatları, canı (HP), qalxanı və kvant sıçrayışı
         playerX: typeof player !== 'undefined' && player ? player.x : null,
         playerY: typeof player !== 'undefined' && player ? player.y : null,
+        playerHp: typeof player !== 'undefined' && player && player.hp !== undefined ? player.hp : 3,
+        playerMaxHp: typeof player !== 'undefined' && player && player.maxHp !== undefined ? player.maxHp : 3,
         playerHasShield: typeof player !== 'undefined' && player ? !!player.hasShield : false,
         playerHasHyperJump: typeof player !== 'undefined' && player ? !!player.hasHyperJump : false,
         playerGlacialSlots: player.glacialSlots,
@@ -561,6 +568,7 @@ function saveActiveRun() {
         playerLifeFlowers: typeof player !== 'undefined' && player ? (player.lifeFlowers || 0) : 0,
         playerMaxLifeFlowers: typeof player !== 'undefined' && player ? (player.maxLifeFlowers || 1) : 1,
         playerLifeFlowerState: typeof player !== 'undefined' && player ? (player.lifeFlowerState || 'none') : 'none',
+
         // Meydandakı sikkələr (DƏQİQ SİYAHI)
         coins: typeof coins !== 'undefined' && Array.isArray(coins) ? coins.map(c => ({ x: c.x, y: c.y, value: c.value })) : [],
         // Meydandakı gücləndiricilər (DƏQİQ SİYAHI)
@@ -652,12 +660,20 @@ function loadActiveRun() {
                 }
                 player.hasShield = !!saved.playerHasShield;
                 player.hasHyperJump = !!saved.playerHasHyperJump;
+                if (saved.playerHp !== undefined) {
+                    player.hp = Math.max(1, parseInt(saved.playerHp, 10));
+                    player.maxHp = Math.max(1, parseInt(saved.playerMaxHp || 3, 10));
+                }
+                if (typeof updateHpUI === 'function') {
+                    updateHpUI();
+                }
                 if (permUpgrades.equippedSpawnAnim === 'seed' && saved.playerLifeFlowers !== undefined) {
                     player.lifeFlowers = parseInt(saved.playerLifeFlowers, 10);
                     player.maxLifeFlowers = parseInt(saved.playerMaxLifeFlowers || 1, 10);
                     player.lifeFlowerState = saved.playerLifeFlowerState || (player.lifeFlowers > 0 ? 'active' : 'none');
                     player.hasLifeFlower = player.lifeFlowers > 0;
                 }
+
             }
 
             // Gücləndirici taymerləri
@@ -700,6 +716,10 @@ function clearActiveRun() {
 
 const GLACIAL_RELOAD_PRICES = [100, 150, 225, 325, 450, 600];
 function getGlacialReloadLevel() { return Math.max(0, Math.min(6, Math.floor(Number(permUpgrades.glacialReloadLvl) || 0))); }
+function getGlacialCapacity() {
+    const lvl = getGlacialReloadLevel();
+    return Math.max(1, Math.min(6, lvl || 1));
+}
 function buyGlacialReload() {
     const level = getGlacialReloadLevel();
     if (level >= 6) return false;
@@ -716,11 +736,202 @@ function buyGlacialReload() {
     if (typeof updateUI === 'function') updateUI();
     if (typeof updateDashboard === 'function') updateDashboard();
     if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateGlacialUpgradeModalUI === 'function') updateGlacialUpgradeModalUI();
     if (typeof showToast === 'function') showToast(`❄️ Buz Tutumu artırıldı: ${permUpgrades.glacialReloadLvl}/6`, 'success');
     return true;
 }
+
+// ❄️ KVANT BUZ ZİREHİ BƏRPA VAXTI / SÜRƏT YÜKSƏLTMƏSİ (Fancy Elmasla)
+const GLACIAL_SPEED_PRICES = [120, 180, 260, 380, 520, 700];
+function getGlacialSpeedLevel() {
+    if (typeof permUpgrades === 'undefined') return 0;
+    return Math.max(0, Math.min(6, Math.floor(Number(permUpgrades.glacialSpeedLvl) || 0)));
+}
+function getGlacialRechargeTime() {
+    const lvl = getGlacialSpeedLevel();
+    // Baza 5.0s, hər səviyyədə -0.5s (5.0s -> 4.5s -> 4.0s -> 3.5s -> 3.0s -> 2.5s -> 2.0s MAX)
+    return Math.max(2.0, +(5.0 - (lvl * 0.5)).toFixed(1));
+}
+function buyGlacialSpeed() {
+    const level = getGlacialSpeedLevel();
+    if (level >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('glacial')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə Kvant Buz Zirehi animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
+    const price = GLACIAL_SPEED_PRICES[level];
+    if (redDiamonds < price) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning');
+        return false;
+    }
+    redDiamonds -= price;
+    permUpgrades.glacialSpeedLvl = level + 1;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateGlacialUpgradeModalUI === 'function') updateGlacialUpgradeModalUI();
+    const newTime = getGlacialRechargeTime();
+    if (typeof showToast === 'function') showToast(`⏱️ Buz Kristalı yaranma vaxtı azaldıldı: ${newTime.toFixed(1)}s`, 'success');
+    return true;
+}
+
 window.buyGlacialReload = buyGlacialReload;
 window.getGlacialReloadLevel = getGlacialReloadLevel;
+window.getGlacialCapacity = getGlacialCapacity;
+window.GLACIAL_RELOAD_PRICES = GLACIAL_RELOAD_PRICES;
+window.buyGlacialSpeed = buyGlacialSpeed;
+window.getGlacialSpeedLevel = getGlacialSpeedLevel;
+window.getGlacialRechargeTime = getGlacialRechargeTime;
+window.GLACIAL_SPEED_PRICES = GLACIAL_SPEED_PRICES;
+
+// 💥 KVANT BUZ ZİREHİ ZƏRƏR YÜKSƏLTMƏSİ (Fancy Elmasla)
+const GLACIAL_DAMAGE_PRICES = [140, 220, 340, 500, 700, 950];
+const GLACIAL_DAMAGE_VALUES = [300, 450, 650, 900, 1200, 1600, 2100];
+function getGlacialDamageLevel() {
+    if (typeof permUpgrades === 'undefined') return 0;
+    return Math.max(0, Math.min(6, Math.floor(Number(permUpgrades.glacialDamageLvl) || 0)));
+}
+function getGlacialDamage() {
+    const lvl = getGlacialDamageLevel();
+    return GLACIAL_DAMAGE_VALUES[lvl] || 300;
+}
+function buyGlacialDamage() {
+    const level = getGlacialDamageLevel();
+    if (level >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('glacial')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə Kvant Buz Zirehi animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
+    const price = GLACIAL_DAMAGE_PRICES[level];
+    if (redDiamonds < price) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning');
+        return false;
+    }
+    redDiamonds -= price;
+    permUpgrades.glacialDamageLvl = level + 1;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateGlacialUpgradeModalUI === 'function') updateGlacialUpgradeModalUI();
+    if (typeof showToast === 'function') showToast(`💥 Buz Mərmisi Zərəri artırıldı: ${getGlacialDamage()} DMG`, 'success');
+    return true;
+}
+
+// 🧊 4. KVANT BUZ ZİREHİ LAVA DONDURMA / YAVAŞLATMA FAİZİ (Fancy Elmasla)
+const GLACIAL_FREEZE_POWER_PRICES = [140, 220, 340, 500, 700, 950];
+const GLACIAL_FREEZE_POWER_VALUES = [5, 20, 40, 60, 80, 95, 100]; // Lv.0: 5% ... Lv.6: 100% MAKS
+function getGlacialFreezePowerLevel() {
+    if (typeof permUpgrades === 'undefined') return 0;
+    const val = permUpgrades.glacialFreezePowerLvl !== undefined ? permUpgrades.glacialFreezePowerLvl : permUpgrades.glacialFreezeLvl;
+    return Math.max(0, Math.min(6, Math.floor(Number(val) || 0)));
+}
+function getGlacialFreezePower() {
+    const lvl = getGlacialFreezePowerLevel();
+    return GLACIAL_FREEZE_POWER_VALUES[lvl] !== undefined ? GLACIAL_FREEZE_POWER_VALUES[lvl] : 5;
+}
+function buyGlacialFreezePower() {
+    const level = getGlacialFreezePowerLevel();
+    if (level >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('glacial')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə Kvant Buz Zirehi animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
+    const price = GLACIAL_FREEZE_POWER_PRICES[level];
+    if (redDiamonds < price) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning');
+        return false;
+    }
+    redDiamonds -= price;
+    permUpgrades.glacialFreezePowerLvl = level + 1;
+    permUpgrades.glacialFreezeLvl = permUpgrades.glacialFreezePowerLvl;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateGlacialUpgradeModalUI === 'function') updateGlacialUpgradeModalUI();
+    const power = getGlacialFreezePower();
+    const txt = power >= 100 ? '🧊 LAVA TAM DONDURULDU (100%)!' : `🧊 Lava Yavaşlatma Faizi: ${power}%`;
+    if (typeof showToast === 'function') showToast(txt, 'success');
+    return true;
+}
+
+// ⏱️ 5. KVANT BUZ ZİREHİ DONDURMA VAXTI / MÜDDƏTİ (Fancy Elmasla)
+const GLACIAL_FREEZE_DURATION_PRICES = [120, 190, 280, 400, 580, 800];
+const GLACIAL_FREEZE_DURATION_VALUES = [1.0, 1.4, 1.8, 2.2, 2.6, 2.8, 3.0]; // Lv.0: 1.0s ... Lv.6: 3.0s MAKS
+function getGlacialFreezeDurationLevel() {
+    if (typeof permUpgrades === 'undefined') return 0;
+    return Math.max(0, Math.min(6, Math.floor(Number(permUpgrades.glacialFreezeDurationLvl) || 0)));
+}
+function getGlacialFreezeDuration() {
+    const lvl = getGlacialFreezeDurationLevel();
+    return GLACIAL_FREEZE_DURATION_VALUES[lvl] !== undefined ? GLACIAL_FREEZE_DURATION_VALUES[lvl] : 1.0;
+}
+function buyGlacialFreezeDuration() {
+    const level = getGlacialFreezeDurationLevel();
+    if (level >= 6) return false;
+    if (!permUpgrades || !permUpgrades.ownedSpawnAnims || !permUpgrades.ownedSpawnAnims.includes('glacial')) {
+        if (typeof showToast === 'function') showToast('❌ Əvvəlcə Kvant Buz Zirehi animasiyasını əldə etməlisiniz!', 'warning');
+        return false;
+    }
+    const price = GLACIAL_FREEZE_DURATION_PRICES[level];
+    if (redDiamonds < price) {
+        if (typeof showToast === 'function') showToast(`Kifayət qədər Fancy almaz yoxdur! Lazımdır: ${price} Fancy`, 'warning');
+        return false;
+    }
+    redDiamonds -= price;
+    permUpgrades.glacialFreezeDurationLvl = level + 1;
+    savePermanentData();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateDashboard === 'function') updateDashboard();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
+    if (typeof updateGlacialUpgradeModalUI === 'function') updateGlacialUpgradeModalUI();
+    const dur = getGlacialFreezeDuration();
+    if (typeof showToast === 'function') showToast(`⏱️ Dondurma Vaxtı artırıldı: ${dur.toFixed(1)}s`, 'success');
+    return true;
+}
+
+// Birləşdirilmiş konfiqurasiya oxuyucusu (Oyun mühərriki üçün)
+function getGlacialFreezeConfig() {
+    return {
+        slow: getGlacialFreezePower(),
+        duration: getGlacialFreezeDuration()
+    };
+}
+function getGlacialFreezeLevel() {
+    return getGlacialFreezePowerLevel();
+}
+function buyGlacialFreeze() {
+    return buyGlacialFreezePower();
+}
+
+window.buyGlacialDamage = buyGlacialDamage;
+window.getGlacialDamageLevel = getGlacialDamageLevel;
+window.getGlacialDamage = getGlacialDamage;
+window.GLACIAL_DAMAGE_PRICES = GLACIAL_DAMAGE_PRICES;
+window.GLACIAL_DAMAGE_VALUES = GLACIAL_DAMAGE_VALUES;
+
+window.buyGlacialFreezePower = buyGlacialFreezePower;
+window.getGlacialFreezePowerLevel = getGlacialFreezePowerLevel;
+window.getGlacialFreezePower = getGlacialFreezePower;
+window.GLACIAL_FREEZE_POWER_PRICES = GLACIAL_FREEZE_POWER_PRICES;
+window.GLACIAL_FREEZE_POWER_VALUES = GLACIAL_FREEZE_POWER_VALUES;
+
+window.buyGlacialFreezeDuration = buyGlacialFreezeDuration;
+window.getGlacialFreezeDurationLevel = getGlacialFreezeDurationLevel;
+window.getGlacialFreezeDuration = getGlacialFreezeDuration;
+window.GLACIAL_FREEZE_DURATION_PRICES = GLACIAL_FREEZE_DURATION_PRICES;
+window.GLACIAL_FREEZE_DURATION_VALUES = GLACIAL_FREEZE_DURATION_VALUES;
+
+// Geriyə uyğunluq
+window.buyGlacialFreeze = buyGlacialFreeze;
+window.getGlacialFreezeLevel = getGlacialFreezeLevel;
+window.getGlacialFreezeConfig = getGlacialFreezeConfig;
 
 // ============================================================================
 // ⚛️ 4D KVANT TESSERAKTI MƏRMİ TUTUMU YÜKSƏLTMƏSİ (Fancy Elmasla)

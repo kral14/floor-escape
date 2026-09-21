@@ -15,10 +15,11 @@ class Player {
         this.facing = -Math.PI / 2;
         this.visualAngle = 0; // İlk doğanda şaquli düz durur
         this.hasShield = false;
-        this.maxShieldDefense = 10;
-        this.shieldDefense = 10;
         this.shieldAngle = 0;
+        this.maxHp = 3;
+        this.hp = 3;
         this.hasHyperJump = false; // 🚀 Ehtiyat Kvant Sıçrayışı (Lava yaxınlaşdıqda avtomatik atır)
+
         this.flapPhase = 0;
         this.draculaDust = [];
         this.dustBudget = 0;
@@ -56,7 +57,11 @@ class Player {
     reset(isNewRun = true) {
         if (window.GlacialSpawnEffect) window.GlacialSpawnEffect.resetGame();
         if (window.TesseractSpawnEffect) window.TesseractSpawnEffect.resetGame();
-        if (isNewRun) { this.glacialSlots = Array(6).fill(true); this.glacialCharge = 0;
+        if (isNewRun) {
+            const glacCap = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : 6;
+            this.glacialSlots = Array(6).fill(false);
+            for (let i = 0; i < glacCap; i++) this.glacialSlots[i] = true;
+            this.glacialCharge = 0;
             const tessCap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
             this.tesseractSlots = Array(tessCap).fill(true);
         }
@@ -64,7 +69,12 @@ class Player {
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(typeof gameState !== 'undefined' ? gameState.floor : 1) : canvasHeight;
         this.y = worldH - 180;
         this.speed = getBaseSpeed();
+        this.maxHp = 3;
+        if (isNewRun || this.hp === undefined || this.hp <= 0) {
+            this.hp = 3;
+        }
         this.trail = [];
+
         this.facing = -Math.PI / 2;
         this.visualAngle = 0; // İlk doğanda şaquli düz durur
         this.canPassBorder = false;
@@ -192,28 +202,28 @@ class Player {
 
         if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim === 'dracula' && typeof getIngameWingDustPoint === 'function') {
             const beat = 0.5 + 0.5 * Math.cos(this.flapPhase);
-            this.dustBudget = (this.dustBudget || 0) + dt * (16 + speedRatio * 32 + beat * 22);
-            while (this.dustBudget >= 1) {
+            this.dustBudget = (this.dustBudget || 0) + dt * (8 + speedRatio * 16 + beat * 8);
+            while (this.dustBudget >= 1 && this.draculaDust.length < 35) {
                 this.dustBudget--;
                 for (const side of [-1, 1]) {
                     const pos = getIngameWingDustPoint(side, this);
-                    const life = 0.7 + Math.random() * 0.6;
+                    const life = 0.5 + Math.random() * 0.4;
                     this.draculaDust.push({
                         x: pos.x,
                         y: pos.y,
-                        vx: side * (3 + Math.random() * 6) + this.vx * 0.25,
-                        vy: 12 + Math.random() * 16 + this.vy * 0.15,
+                        vx: side * (2 + Math.random() * 4) + this.vx * 0.2,
+                        vy: 8 + Math.random() * 10 + this.vy * 0.1,
                         life,
                         maxLife: life,
-                        size: 0.7 + Math.random() * 1.5,
+                        size: 0.8 + Math.random() * 1.3,
                         angle: Math.random() * 6.28,
                         spin: (Math.random() - 0.5) * 2,
-                        star: Math.random() < 0.22,
+                        star: Math.random() < 0.2,
                         color: ['#ffe5b4', '#d8bdff', '#c3f3ef'][Math.floor(Math.random() * 3)]
                     });
                 }
             }
-            if (this.draculaDust.length > 150) this.draculaDust.splice(0, this.draculaDust.length - 150);
+            if (this.draculaDust.length > 35) this.draculaDust.splice(0, this.draculaDust.length - 35);
         }
 
         // 🌸 Yaşam Çiçəyinin Solma və Ləçək İzi İdarəetməsi
@@ -318,53 +328,16 @@ class Player {
         if (this.trail.length > 12) this.trail.shift();
     }
 
-    // 🛡️ QALXANIN BƏRPASI (YENİDƏN 10 DEFANS)
+    // 🛡️ QALXANIN BƏRPASI (1 DƏFƏLİK MÜDAFİƏ)
     restoreShield() {
         this.hasShield = true;
-        this.shieldDefense = this.maxShieldDefense; // 10 defans
     }
 
-    // 🛡️ QALXANIN DEFANS ALMASI VƏ ZƏRBƏNİ UDMAQ (Lava: -3, Meteor: -5, Canavar: -10)
-    damageShield(amount = 1, source = 'generic') {
-        if (!this.hasShield) return false;
-
-        this.shieldDefense = Math.max(0, (this.shieldDefense !== undefined ? this.shieldDefense : 10) - amount);
-
-        // Zərbə hissəcikləri
-        if (typeof particles !== 'undefined') {
-            const pCount = Math.min(18, amount * 3);
-            for (let i = 0; i < pCount; i++) {
-                particles.push(new Particle(this.x, this.y, '#00f0ff', 3.2));
-            }
-        }
-
-        // Qısa toxunulmazlıq (i-frame) veririk ki, ardıcıl kadrlarda zərər dərhal təkrar olunmasın
-        if (typeof gameState !== 'undefined') {
-            gameState.dashInvulnerable = Math.max(gameState.dashInvulnerable || 0, 36); // ~0.6 saniyə toxunulmazlıq
-        }
-
-        if (this.shieldDefense <= 0) {
-            // Defans tükəndi - Qalxan sınır!
-            this.breakShield();
-            return false; // Qalxan qırıldı
-        } else {
-            // Defans azaldı, qalxan hələ sağdır!
-            if (typeof audio !== 'undefined') {
-                if (typeof audio.playShieldBlock === 'function') {
-                    audio.playShieldBlock();
-                } else if (typeof audio.playExplosion === 'function') {
-                    audio.playExplosion();
-                }
-            }
-            return true; // Qalxan hələ aktivdir
-        }
-    }
-
-    // 🛡️ QALXANIN SINMASI VƏ OYUNÇUNUN XİLAS OLUNMASI
+    // 🛡️ QALXANIN ZƏRBƏNİ 1 DƏFƏ BLOKLAYARAQ PARÇALANMASI
     breakShield() {
+        if (!this.hasShield) return;
         this.hasShield = false;
-        this.shieldDefense = 0;
-        let invulnDuration = 75; // 1.25 saniyəlik baza toxunulmazlıq
+        let invulnDuration = 80; // 1.35 saniyəlik toxunulmazlıq
 
         // 🛡️ Titan Zirehli (Aegis) Dərisi Bonusu: +1.5s (90 kadr) əlavə toxunulmazlıq
         if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin === 'aegis') {
@@ -384,10 +357,108 @@ class Player {
                 particles.push(new Particle(this.x, this.y, Math.random() < 0.5 ? '#00f0ff' : '#ffffff', 4));
             }
         }
+        if (typeof addFloatingText === 'function') {
+            addFloatingText(this.x, this.y - 25, '🛡️ QALXAN BLOKLADI VƏ PARÇALANDI!', '#00f0ff', 20);
+        }
         if (typeof showToast === 'function') {
-            showToast('🛡️ ENERJİ QALXANI SİZİ LAVADAN XİLAS ETDİ!', 'success');
+            showToast('🛡️ ENERJİ QALXANI SİZİ 1 DƏFƏ ZƏRƏRDƏN QORUYARAQ PARÇALANDI!', 'success');
         }
     }
+
+    // 🛡️ Geriyə uyğunluq üçün damageShield: Qalxan 1 dəfə üçün aktivdir və dərhal parçalanır!
+    damageShield(amount = 1, source = 'generic') {
+        if (!this.hasShield) return false;
+        this.breakShield();
+        return false; // Artıq qalxan parçalandı
+    }
+
+    // ❤️ MONSUN CAN ALMASI (PLAYER HP) VƏ YA ZƏRƏRDƏN QORUNMASI
+    takeDamage(amount = 1, source = 'generic') {
+        if (typeof gameState !== 'undefined' && (gameState.dashInvulnerable > 0 || gameState.transitioning || gameState.gameOver)) {
+            return false;
+        }
+
+        // 1. Əgər Qalxan varsa, 1 DƏFƏ zərərdən qoruyur və qalxan parçalanır!
+        if (this.hasShield) {
+            this.breakShield();
+            return false; // Can getmədi
+        }
+
+        // 2. Əgər Yaşam Çiçəyi varsa, o qoruyur
+        if (this.hasLifeFlower && typeof this.consumeLifeFlower === 'function') {
+            this.consumeLifeFlower();
+            return false; // Can getmədi
+        }
+
+        // 3. Qalxan və çiçək yoxdursa -> MONSUN CANI AZALIR!
+        this.hp = Math.max(0, (this.hp !== undefined ? this.hp : (this.maxHp || 3)) - amount);
+
+        if (typeof updateHpUI === 'function') {
+            updateHpUI();
+        }
+
+        // Zərbə səsi
+        if (typeof audio !== 'undefined') {
+            if (typeof audio.playExplosion === 'function') audio.playExplosion();
+            else if (typeof audio.playShieldBreak === 'function') audio.playShieldBreak();
+        }
+
+        // Ekran qırmızı pulsasiyası və silkələnməsi
+        if (typeof screenPulse !== 'undefined') {
+            screenPulse.color = 'rgba(239, 68, 68, 0.6)';
+            screenPulse.alpha = 0.9;
+        }
+        const mainView = (typeof document !== 'undefined') ? document.getElementById('main-view') : null;
+        if (mainView) {
+            mainView.classList.add('shake');
+            setTimeout(() => mainView.classList.remove('shake'), 280);
+        }
+
+
+        // Zərbə hissəcikləri
+        if (typeof particles !== 'undefined') {
+            for (let i = 0; i < 25; i++) {
+                particles.push(new Particle(this.x, this.y, Math.random() < 0.5 ? '#ef4444' : '#f97316', 4));
+            }
+        }
+
+        if (this.hp <= 0) {
+            // Can bitdi -> Oyun bitir!
+            if (typeof addFloatingText === 'function') {
+                addFloatingText(this.x, this.y - 25, '💀 MONSUN CANI BİTDİ!', '#ef4444', 24);
+            }
+            if (typeof showToast === 'function') {
+                showToast('💀 MONSUN BÜTÜN CANLARI TÜKƏNDİ!', 'danger');
+            }
+            if (typeof triggerGameOver === 'function') {
+                triggerGameOver();
+            }
+            return true;
+        } else {
+            // Hələ canı var -> Təhlükəsiz zonaya atır və toxunulmazlıq verir!
+            let invuln = 90; // 1.5 saniyə toxunulmazlıq
+            if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin === 'aegis') {
+                invuln = 130;
+            }
+            if (typeof gameState !== 'undefined') {
+                gameState.dashInvulnerable = invuln;
+            }
+            this.y = Math.max(70, this.y - 170);
+
+            if (typeof addFloatingText === 'function') {
+                addFloatingText(this.x, this.y - 25, `💔 -1 CAN! [${this.hp}/${this.maxHp || 3}]`, '#ef4444', 22);
+            }
+            if (typeof showToast === 'function') {
+                showToast(`💔 MONS ZƏRƏR ALDI! Qalan Can: ${this.hp}/${this.maxHp || 3}`, 'warning');
+            }
+            if (typeof saveActiveRun === 'function') {
+                saveActiveRun();
+            }
+            return false;
+        }
+    }
+
+
 
     // 🌸 YAŞAM ÇİÇƏYİ BONUS CANININ SƏRF EDİLMƏSİ VƏ XİLAS OLUNMA
     consumeLifeFlower() {
@@ -737,45 +808,18 @@ class Player {
             }
             ctx.restore();
 
-            // 4. Qalxan Defans İndikatoru (10 xanalı neon müdafiə barı)
-            const curDef = Math.max(0, this.shieldDefense !== undefined ? this.shieldDefense : 10);
-            const barW = 44;
-            const barH = 5;
-            const barX = this.x - barW / 2;
-            const barY = this.y - shieldRad - 14;
-
-            // Arxa fon
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
-            ctx.fill();
-            ctx.stroke();
-
-            // 10 Seqmentli Defans Hücrələri
-            const segW = (barW - 9) / 10;
-            for (let d = 0; d < 10; d++) {
-                const segX = barX + d * (segW + 1);
-                if (d < curDef) {
-                    ctx.fillStyle = curDef > 5 ? '#00f0ff' : (curDef > 3 ? '#facc15' : '#f97316');
-                    ctx.shadowColor = ctx.fillStyle;
-                    ctx.shadowBlur = 6;
-                } else {
-                    ctx.fillStyle = 'rgba(51, 65, 85, 0.5)';
-                    ctx.shadowBlur = 0;
-                }
-                ctx.beginPath();
-                ctx.roundRect(segX, barY, segW, barH, 1.5);
-                ctx.fill();
-            }
-
             ctx.restore();
         }
 
         // 🏷️ Animasiya Üzərindəki Status Badge-i (Ulduz, Kvant Buz Zirehi və s.)
         this.drawAnimBadge(ctx);
     }
+
+    // ❤️ Can artıq yuxarı HUD panelində (stat-hp-panel) göstərilir, Monsun üzərində çəkilmir
+    drawHealthBar(ctx) {
+        // Deaktiv edilib: can artıq yuxarı paneldə əks olunur
+    }
+
     // 🏷️ Doğuluş Animasiyası Resurs & Status Göstəricisi (Ulduz, Kvant Buz Zirehi, Tesserakt, Yaşam Çiçəyi)
     drawAnimBadge(ctx) {
         if (typeof gameState !== 'undefined' && gameState.gameOver) return;

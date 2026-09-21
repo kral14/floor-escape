@@ -171,7 +171,9 @@ class MonsSpawnEffect {
             fxModule.resetFlight();
         }
         this.maxAnimTime = (fxModule && fxModule.duration) ? fxModule.duration : 7.0;
-        this.duration = (this.mode === 'out') ? 1.4 : (this.engine ? 6.2 : (this.animType === 'seed' ? 6.2 : (['glacial','tesseract'].includes(this.animType) ? 6.8 : 5.6)));
+        // ⚡ Animasiyaların açılma sürətini 2.5 qat artırırıq (6.8s-dən ~2.4 saniyəyə qısaldırıq)
+        this.animSpeed = (this.mode === 'out') ? 1.4 : 2.5;
+        this.duration = (this.mode === 'out') ? 1.0 : (this.engine ? 6.2 : (this.animType === 'seed' ? 6.2 : (['glacial','tesseract'].includes(this.animType) ? 6.8 : 5.6)));
         this.finished = false;
         this.scale = 0.56; // İKİNCİ ŞƏKİLDƏKİ REAL OYUNÇU ÖLÇÜSÜ
         this._burstPlayed = false;
@@ -184,13 +186,14 @@ class MonsSpawnEffect {
 
     update(dt) {
         if (this.finished) return;
-        this.time += dt;
+        const effectiveDt = dt * (this.animSpeed || 2.5);
+        this.time += effectiveDt;
 
         if (this.engine) {
             if (this.mode === 'out') {
                 this.engine.timeline = Math.max(0, 6.2 - (this.time / this.duration) * 6.2);
             } else {
-                this.engine.step(dt);
+                this.engine.step(effectiveDt);
             }
             if (this.time >= this.duration) {
                 if (this.loop) {

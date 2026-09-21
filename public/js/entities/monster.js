@@ -511,10 +511,22 @@ class Monster {
             return;
         }
 
-        // 5. LƏNGİTMƏ EFFEKTLƏRİ
+        // 5. LƏNGİTMƏ VƏ DİNAMİK TƏQİB SÜRƏTİ
         let currentSpeed = this.baseSpeed;
+
+        // 🔥 DİNAMİK LAVA TƏQİBİ: Oyunçu irəlilədikcə lavın arxada gözdən itməsinin qarşısını alır
+        if (typeof player !== 'undefined' && player && typeof player.y === 'number') {
+            const distToPlayer = this.y - player.y;
+            // Əgər lav oyunçunun ekranından çox aşağıda qalıbsa (dist > 520px), təbii təqib sürəti əlavə olunur
+            if (distToPlayer > 520) {
+                const catchup = Math.min(2.0, ((distToPlayer - 520) / 650) * 1.5);
+                currentSpeed += catchup;
+            }
+        }
+
         if (this.iceTimer > 0) {
-            currentSpeed *= 0.25; // 75% ləngimə
+            const factor = (typeof this.iceSlowFactor === 'number') ? this.iceSlowFactor : 0.75;
+            currentSpeed *= Math.max(0, 1 - factor); // Dinamik yavaşlatma və ya 100% donma
         }
         if (this.plasmaTimer > 0) {
             currentSpeed *= 0.20; // 80% ləngimə
@@ -546,9 +558,13 @@ class Monster {
         const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : (typeof canvasHeight !== 'undefined' ? canvasHeight : 680);
         const bottomH = worldH + 350;
+        // ☄️ METEORLAR VƏ ŞOK DALĞALARI HƏMİŞƏ ÇƏKİLİR (Lava aşağıda olsa belə göydən enən hücumlar görünməlidir)
+        this.drawMeteors(c);
+        this.drawShockwaves(c);
+
         const top = this.y + this.shockShake;
 
-        // Əgər lava tamamilə dünyanın altındadırsa çəkməyə ehtiyac yoxdur
+        // Əgər lava tamamilə dünyanın altındadırsa mayeni çəkməyə ehtiyac yoxdur
         if (top > worldH + 250) {
             c.restore();
             return;
@@ -832,25 +848,23 @@ class Monster {
             c.restore();
         }
     
-        // ☄️ METEORLAR VƏ ŞOK DALĞALARININ ÇƏKİLMƏSİ
-        this.drawMeteors(c);
-        this.drawShockwaves(c);
-
         c.restore(); // Monster draw() state izolyasiyasının sonu
         c.globalAlpha = 1;
         c.shadowBlur = 0;
     }
 
-    // ☄️ METEOR YARATMAQ
+    // ☄️ METEOR YARATMAQ (Lavanın göydən oyunçunun başına düşməsi)
     spawnMeteor(tx, ty) {
+        // Kameranın yuxarı kənarından / hədəfdən 420px yuxarıdan enir
+        const startY = Math.max(0, ty - 420);
         this.meteors.push({
             targetX: tx,
             targetY: ty,
-            x: tx + (Math.random() - 0.5) * 60,
-            y: -60,
-            speed: 13,
-            radius: 16,
-            warningTimer: 55, // 55 kadr xəbərdarlıq qırpınması
+            x: tx + (Math.random() - 0.5) * 50,
+            y: startY,
+            speed: 14,
+            radius: 18,
+            warningTimer: 45, // 45 kadr (~0.75s) yerdə qırpınan xəbərdarlıq halqası
             landed: false
         });
     }
@@ -873,28 +887,15 @@ class Monster {
                 if (airDist < (m.radius + (player.radius || 16))) {
                     m.landed = true;
                     m.y = m.targetY;
-                    if (player.hasShield) {
-                        const stillActive = (typeof player.damageShield === 'function')
-                            ? player.damageShield(5, 'meteor')
-                            : (player.breakShield(), false);
-
-                        if (stillActive) {
-                            if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, `🛡️ -5 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
-                            if (typeof showToast === 'function') showToast(`🛡️ METEOR BLOKLANDI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
-                        } else {
-                            if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
-                            if (typeof showToast === 'function') showToast('🛡️ METEOR DƏYDİ! Qalxanınız parçalandı!', 'warning');
-                        }
-                    } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
-                        player.consumeLifeFlower();
-                        if (typeof showToast === 'function') showToast('🌸 METEOR DƏYDİ! Yaşam Çiçəyi sizi qorudu!', 'warning');
-                    } else {
-                        if (typeof showToast === 'function') showToast('💥 DÜŞƏN LAVA SİZİ VURDU VƏ MƏHV ETDİ!', 'danger');
-                        if (typeof triggerGameOver === 'function') triggerGameOver();
-                        return;
+                    if (typeof player.takeDamage === 'function') {
+                        player.takeDamage(1, 'meteor');
+                    } else if (typeof triggerGameOver === 'function') {
+                        triggerGameOver();
                     }
+                    return;
                 }
             }
+
 
             // Hədəfə çatdıqda partlayış
             if (m.y >= m.targetY) {
@@ -926,32 +927,15 @@ class Monster {
                 if (typeof player !== 'undefined' && player && typeof gameState !== 'undefined' && gameState.dashInvulnerable <= 0) {
                     const dist = Math.hypot(player.x - m.targetX, player.y - m.targetY);
                     if (dist < 48) {
-                        if (player.hasShield) {
-                            const stillActive = (typeof player.damageShield === 'function')
-                                ? player.damageShield(5, 'meteor')
-                                : (player.breakShield(), false);
-
-                            if (stillActive) {
-                                if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, `🛡️ -5 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
-                                if (typeof showToast === 'function') showToast(`🛡️ METEOR PARTLAYIŞI BLOKLANDI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
-                            } else {
-                                if (typeof addFloatingText === 'function') addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
-                                if (typeof showToast === 'function') showToast('🛡️ METEOR PARTLAYIŞI! Qalxanınız parçalandı!', 'warning');
-                            }
-                        } else if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
-                            player.consumeLifeFlower();
-                            if (typeof showToast === 'function') showToast('🌸 METEOR PARTLAYIŞI! Yaşam Çiçəyi sizi qorudu!', 'warning');
-                        } else {
-                            if (typeof showToast === 'function') {
-                                showToast('💥 LAVA METEORU PARTLAYIŞI SİZİ MƏHV ETDİ!', 'danger');
-                            }
-                            if (typeof triggerGameOver === 'function') {
-                                triggerGameOver();
-                            }
-                            return;
+                        if (typeof player.takeDamage === 'function') {
+                            player.takeDamage(1, 'meteor');
+                        } else if (typeof triggerGameOver === 'function') {
+                            triggerGameOver();
                         }
+                        return;
                     }
                 }
+
 
                 this.meteors.splice(i, 1);
             }

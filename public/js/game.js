@@ -242,6 +242,10 @@ function updatePhysicsStep() {
         if (typeof monsPortal !== 'undefined' && monsPortal && !monsPortal.finished) {
             monsPortal.update(1 / 60);
         }
+        // 🌋 Lav şəlalələri və köz damcıları oyun açılanda da canlı axır
+        if (typeof updatePlatformsPhysics === 'function') {
+            updatePlatformsPhysics(player, 1 / 60);
+        }
         // Canavar hələ yüksəlmir, lakin lava həmişə ekranın alt kənarında dalğalanaraq aydın görünür
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
         monster.y = worldH - 38;
@@ -421,11 +425,10 @@ function updatePhysicsStep() {
                     player.restoreShield();
                 } else {
                     player.hasShield = true;
-                    player.shieldDefense = 10;
                 }
-                addFloatingText(player.x, player.y - 20, '🛡️ QALXAN AKTİV! [10/10 DEFANS]', '#00f0ff', 16);
+                addFloatingText(player.x, player.y - 20, '🛡️ QALXAN AKTİV! (1 DƏFƏLİK QORUMA)', '#00f0ff', 16);
                 if (typeof showToast === 'function') {
-                    showToast('🛡️ ENERJİ QALXANI YENİLƏNDİ! (10 Defans)', 'success');
+                    showToast('🛡️ ENERJİ QALXANI AKTİVLƏŞDİ! (1 Dəfə Zərərdən Qoruyacaq)', 'success');
                 }
             } else if (p.type === 'chrono') {
                 gameState.chronoTimer = 240; // 4.0 saniyə (60fps)
@@ -604,25 +607,10 @@ function updatePhysicsStep() {
             player.hyperJump();
             if (typeof saveActiveRun === 'function') saveActiveRun();
         } else if (distToLava <= 0) {
-            if (player.hasShield) {
-                // Lava canavarına dəyəndə 10 defans alır (qalxan 1 dəfəyə düşür)
-                if (typeof player.damageShield === 'function') {
-                    player.damageShield(10, 'monster');
-                } else {
-                    player.breakShield();
-                }
-                addFloatingText(player.x, player.y - 25, '💥 -10 DEFANS! QALXAN PARÇALANDI!', '#ef4444', 20);
-                if (typeof showToast === 'function') {
-                    showToast('🌋 LAVA CANAVARI QALXANINIZI 1 DƏFƏYƏ PARÇALADI!', 'warning');
-                }
-                if (typeof saveActiveRun === 'function') saveActiveRun();
-            } else if (player.hasLifeFlower) {
-                player.consumeLifeFlower();
-                if (typeof saveActiveRun === 'function') saveActiveRun();
-            } else {
-                triggerGameOver();
-            }
+            player.takeDamage(1, 'lava');
+            if (typeof saveActiveRun === 'function') saveActiveRun();
         }
+
     }
 
     // Sərhəd açıq deyilsə passiv qızıl artımı
@@ -656,8 +644,8 @@ function renderGame() {
         drawPlatforms(ctx);
     }
 
-    // 4. Sərhəd Qapısı
-    if (typeof drawBorderLine === 'function') {
+    // 4. Sərhəd Qapısı (Yalnız kamera yuxarı çatanda və ekranda görünəndə çəkilir)
+    if (typeof drawBorderLine === 'function' && viewTop <= 110) {
         drawBorderLine();
     }
 
@@ -669,12 +657,21 @@ function renderGame() {
         }
     }
 
-    // 6. 📜 Keçid Kağızı (Escape Pass)
-    if (typeof drawEscapePass === 'function') {
+    // 6. 📜 Keçid Kağızı (Escape Pass) (Yalnız kamera baxış sahəsindədirsə çəkilir)
+    if (typeof activeEscapePass !== 'undefined' && activeEscapePass) {
+        if (activeEscapePass.y >= viewTop - 30 && activeEscapePass.y <= viewBottom + 30) {
+            if (typeof drawEscapePass === 'function') drawEscapePass(ctx);
+        }
+    } else if (typeof drawEscapePass === 'function') {
         drawEscapePass(ctx);
     }
-    // 🛡️ Qat Qoruma Kağızı (Floor Protection)
-    if (typeof drawFloorProtection === 'function') {
+
+    // 🛡️ Qat Qoruma Kağızı (Floor Protection) (Culling yoxlanışı)
+    if (typeof activeFloorProtection !== 'undefined' && activeFloorProtection) {
+        if (activeFloorProtection.y >= viewTop - 30 && activeFloorProtection.y <= viewBottom + 30) {
+            if (typeof drawFloorProtection === 'function') drawFloorProtection(ctx);
+        }
+    } else if (typeof drawFloorProtection === 'function') {
         drawFloorProtection(ctx);
     }
 
@@ -697,9 +694,28 @@ function renderGame() {
         }
     }
 
-    // Canavar həmişə lava səthindədir, kamera sahəsindədirsə çəkilir
-    if (monster.y >= viewTop - 120 && monster.y <= viewBottom + 120) {
+    // Canavar həmişə lava səthindədir, kamera sahəsindədirsə tam çəkilir
+    if (monster.y >= viewTop - 150 && monster.y <= viewBottom + 250) {
         monster.draw();
+    } else {
+        // Canavarın gövdəsi ekrandan aşağıda olsa belə, göydən enən meteorlar və şok dalğaları həmişə çəkilir
+        if (typeof monster.drawMeteors === 'function') monster.drawMeteors(ctx);
+        if (typeof monster.drawShockwaves === 'function') monster.drawShockwaves(ctx);
+
+        // Ekranın alt kənarında qaynayan lava parıltısı (Lava Proximity Glow)
+        if (monster.y > viewBottom) {
+            const distFromScreen = monster.y - viewBottom;
+            if (distFromScreen < 750) {
+                const glowAlpha = Math.max(0, Math.min(0.5, 1 - distFromScreen / 750));
+                ctx.save();
+                const threatGrad = ctx.createLinearGradient(0, viewBottom - 50, 0, viewBottom);
+                threatGrad.addColorStop(0, 'rgba(239, 68, 68, 0)');
+                threatGrad.addColorStop(1, `rgba(249, 115, 22, ${glowAlpha})`);
+                ctx.fillStyle = threatGrad;
+                ctx.fillRect(0, viewBottom - 50, canvasWidth, 50);
+                ctx.restore();
+            }
+        }
     }
 
     // 🎯 MƏRMİLƏR (Kamerada görünənlər çəkilir)
@@ -1152,16 +1168,16 @@ function showFirstFloorLavaWarning() {
         banner.style.transform = 'scale(1)';
     });
 
-    // 4 saniyə sonra zərifcə fade-out edərək silinir
+    // 2.4 saniyə sonra zərifcə fade-out edərək silinir (oyunçunu ləngitmir)
     setTimeout(() => {
         if (banner && banner.parentNode) {
             banner.style.opacity = '0';
             banner.style.transform = 'scale(0.9)';
             setTimeout(() => {
                 if (banner && banner.parentNode) banner.remove();
-            }, 500);
+            }, 400);
         }
-    }, 4000);
+    }, 2400);
 }
 window.showFirstFloorLavaWarning = showFirstFloorLavaWarning;
 

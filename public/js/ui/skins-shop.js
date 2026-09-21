@@ -848,6 +848,13 @@ function renderSpawnAnimsShop() {
             glowStyle = `box-shadow: 0 0 24px ${displayAnim.color}50;`;
         }
 
+        const isGlacialCard = (anim.id === 'glacial' || effectiveId === 'glacial');
+        const glacialUpgradeBtn = isGlacialCard ? `
+            <button type="button" onclick="event.stopPropagation(); openGlacialUpgradeModal();" class="px-2.5 py-1.5 rounded-lg bg-sky-950/90 hover:bg-sky-850 text-cyan-300 hover:text-white border border-cyan-500/50 hover:border-cyan-400 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer shadow-sm hover:scale-105 active:scale-95" title="Kvant Buz Zirehi Təkmilləşdirmələri">
+                <i class="fa-solid fa-angles-up text-[9px]"></i>
+            </button>
+        ` : '';
+
         let actionBtn = '';
         if (isActive) {
             actionBtn = `
@@ -855,6 +862,7 @@ function renderSpawnAnimsShop() {
                     <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
+                    ${glacialUpgradeBtn}
                     <button disabled class="flex-1 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-default shadow-sm shadow-emerald-500/20">
                         <i class="fa-solid fa-check-circle text-[9px]"></i> AKTİVDİR
                     </button>
@@ -866,6 +874,7 @@ function renderSpawnAnimsShop() {
                     <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-400/50 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
+                    ${glacialUpgradeBtn}
                     <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${effectiveId}');" class="flex-1 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition hover:scale-[1.02]">
                         <i class="fa-solid fa-hand-pointer text-[9px]"></i> TƏCHİZ ET
                     </button>
@@ -881,6 +890,7 @@ function renderSpawnAnimsShop() {
                     <button type="button" onclick="event.stopPropagation(); openSpawnAnimFullscreenPreview('${effectiveId}');" class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-white border border-amber-500/40 hover:border-amber-400 font-orbitron font-bold text-[9px] flex items-center justify-center gap-1 transition cursor-pointer shadow-sm hover:scale-105" title="Bütün qeydlər və Tam Baxış">
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
+                    ${glacialUpgradeBtn}
                     <button type="button" onclick="event.stopPropagation(); buyOrEquipSpawnAnim('${effectiveId}');" class="flex-1 py-1.5 rounded-lg font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 transition cursor-pointer ${canAfford ? 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/25 hover:scale-[1.02] border border-rose-400/50' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-rose-500/30'}">
                         <span>AL: ${displayAnim.cost}</span>
                         <span>${rubySvg}</span>
@@ -893,15 +903,12 @@ function renderSpawnAnimsShop() {
             <div id="spawn-anim-card-${anim.id}"
                  onclick="handleSpawnAnimCardClick('${effectiveId}');"
                  onmouseenter="setHoveredSpawnAnimCard('${anim.id}');"
-                 onmouseleave="setHoveredSpawnAnimCard(null);"
-                 class="glass-card p-2.5 rounded-2xl border ${borderClass} flex flex-col justify-between items-center text-center relative z-10 overflow-hidden group transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:border-amber-400/60"
-                 style="${glowStyle}"
-                 title="Önbaxış üçün klikləyin">
+                 class="relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer select-none group min-h-[190px] ${borderClass}"
+                 style="${glowStyle}">
                 
-                <div class="w-full flex items-center justify-between px-0.5 mb-1 pointer-events-none">
-                    <span class="text-[9.5px] font-orbitron font-bold px-2 py-0.5 rounded-full border bg-slate-900/90 truncate max-w-[145px] flex items-center gap-1" style="color: ${displayAnim.color}; border-color: ${displayAnim.color}40;">
-                        <i class="fa-solid ${displayAnim.icon}"></i>
-                        <span class="truncate">${displayAnim.name}</span>
+                <div class="w-full flex items-center justify-between gap-1 mb-1">
+                    <span class="font-orbitron font-bold text-[10px] sm:text-[11px] truncate" style="color: ${displayAnim.color}">
+                        ${displayAnim.badge || displayAnim.name}
                     </span>
                     ${isActive ? `<span class="bg-emerald-500 text-slate-950 rounded-full px-1.5 py-0.5 text-[8px] font-orbitron font-bold shadow flex items-center gap-0.5"><i class="fa-solid fa-check"></i> AKTİV</span>` : (isOwned ? `<span class="text-slate-400 text-[8px] font-mono">SAHİBSƏN</span>` : '')}
                 </div>
@@ -912,21 +919,7 @@ function renderSpawnAnimsShop() {
                     <div class="absolute bottom-1 right-1 text-[6px] font-mono text-slate-400 bg-slate-950/80 px-1 py-0.5 rounded border border-slate-800 pointer-events-none">FX</div>
                 </div>
 
-                ${anim.id === 'glacial' ? (() => {
-                    const lvl = getGlacialReloadLevel();
-                    const isMax = lvl >= 6;
-                    const price = !isMax ? GLACIAL_RELOAD_PRICES[lvl] : 0;
-                    const ruby = (typeof ICONS !== 'undefined') ? ICONS.rubyDiamond({ size: 10 }) : '💎';
-                    return `
-                        <div class="w-full my-1 px-2 py-1 rounded-xl bg-sky-950/70 border border-sky-500/30 text-[9px] text-cyan-100 flex items-center justify-between gap-1.5 shadow-inner" onclick="event.stopPropagation()">
-                            <span class="font-mono text-slate-300">❄️ Tutum: <strong class="text-sky-300 font-bold">${lvl}/6</strong></span>
-                            <button type="button" class="px-2 py-0.5 rounded-lg font-orbitron font-bold text-[8.5px] shrink-0 transition active:scale-95 cursor-pointer ${isMax ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-400 hover:to-cyan-400 text-slate-950 shadow-sm flex items-center gap-1'}" onclick="buyGlacialReload()" ${isMax ? 'disabled' : ''}>
-                                <span>${isMax ? 'MAKS' : `+1: ${price}`}</span>
-                                ${!isMax ? ruby : ''}
-                            </button>
-                        </div>
-                    `;
-                })() : ''}
+
                 ${anim.id === 'tesseract' ? (() => {
                     const cap = (typeof getTesseractAmmoCap === 'function') ? getTesseractAmmoCap() : 1;
                     const isMax = cap >= 6;
@@ -1601,3 +1594,564 @@ function upgradeSeedLife() {
     }
 }
 window.upgradeSeedLife = upgradeSeedLife;
+
+// ============================================================================
+// ❄️ KVANT BUZ ZİREHİ XÜSUSİ TƏKMİLLƏŞDİRMƏ MODALI (TUTUM VƏ YARANMA VAXTI)
+// ============================================================================
+// ============================================================================
+// ❄️ KVANT BUZ ZİREHİ TƏKMİLLƏŞDİRMƏ PƏNCƏRƏSİ (İstifadəçi Dizaynı Əsasında)
+// ============================================================================
+function ensureGlacialUpgradeModal() {
+    let modal = document.getElementById('glacial-upgrade-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'glacial-upgrade-modal';
+        modal.className = 'fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 hidden transition-opacity duration-300';
+        modal.innerHTML = `
+            <style id="glacial-modal-custom-css">
+              .glacial-panel {
+                width: 100%;
+                max-width: 640px;
+                background: linear-gradient(180deg, #0b1220, #070d17);
+                border: 1px solid rgba(56,189,248,0.18);
+                border-radius: 14px;
+                padding: 12px 14px;
+                box-shadow: 0 30px 80px -40px rgba(56,189,248,0.4);
+                color: #e2e8f0;
+                font-family: 'Space Grotesk', system-ui, sans-serif;
+                position: relative;
+                overflow: hidden;
+              }
+              .glacial-panel .header {
+                display: flex; align-items: center; gap: 9px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(56,189,248,0.15);
+                margin-bottom: 8px;
+              }
+              .glacial-panel .header-icon {
+                width: 28px; height: 28px;
+                border-radius: 7px;
+                background: linear-gradient(135deg, #0c4a6e, #082f49);
+                border: 1px solid rgba(103,232,249,0.5);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 14px; flex-shrink: 0;
+                box-shadow: 0 0 12px -4px rgba(103,232,249,0.6);
+              }
+              .glacial-panel .header-title {
+                font-size: 11.5px; font-weight: 700;
+                letter-spacing: 0.06em; color: #fff;
+              }
+              .glacial-panel .header-sub {
+                font-size: 8.5px; color: #64748b; margin-top: 1px;
+              }
+              .glacial-panel .close-btn {
+                margin-left: auto;
+                width: 22px; height: 22px; border-radius: 6px;
+                background: rgba(15,23,42,0.8);
+                border: 1px solid rgba(56,189,248,0.25);
+                color: #94a3b8;
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; font-size: 11px;
+                transition: all .2s;
+              }
+              .glacial-panel .close-btn:hover { color: #fff; border-color: rgba(103,232,249,0.6); }
+
+              .glacial-panel .balance {
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 6px 11px;
+                background: rgba(30,41,59,0.5);
+                border: 1px solid rgba(56,189,248,0.18);
+                border-radius: 8px;
+                margin-bottom: 8px;
+                font-size: 10.5px;
+              }
+              .glacial-panel .balance-label { display: flex; align-items: center; gap: 5px; color: #94a3b8; }
+              .glacial-panel .balance-value {
+                font-family: 'JetBrains Mono', monospace;
+                font-weight: 700; font-size: 11.5px;
+                color: #f87171;
+                text-shadow: 0 0 10px rgba(248,113,113,0.5);
+                transition: all .3s;
+              }
+
+              /* 2 SÜTUNLU YAN-YANA ŞƏBƏKƏ */
+              .glacial-panel .cards-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px;
+              }
+              @media (max-width: 560px) {
+                .glacial-panel .cards-grid {
+                  grid-template-columns: 1fr;
+                }
+                .glacial-panel .card.col-span-2 {
+                  grid-column: span 1 !important;
+                }
+              }
+
+              .glacial-panel .card {
+                background: rgba(15,23,42,0.6);
+                border: 1px solid rgba(56,189,248,0.15);
+                border-radius: 9px;
+                padding: 7px 9px;
+                margin-bottom: 0;
+                transition: border-color .2s;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-width: 0;
+              }
+              .glacial-panel .card:hover { border-color: rgba(103,232,249,0.4); }
+              .glacial-panel .card.col-span-2 {
+                grid-column: span 2;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+              }
+              .glacial-panel .card.col-span-2 .card-top {
+                margin-bottom: 0;
+              }
+              .glacial-panel .card.col-span-2 .upgrade-row {
+                flex: 0 0 250px;
+              }
+              @media (max-width: 560px) {
+                .glacial-panel .card.col-span-2 {
+                  flex-direction: column;
+                  align-items: stretch;
+                  gap: 6px;
+                }
+                .glacial-panel .card.col-span-2 .card-top {
+                  margin-bottom: 5px;
+                }
+                .glacial-panel .card.col-span-2 .upgrade-row {
+                  flex: 1;
+                }
+              }
+
+              .glacial-panel .card-top {
+                display: flex; align-items: center; gap: 6px;
+                margin-bottom: 5px;
+                min-width: 0;
+              }
+              .glacial-panel .card-icon {
+                width: 20px; height: 20px; border-radius: 5px;
+                background: rgba(30,41,59,0.9);
+                border: 1px solid rgba(56,189,248,0.3);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 10px; flex-shrink: 0;
+              }
+              .glacial-panel .card-title {
+                font-size: 10.5px; font-weight: 700; color: #fff;
+                letter-spacing: 0.02em;
+                line-height: 1.15;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              .glacial-panel .card-desc {
+                font-size: 8px; color: #64748b; margin-top: 1px;
+                line-height: 1.1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .glacial-panel .upgrade-row {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                min-width: 0;
+              }
+
+              .glacial-panel .current-box {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                padding: 5px 6px;
+                background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(14,165,233,0.08));
+                border: 1px solid rgba(103,232,249,0.45);
+                border-radius: 6px;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 11px;
+                font-weight: 800;
+                color: #fff;
+                text-shadow: 0 0 10px rgba(103,232,249,0.6);
+                min-width: 0;
+                white-space: nowrap;
+              }
+              .glacial-panel .current-box .unit {
+                font-size: 8px;
+                color: #a5f3fc;
+                font-weight: 600;
+                opacity: 0.85;
+              }
+
+              .glacial-panel .arrow {
+                color: #67e8f9;
+                font-size: 10px;
+                opacity: 0.55;
+                flex-shrink: 0;
+              }
+
+              .glacial-panel .next-box {
+                flex: 1.35;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 4px;
+                padding: 4px 6px;
+                background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(76,29,149,0.12));
+                border: 1px solid rgba(165,180,252,0.45);
+                border-radius: 6px;
+                min-width: 0;
+              }
+
+              .glacial-panel .next-value {
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 11px;
+                font-weight: 800;
+                color: #fff;
+                text-shadow: 0 0 10px rgba(129,140,248,0.7);
+                display: flex;
+                align-items: baseline;
+                gap: 2px;
+                white-space: nowrap;
+              }
+              .glacial-panel .next-value .unit {
+                font-size: 8px;
+                color: #c7d2fe;
+                font-weight: 600;
+                opacity: 0.85;
+              }
+
+              .glacial-panel .buy-btn {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                padding: 3px 6px;
+                border-radius: 5px;
+                background: linear-gradient(135deg, rgba(129,140,248,0.55), rgba(99,102,241,0.4));
+                border: 1px solid rgba(199,210,254,0.7);
+                color: #fff;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 8.5px;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                cursor: pointer;
+                transition: all .2s;
+                flex-shrink: 0;
+                white-space: nowrap;
+              }
+              .glacial-panel .buy-btn:hover:not(:disabled) {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px -5px rgba(129,140,248,0.9);
+              }
+              .glacial-panel .buy-btn:active:not(:disabled) { transform: scale(0.96); }
+              .glacial-panel .buy-btn:disabled {
+                background: rgba(30,41,59,0.6);
+                border-color: rgba(56,189,248,0.15);
+                color: #475569;
+                cursor: not-allowed;
+              }
+              .glacial-panel .buy-btn.teal {
+                background: linear-gradient(135deg, rgba(20,184,166,0.55), rgba(13,148,136,0.4));
+                border-color: rgba(94,234,212,0.7);
+              }
+              .glacial-panel .buy-btn.teal:hover:not(:disabled) {
+                box-shadow: 0 4px 12px -5px rgba(20,184,166,0.9);
+              }
+              .glacial-panel .buy-btn.sky {
+                background: linear-gradient(135deg, rgba(56,189,248,0.55), rgba(14,165,233,0.4));
+                border-color: rgba(125,211,252,0.7);
+              }
+              .glacial-panel .buy-btn .gem { font-size: 8px; }
+
+              .glacial-panel .next-box.maxed {
+                background: rgba(30,41,59,0.5);
+                border-color: rgba(103,232,249,0.35);
+                justify-content: center;
+                padding: 5px 6px;
+              }
+              .glacial-panel .maxed-label {
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 8.5px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                color: #67e8f9;
+                white-space: nowrap;
+              }
+            </style>
+
+            <div class="glacial-panel" onclick="event.stopPropagation()">
+                <!-- HEADER -->
+                <div class="header">
+                    <div class="header-icon">❄</div>
+                    <div>
+                        <div class="header-title">KVANT BUZ ZİREHİ</div>
+                        <div class="header-sub">Kristal Tutumu və Yaranma Sistemi</div>
+                    </div>
+                    <button type="button" class="close-btn" onclick="closeGlacialUpgradeModal()">✕</button>
+                </div>
+
+                <!-- BALANCE -->
+                <div class="balance">
+                    <div class="balance-label">
+                        <span>💎</span> Mövcud Fancy Balans:
+                    </div>
+                    <div class="balance-value" id="glacial-modal-ruby-balance">0</div>
+                </div>
+
+                <!-- 2 SÜTUNLU YAN-YANA KARTLAR -->
+                <div class="cards-grid">
+                    <!-- CARD 1: Kristal Tutumu -->
+                    <div class="card">
+                        <div class="card-top">
+                            <div class="card-icon">❄️</div>
+                            <div class="min-w-0">
+                                <div class="card-title">Kristal Tutumu</div>
+                                <div class="card-desc">Zirehdə saxlanıla bilən kristal sayı</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <div class="current-box" id="glacial-modal-cap-current">6 <span class="unit">kristal</span></div>
+                            <div class="arrow">➔</div>
+                            <div class="next-box" id="glacial-modal-cap-next-box"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: Yaranma Vaxtı -->
+                    <div class="card">
+                        <div class="card-top">
+                            <div class="card-icon">⏱️</div>
+                            <div class="min-w-0">
+                                <div class="card-title">Yaranma Vaxtı</div>
+                                <div class="card-desc">Kristallar vaxt keçdikcə kondensasiya olunur</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <div class="current-box" id="glacial-modal-speed-current">2.0 <span class="unit">san</span></div>
+                            <div class="arrow">➔</div>
+                            <div class="next-box" id="glacial-modal-speed-next-box"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: Buz Mərmisi Zərəri -->
+                    <div class="card">
+                        <div class="card-top">
+                            <div class="card-icon">💥</div>
+                            <div class="min-w-0">
+                                <div class="card-title">Buz Mərmisi Zərəri</div>
+                                <div class="card-desc">Lava və bossa vurduğu zərbə gücü</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <div class="current-box" id="glacial-modal-damage-current">300 <span class="unit">DMG</span></div>
+                            <div class="arrow">➔</div>
+                            <div class="next-box" id="glacial-modal-damage-next-box"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: Lava Dondurma Faizi -->
+                    <div class="card">
+                        <div class="card-top">
+                            <div class="card-icon">🧊</div>
+                            <div class="min-w-0">
+                                <div class="card-title">Lava Dondurma Faizi</div>
+                                <div class="card-desc">Buz zərbəsi lavı yavaşladır/dondurur</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <div class="current-box" id="glacial-modal-freeze-power-current">5 <span class="unit">%</span></div>
+                            <div class="arrow">➔</div>
+                            <div class="next-box" id="glacial-modal-freeze-power-next-box"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: Dondurma Vaxtı (Alt sətirdə mərkəzli span-2) -->
+                    <div class="card col-span-2">
+                        <div class="card-top">
+                            <div class="card-icon">⏳</div>
+                            <div class="min-w-0">
+                                <div class="card-title">Dondurma Vaxtı</div>
+                                <div class="card-desc">Dondurma və yavaşlatmanın təsir müddəti</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-row">
+                            <div class="current-box" id="glacial-modal-freeze-duration-current">1.0 <span class="unit">san</span></div>
+                            <div class="arrow">➔</div>
+                            <div class="next-box" id="glacial-modal-freeze-duration-next-box"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeGlacialUpgradeModal();
+        });
+    }
+    return modal;
+}
+
+function updateGlacialUpgradeModalUI() {
+    const modal = document.getElementById('glacial-upgrade-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+
+    // Fancy Balans
+    const redBal = (typeof redDiamonds !== 'undefined') ? redDiamonds : 0;
+    const rubyEl = document.getElementById('glacial-modal-ruby-balance');
+    if (rubyEl) rubyEl.textContent = `${redBal.toLocaleString()}`;
+
+    // 1. Kristal Tutumu
+    const capLvl = (typeof getGlacialReloadLevel === 'function') ? getGlacialReloadLevel() : 0;
+    const isCapMax = capLvl >= 6;
+    const curCap = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : Math.max(1, capLvl);
+    const nextCap = Math.min(6, curCap + 1);
+    const capPrice = !isCapMax ? ((typeof GLACIAL_RELOAD_PRICES !== 'undefined') ? GLACIAL_RELOAD_PRICES[capLvl] : 600) : 0;
+    const canAffordCap = redBal >= capPrice;
+
+    const capCurEl = document.getElementById('glacial-modal-cap-current');
+    if (capCurEl) capCurEl.innerHTML = `${curCap} <span class="unit">kristal</span>`;
+
+    const capNextBox = document.getElementById('glacial-modal-cap-next-box');
+    if (capNextBox) {
+        if (isCapMax) {
+            capNextBox.className = 'next-box maxed';
+            capNextBox.innerHTML = '<div class="maxed-label">✓ MAKSİMUM</div>';
+        } else {
+            capNextBox.className = 'next-box';
+            capNextBox.innerHTML = `
+                <div class="next-value">${nextCap} <span class="unit">kristal</span></div>
+                <button type="button" class="buy-btn sky" ${canAffordCap ? '' : 'disabled'} onclick="buyGlacialReload()">
+                    <span class="gem">💎</span>${capPrice.toLocaleString()}
+                </button>
+            `;
+        }
+    }
+
+    // 2. Yaranma Vaxtı
+    const speedLvl = (typeof getGlacialSpeedLevel === 'function') ? getGlacialSpeedLevel() : 0;
+    const isSpeedMax = speedLvl >= 6;
+    const curTime = (typeof getGlacialRechargeTime === 'function') ? getGlacialRechargeTime() : 5.0;
+    const speedPrice = !isSpeedMax ? ((typeof GLACIAL_SPEED_PRICES !== 'undefined') ? GLACIAL_SPEED_PRICES[speedLvl] : 120) : 0;
+    const canAffordSpeed = redBal >= speedPrice;
+
+    const speedCurEl = document.getElementById('glacial-modal-speed-current');
+    if (speedCurEl) speedCurEl.innerHTML = `${curTime.toFixed(1)} <span class="unit">san</span>`;
+
+    const speedNextBox = document.getElementById('glacial-modal-speed-next-box');
+    if (speedNextBox) {
+        if (isSpeedMax) {
+            speedNextBox.className = 'next-box maxed';
+            speedNextBox.innerHTML = '<div class="maxed-label">✓ MAKSİMUM</div>';
+        } else {
+            const nextTime = Math.max(2.0, curTime - 0.5);
+            speedNextBox.className = 'next-box';
+            speedNextBox.innerHTML = `
+                <div class="next-value">${nextTime.toFixed(1)} <span class="unit">san</span></div>
+                <button type="button" class="buy-btn" ${canAffordSpeed ? '' : 'disabled'} onclick="buyGlacialSpeed()">
+                    <span class="gem">💎</span>${speedPrice.toLocaleString()}
+                </button>
+            `;
+        }
+    }
+
+    // 3. Buz Mərmisi Zərəri
+    const dmgLvl = (typeof getGlacialDamageLevel === 'function') ? getGlacialDamageLevel() : 0;
+    const isDmgMax = dmgLvl >= 6;
+    const curDmg = (typeof getGlacialDamage === 'function') ? getGlacialDamage() : 300;
+    const dmgPrice = !isDmgMax ? ((typeof GLACIAL_DAMAGE_PRICES !== 'undefined') ? GLACIAL_DAMAGE_PRICES[dmgLvl] : 140) : 0;
+    const nextDmg = !isDmgMax ? ((typeof GLACIAL_DAMAGE_VALUES !== 'undefined') ? GLACIAL_DAMAGE_VALUES[dmgLvl + 1] : 450) : curDmg;
+    const canAffordDmg = redBal >= dmgPrice;
+
+    const dmgCurEl = document.getElementById('glacial-modal-damage-current');
+    if (dmgCurEl) dmgCurEl.innerHTML = `${curDmg} <span class="unit">DMG</span>`;
+
+    const dmgNextBox = document.getElementById('glacial-modal-damage-next-box');
+    if (dmgNextBox) {
+        if (isDmgMax) {
+            dmgNextBox.className = 'next-box maxed';
+            dmgNextBox.innerHTML = '<div class="maxed-label">✓ MAKSİMUM</div>';
+        } else {
+            dmgNextBox.className = 'next-box';
+            dmgNextBox.innerHTML = `
+                <div class="next-value">${nextDmg} <span class="unit">DMG</span></div>
+                <button type="button" class="buy-btn" ${canAffordDmg ? '' : 'disabled'} onclick="buyGlacialDamage()">
+                    <span class="gem">💎</span>${dmgPrice.toLocaleString()}
+                </button>
+            `;
+        }
+    }
+
+    // 4. Lava Dondurma Faizi
+    const powerLvl = (typeof getGlacialFreezePowerLevel === 'function') ? getGlacialFreezePowerLevel() : 0;
+    const isPowerMax = powerLvl >= 6;
+    const curPower = (typeof getGlacialFreezePower === 'function') ? getGlacialFreezePower() : 5;
+    const powerPrice = !isPowerMax ? ((typeof GLACIAL_FREEZE_POWER_PRICES !== 'undefined') ? GLACIAL_FREEZE_POWER_PRICES[powerLvl] : 140) : 0;
+    const nextPower = !isPowerMax ? ((typeof GLACIAL_FREEZE_POWER_VALUES !== 'undefined') ? GLACIAL_FREEZE_POWER_VALUES[powerLvl + 1] : 20) : curPower;
+    const canAffordPower = redBal >= powerPrice;
+
+    const powerCurEl = document.getElementById('glacial-modal-freeze-power-current');
+    if (powerCurEl) powerCurEl.innerHTML = `${curPower} <span class="unit">%</span>`;
+
+    const powerNextBox = document.getElementById('glacial-modal-freeze-power-next-box');
+    if (powerNextBox) {
+        if (isPowerMax) {
+            powerNextBox.className = 'next-box maxed';
+            powerNextBox.innerHTML = '<div class="maxed-label">✓ MAKSİMUM</div>';
+        } else {
+            powerNextBox.className = 'next-box';
+            powerNextBox.innerHTML = `
+                <div class="next-value">${nextPower} <span class="unit">%</span></div>
+                <button type="button" class="buy-btn teal" ${canAffordPower ? '' : 'disabled'} onclick="buyGlacialFreezePower()">
+                    <span class="gem">💎</span>${powerPrice.toLocaleString()}
+                </button>
+            `;
+        }
+    }
+
+    // 5. Dondurma Vaxtı / Müddəti
+    const durLvl = (typeof getGlacialFreezeDurationLevel === 'function') ? getGlacialFreezeDurationLevel() : 0;
+    const isDurMax = durLvl >= 6;
+    const curDur = (typeof getGlacialFreezeDuration === 'function') ? getGlacialFreezeDuration() : 1.0;
+    const durPrice = !isDurMax ? ((typeof GLACIAL_FREEZE_DURATION_PRICES !== 'undefined') ? GLACIAL_FREEZE_DURATION_PRICES[durLvl] : 120) : 0;
+    const nextDur = !isDurMax ? ((typeof GLACIAL_FREEZE_DURATION_VALUES !== 'undefined') ? GLACIAL_FREEZE_DURATION_VALUES[durLvl + 1] : 1.4) : curDur;
+    const canAffordDur = redBal >= durPrice;
+
+    const durCurEl = document.getElementById('glacial-modal-freeze-duration-current');
+    if (durCurEl) durCurEl.innerHTML = `${curDur.toFixed(1)} <span class="unit">san</span>`;
+
+    const durNextBox = document.getElementById('glacial-modal-freeze-duration-next-box');
+    if (durNextBox) {
+        if (isDurMax) {
+            durNextBox.className = 'next-box maxed';
+            durNextBox.innerHTML = '<div class="maxed-label">✓ MAKSİMUM</div>';
+        } else {
+            durNextBox.className = 'next-box';
+            durNextBox.innerHTML = `
+                <div class="next-value">${nextDur.toFixed(1)} <span class="unit">san</span></div>
+                <button type="button" class="buy-btn teal" ${canAffordDur ? '' : 'disabled'} onclick="buyGlacialFreezeDuration()">
+                    <span class="gem">💎</span>${durPrice.toLocaleString()}
+                </button>
+            `;
+        }
+    }
+}
+
+function openGlacialUpgradeModal() {
+    const modal = ensureGlacialUpgradeModal();
+    modal.classList.remove('hidden');
+    updateGlacialUpgradeModalUI();
+}
+
+function closeGlacialUpgradeModal() {
+    const modal = document.getElementById('glacial-upgrade-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+window.openGlacialUpgradeModal = openGlacialUpgradeModal;
+window.closeGlacialUpgradeModal = closeGlacialUpgradeModal;
+window.updateGlacialUpgradeModalUI = updateGlacialUpgradeModalUI;

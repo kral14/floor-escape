@@ -464,10 +464,11 @@
       // Shoots one ice projectile downwards from an active pylon chamber
       launchIceBullet() {
         if (this.engine.currentPhase < 4) return;
+        const maxCapacity = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : 6;
 
-        // Find available loaded slot
+        // Find available loaded slot within capacity
         const loadedIndices = [];
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < maxCapacity; i++) {
           if (this.slots[i]) loadedIndices.push(i);
         }
 
@@ -475,7 +476,7 @@
           const btn = document.getElementById('fireSpikeBtn');
           if (btn) {
             btn.classList.add('opacity-50');
-            btn.textContent = '❄ Buz Bitdi! Sağa-sola sürün ↻';
+            btn.textContent = '❄ Buz Bitdi! Avtomatik bərpa olunur ↻';
           }
           return;
         }
@@ -517,10 +518,11 @@
         this.updateHUD();
       }
 
-      // Recharges an empty slot through high centrifugal spin
+      // Recharges an empty slot over time
       forgeNewIceCrystal() {
+        const maxCapacity = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : 6;
         const emptyIndices = [];
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < maxCapacity; i++) {
           if (!this.slots[i]) emptyIndices.push(i);
         }
         if (!emptyIndices.length) return;
@@ -617,18 +619,16 @@
           if (jet.alpha <= 0) this.cryoVaporJets.splice(v, 1);
         }
 
-        // KINETIC RECHARGE MECHANISM (Only in preview/cards, disabled during gameplay):
-        if (this.engine.currentPhase >= 4 && !this.engine.isGame) {
+        // ❄️ AVTOMATİK KRİSTAL BƏRPA SİSTEMİ (Həm oyunda, həm də önbaxışda vaxt keçdikcə bərpa olunur):
+        if (this.engine.currentPhase >= 4) {
+          const reloadLimit = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : 6;
           const currentAmmo = this.getAmmoCount();
-          const reloadLimit = 6;
           if (currentAmmo < reloadLimit) {
-            if (this.engine.speedFactor > 0.25) {
-              const chargeRate = (this.engine.speedFactor * 1.65);
-              this.chargeProgress += chargeRate * dt;
-              if (this.chargeProgress >= 1.0) {
-                this.chargeProgress = 0;
-                this.forgeNewIceCrystal();
-              }
+            const rechargeTime = (typeof getGlacialRechargeTime === 'function') ? getGlacialRechargeTime() : 5.0;
+            this.chargeProgress += dt / Math.max(0.5, rechargeTime);
+            if (this.chargeProgress >= 1.0) {
+              this.chargeProgress = 0;
+              this.forgeNewIceCrystal();
             }
           } else {
             this.chargeProgress = 0;
@@ -1242,8 +1242,10 @@
             e.h = (typeof getFloorWorldHeight === 'function' ? getFloorWorldHeight(gameState.floor) : 2200) / .54;
             e.x = p.x / .54 - e.w / 2; e.y = p.y / .54 - e.h / 2;
             e.timeline = 6.8; e.currentPhase = 4;
-            e.javelinSystem.slots = p.glacialSlots.slice();
-            e.javelinSystem.chargeProgress = p.glacialCharge || 0;
+            if (p && Array.isArray(p.glacialSlots)) {
+                e.javelinSystem.slots = p.glacialSlots.slice();
+            }
+            e.javelinSystem.chargeProgress = (p && p.glacialCharge) || 0;
             return e;
         },
         updateGame(dt, p) {
@@ -1257,7 +1259,31 @@
                 for (let i=e.javelinSystem.javelins.length-1;i>=0;i--) {
                     const j=e.javelinSystem.javelins[i], x=j.x*.54, y=j.y*.54;
                     const lavaY=typeof boss.surface==='function'?boss.surface(x,boss.y):boss.y;
-                    if(y>=lavaY-12){e.javelinSystem.triggerFloorImpact(j.x,lavaY/.54);e.javelinSystem.javelins.splice(i,1);if(typeof boss.takeDamage==='function')boss.takeDamage(300,'ice',x,lavaY);}
+                    if (y >= lavaY - 12) {
+                        e.javelinSystem.triggerFloorImpact(j.x, lavaY / .54);
+                        e.javelinSystem.javelins.splice(i, 1);
+                        if (typeof boss.takeDamage === 'function') {
+                            const dmg = (typeof getGlacialDamage === 'function') ? getGlacialDamage() : 300;
+                            boss.takeDamage(dmg, 'ice', x, lavaY);
+
+                            // 🧊 Lava Dondurma / Yavaşlatma Effekti
+                            const freezeCfg = (typeof getGlacialFreezeConfig === 'function') ? getGlacialFreezeConfig() : { slow: 5, duration: 1.0 };
+                            const freezeFrames = Math.max(15, Math.round(freezeCfg.duration * 60));
+                            boss.iceTimer = Math.max(boss.iceTimer || 0, freezeFrames);
+                            boss.iceSlowFactor = Math.min(1.0, freezeCfg.slow / 100);
+
+                            if (freezeCfg.slow >= 100) {
+                                if (typeof addFloatingText === 'function') {
+                                    addFloatingText(x, lavaY - 28, `🧊 100% DONMA! (${freezeCfg.duration.toFixed(1)}s)`, '#38bdf8', 17);
+                                }
+                            } else {
+                                if (typeof addFloatingText === 'function') {
+                                    addFloatingText(x, lavaY - 28, `❄ -${freezeCfg.slow}% Ləngimə (${freezeCfg.duration.toFixed(1)}s)`, '#7dd3fc', 13);
+                                }
+                            }
+                            if (typeof audio !== 'undefined' && audio.playIce) audio.playIce();
+                        }
+                    }
                 }
             }
         },
@@ -1270,9 +1296,10 @@
         },
         collectAmmo(p) {
             const e=this.syncGame(p);
+            const cap = (typeof getGlacialCapacity === 'function') ? getGlacialCapacity() : 6;
             const before=e.javelinSystem.getAmmoCount();
-            if (before < 6) {
-                const emptyIdx = e.javelinSystem.slots.indexOf(false);
+            if (before < cap) {
+                const emptyIdx = e.javelinSystem.slots.slice(0, cap).indexOf(false);
                 if (emptyIdx !== -1) {
                     e.javelinSystem.slots[emptyIdx] = true;
                     p.glacialSlots = e.javelinSystem.slots.slice();

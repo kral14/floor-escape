@@ -143,33 +143,37 @@ const DraculaSpawnEffect = {
     },
 
     updateDust(dt, t) {
-        for (const p of this.dust) {
+        for (let i = this.dust.length - 1; i >= 0; i--) {
+            const p = this.dust[i];
             p.life -= dt;
+            if (p.life <= 0) {
+                this.dust.splice(i, 1);
+                continue;
+            }
             p.x += p.vx * dt;
             p.y += p.vy * dt;
             p.vy += 10 * dt;
             p.angle += p.spin * dt;
         }
-        this.dust = this.dust.filter(p => p.life > 0);
         if (t < 5.25) return;
 
         const speed = Math.min(1, Math.hypot(this.vx, this.vy) / 155);
         const beat = 0.5 + 0.5 * Math.cos(this.flapPhase);
-        this.dustBudget += dt * (20 + speed * 30 + beat * 22);
+        this.dustBudget += dt * (12 + speed * 16 + beat * 12);
 
-        while (this.dustBudget >= 1) {
+        while (this.dustBudget >= 1 && this.dust.length < 45) {
             this.dustBudget--;
             for (const side of [-1, 1]) {
                 const pos = this.wingDustPoint(side, t);
-                const life = 0.8 + Math.random() * 0.7;
+                const life = 0.6 + Math.random() * 0.5;
                 this.dust.push({
                     x: pos.x,
                     y: pos.y,
-                    vx: side * (3 + Math.random() * 7),
-                    vy: 14 + Math.random() * 17,
+                    vx: side * (3 + Math.random() * 5),
+                    vy: 10 + Math.random() * 12,
                     life,
                     maxLife: life,
-                    size: 0.7 + Math.random() * 1.6,
+                    size: 0.8 + Math.random() * 1.4,
                     angle: Math.random() * 6.28,
                     spin: (Math.random() - 0.5) * 2,
                     star: Math.random() < 0.2,
@@ -177,36 +181,41 @@ const DraculaSpawnEffect = {
                 });
             }
         }
-        if (this.dust.length > 200) this.dust.splice(0, this.dust.length - 200);
+        if (this.dust.length > 45) this.dust.splice(0, this.dust.length - 45);
     },
 
     drawDust(c, t) {
+        if (!this.dust || this.dust.length === 0) return;
         c.save();
         c.globalCompositeOperation = 'lighter';
-        for (const p of this.dust) {
+        for (let i = 0; i < this.dust.length; i++) {
+            const p = this.dust[i];
             const age = 1 - p.life / p.maxLife;
-            const alpha = Math.min(1, age * 12) * Math.pow(1 - age, 1.4);
-            c.save();
-            c.translate(p.x, p.y);
-            c.rotate(p.angle);
+            const alpha = Math.min(1, age * 10) * Math.pow(1 - age, 1.3);
+            if (alpha <= 0.01) continue;
+
+            const r = p.size * (0.65 + 0.35 * Math.sin(age * 8 + p.angle));
             c.globalAlpha = alpha;
             c.fillStyle = p.color;
-            c.shadowColor = p.color;
-            c.shadowBlur = p.star ? 8 : 3;
-            const r = p.size * (0.65 + 0.35 * Math.sin(age * 8 + p.angle));
+
             c.beginPath();
             if (p.star) {
-                for (let i = 0; i < 8; i++) {
-                    const a = i * Math.PI / 4;
-                    const rr = i % 2 ? r * 0.32 : r * 1.8;
-                    i ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(rr, 0);
-                }
+                // Yüngül 4-bucaqlı parlaq ulduz (save/restore olmadan birbaşa mərkəzdən)
+                const s1 = r * 2.0;
+                const s2 = r * 0.5;
+                c.moveTo(p.x, p.y - s1);
+                c.lineTo(p.x + s2, p.y - s2);
+                c.lineTo(p.x + s1, p.y);
+                c.lineTo(p.x + s2, p.y + s2);
+                c.lineTo(p.x, p.y + s1);
+                c.lineTo(p.x - s2, p.y + s2);
+                c.lineTo(p.x - s1, p.y);
+                c.lineTo(p.x - s2, p.y - s2);
                 c.closePath();
             } else {
-                c.arc(0, 0, r, 0, Math.PI * 2);
+                c.arc(p.x, p.y, r, 0, Math.PI * 2);
             }
             c.fill();
-            c.restore();
         }
         c.restore();
     },
@@ -286,10 +295,10 @@ const DraculaSpawnEffect = {
             c.translate(0, centerY);
             c.globalAlpha = opacity;
             c.shadowColor = '#9774be';
-            c.shadowBlur = 22 * spread + 5;
+            c.shadowBlur = Math.min(10, 14 * spread + 2);
             c.beginPath();
-            for (let j = 0; j <= 150; j++) {
-                const A = j * Math.PI / 75;
+            for (let j = 0; j <= 40; j++) {
+                const A = j * Math.PI / 20;
                 const r = radius * (1 + 0.08 * Math.sin(A * 3 + t * 2.6) * spread + 0.045 * Math.cos(A * 7 - t * 1.8) * spread);
                 const x = Math.cos(A) * r, y = Math.sin(A) * r * 1.13;
                 j ? c.lineTo(x, y) : c.moveTo(x, y);
@@ -309,49 +318,79 @@ const DraculaSpawnEffect = {
 
         // Whispering filaments curl toward the shadow before it awakens.
         const whisper = S(0.9, 1.7, t) * (1 - S(3.4, 4.3, t));
-        for (let i = 0; i < 32; i++) {
-            const A = i * 2.399 + t * 0.24, cycle = (t * 0.36 + i * 0.071) % 1, r = 48 + (1 - cycle) * 128;
-            const P = [];
-            for (let j = 0; j < 8; j++) {
-                const a = A - j * 0.035;
-                P.push(project(Math.cos(a) * (r + j * 2), Math.sin(a) * (r + j * 2) * 0.8, Math.sin(i) * 40));
+        if (whisper > 0.01) {
+            for (let i = 0; i < 16; i++) {
+                const A = i * 2.399 + t * 0.24, cycle = (t * 0.36 + i * 0.071) % 1, r = 48 + (1 - cycle) * 128;
+                const P = [];
+                for (let j = 0; j < 6; j++) {
+                    const a = A - j * 0.035;
+                    P.push(project(Math.cos(a) * (r + j * 2), Math.sin(a) * (r + j * 2) * 0.8, Math.sin(i) * 40));
+                }
+                line(P, i % 5 ? '#9781b5' : '#e6ae83', 0.8, whisper * Math.sin(cycle * Math.PI) * 0.3);
             }
-            line(P, i % 5 ? '#9781b5' : '#e6ae83', 0.7, whisper * Math.sin(cycle * Math.PI) * 0.25);
         }
 
         // An impact ripple remains irregular and breaks apart instead of forming a ring.
         const landing = S(1.1, 1.3, t) * (1 - S(1.4, 2, t));
-        for (let i = 0; i < 7; i++) {
-            const P = [];
-            for (let j = 0; j < 12; j++) {
-                const A = i * 0.91 + j * 0.025, r = 25 + (t - 1.1) * 100;
-                P.push({ x: Math.cos(A) * r, y: Math.sin(A) * r * 0.35 + 18 });
+        if (landing > 0.01) {
+            for (let i = 0; i < 6; i++) {
+                const P = [];
+                for (let j = 0; j < 8; j++) {
+                    const A = i * 0.91 + j * 0.035, r = 25 + (t - 1.1) * 100;
+                    P.push({ x: Math.cos(A) * r, y: Math.sin(A) * r * 0.35 + 18 });
+                }
+                line(P, '#a18db6', 1.2, landing * 0.45);
             }
-            line(P, '#a18db6', 1, landing * 0.4);
         }
 
         // Each ribbon has depth. Near ribbons pass in front, far ribbons behind.
         const ribbons = [];
-        for (let i = 0; i < 12; i++) {
-            const P = [], angle = i * Math.PI / 6 + t * 0.19;
-            for (let j = 0; j <= 35; j++) {
-                const u = j / 35, r = (22 + u * (80 + emerge * 115)) * spread;
-                const A = angle + u * 1.7 + Math.sin(t * 1.6 + i) * u * 0.25;
-                P.push(project(Math.cos(A) * r, Math.sin(A) * r * 0.73 + Math.sin(u * 5 + t * 2 + i) * 10 * spread, Math.sin(angle + u * 3) * 65));
+        if (spread * opacity > 0.01) {
+            for (let i = 0; i < 10; i++) {
+                const P = [], angle = i * Math.PI / 5 + t * 0.19;
+                for (let j = 0; j <= 18; j++) {
+                    const u = j / 18, r = (22 + u * (80 + emerge * 115)) * spread;
+                    const A = angle + u * 1.7 + Math.sin(t * 1.6 + i) * u * 0.25;
+                    P.push(project(Math.cos(A) * r, Math.sin(A) * r * 0.73 + Math.sin(u * 5 + t * 2 + i) * 10 * spread, Math.sin(angle + u * 3) * 65));
+                }
+                ribbons.push({ P, i, z: P[9].z });
             }
-            ribbons.push({ P, i, z: P[16].z });
+            ribbons.sort((a, b) => a.z - b.z);
         }
-        ribbons.sort((a, b) => a.z - b.z);
 
         function drawRibbons(front) {
+            const ribbonAlpha = spread * opacity;
+            if (ribbonAlpha <= 0.01) return;
             for (const { P, i, z } of ribbons) {
-                if ((z >= 0) !== front) continue;
-                for (let j = 1; j < P.length; j++) {
-                    const u = j / P.length, alpha = spread * opacity * Math.sin(u * Math.PI);
-                    line([P[j - 1], P[j]], '#78617f', Math.max(0.5, (15 * (1 - u) + 2) * P[j].k), alpha * 0.35);
-                    line([P[j - 1], P[j]], '#100e1c', Math.max(0.3, (12 * (1 - u) + 1) * P[j].k), alpha * 0.98);
-                    if (i % 3 === 0) line([P[j - 1], P[j]], '#b388a5', 0.65, alpha * 0.6);
+                if ((z >= 0) !== front || P.length < 2) continue;
+                c.save();
+                c.lineCap = 'round';
+                c.lineJoin = 'round';
+
+                // Bütöv ribbon xətləri (batch stroke)
+                c.globalAlpha = Math.min(1, ribbonAlpha * 0.45);
+                c.strokeStyle = '#78617f';
+                c.lineWidth = Math.max(1, 7 * P[0].k);
+                c.beginPath();
+                P.forEach((p, idx) => idx ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+                c.stroke();
+
+                c.globalAlpha = Math.min(1, ribbonAlpha * 0.95);
+                c.strokeStyle = '#100e1c';
+                c.lineWidth = Math.max(0.6, 4.5 * P[0].k);
+                c.beginPath();
+                P.forEach((p, idx) => idx ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+                c.stroke();
+
+                if (i % 3 === 0) {
+                    c.globalAlpha = Math.min(1, ribbonAlpha * 0.6);
+                    c.strokeStyle = '#b388a5';
+                    c.lineWidth = 1;
+                    c.beginPath();
+                    P.forEach((p, idx) => idx ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+                    c.stroke();
                 }
+                c.restore();
             }
         }
         drawRibbons(false);
@@ -565,8 +604,6 @@ function drawDraculaBatWings(c, r, facing = 0, time = 0, player = null) {
         c.strokeStyle = '#ba7886';
         c.lineWidth = 1.6;
         c.lineJoin = 'round';
-        c.shadowColor = '#9c5265';
-        c.shadowBlur = 7;
 
         c.beginPath();
         c.moveTo(0, 0);
@@ -578,7 +615,6 @@ function drawDraculaBatWings(c, r, facing = 0, time = 0, player = null) {
         c.closePath();
         c.fill();
         c.stroke();
-        c.shadowBlur = 0;
 
         // Qanad qabırğaları
         c.strokeStyle = '#925564';
@@ -644,30 +680,33 @@ function drawIngameWingDust(c, dustList) {
     if (!dustList || dustList.length === 0) return;
     c.save();
     c.globalCompositeOperation = 'lighter';
-    for (const p of dustList) {
+    for (let i = 0; i < dustList.length; i++) {
+        const p = dustList[i];
         const age = 1 - p.life / p.maxLife;
-        const alpha = Math.min(1, age * 12) * Math.pow(1 - age, 1.4);
-        c.save();
-        c.translate(p.x, p.y);
-        c.rotate(p.angle);
+        const alpha = Math.min(1, age * 10) * Math.pow(1 - age, 1.3);
+        if (alpha <= 0.01) continue;
+
+        const r = p.size * (0.65 + 0.35 * Math.sin(age * 8 + p.angle));
         c.globalAlpha = alpha;
         c.fillStyle = p.color;
-        c.shadowColor = p.color;
-        c.shadowBlur = p.star ? 8 : 3;
-        const r = p.size * (0.65 + 0.35 * Math.sin(age * 8 + p.angle));
+
         c.beginPath();
         if (p.star) {
-            for (let i = 0; i < 8; i++) {
-                const a = i * Math.PI / 4;
-                const rr = i % 2 ? r * 0.32 : r * 1.8;
-                i ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(rr, 0);
-            }
+            const s1 = r * 2.0;
+            const s2 = r * 0.5;
+            c.moveTo(p.x, p.y - s1);
+            c.lineTo(p.x + s2, p.y - s2);
+            c.lineTo(p.x + s1, p.y);
+            c.lineTo(p.x + s2, p.y + s2);
+            c.lineTo(p.x, p.y + s1);
+            c.lineTo(p.x - s2, p.y + s2);
+            c.lineTo(p.x - s1, p.y);
+            c.lineTo(p.x - s2, p.y - s2);
             c.closePath();
         } else {
-            c.arc(0, 0, r, 0, Math.PI * 2);
+            c.arc(p.x, p.y, r, 0, Math.PI * 2);
         }
         c.fill();
-        c.restore();
     }
     c.restore();
 }

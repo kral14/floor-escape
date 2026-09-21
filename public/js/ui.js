@@ -67,6 +67,29 @@ function updateUI(force = false) {
         }
     }
 
+    // ❤️ MONSUN CANI (HP) HUD YENİLƏNMƏSİ
+    const curHp = (typeof player !== 'undefined' && player && player.hp !== undefined) ? player.hp : 3;
+    const maxHp = (typeof player !== 'undefined' && player && player.maxHp !== undefined) ? player.maxHp : 3;
+    if (_lastUICache.hp !== curHp || _lastUICache.maxHp !== maxHp) {
+        _lastUICache.hp = curHp;
+        _lastUICache.maxHp = maxHp;
+        const hpContainer = document.getElementById('stat-hp-hearts');
+        const hpText = document.getElementById('stat-hp-text');
+        if (hpText) hpText.innerText = `${curHp}/${maxHp}`;
+        if (hpContainer) {
+            let hHtml = '';
+            for (let i = 0; i < maxHp; i++) {
+                if (i < curHp) {
+                    hHtml += '<i class="fa-solid fa-heart text-rose-500 text-xs sm:text-sm animate-pulse"></i>';
+                } else {
+                    hHtml += '<i class="fa-solid fa-heart text-slate-700/80 text-xs sm:text-sm"></i>';
+                }
+            }
+            hpContainer.innerHTML = hHtml;
+        }
+    }
+
+
     const comboKey = `${gameState.combo}_${gameState.borderOpen}`;
     if (_lastUICache.combo !== comboKey) {
         _lastUICache.combo = comboKey;
@@ -171,6 +194,11 @@ function adjustViewportFit() {
 }
 
 window.updateUI = updateUI;
+window.updateHpUI = function() {
+    _lastUICache.hp = -1;
+    updateUI(true);
+};
 window.adjustViewportFit = adjustViewportFit;
 window.addEventListener('resize', adjustViewportFit);
 window.addEventListener('load', adjustViewportFit);
+

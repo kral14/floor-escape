@@ -209,6 +209,28 @@ function initFloorPlatforms(floor = 1) {
             });
         }
 
+        // 🌋 ZƏNGİN VƏ CANLI KASKAD LAVA ŞƏLALƏLƏRİ:
+        // Hər qatda və bütün yollarda platformalardan aşağı süzülən möhtəşəm təbii axınlar təmin edilir
+        if (initialLavaSources.length < 8 && currentRocks.length > 0) {
+            const sortedRocks = [...currentRocks].sort((a, b) => a.y - b.y);
+            const step = Math.max(1, Math.floor(sortedRocks.length / 7));
+            for (let i = 0; i < sortedRocks.length && initialLavaSources.length < 10; i += step) {
+                const rock = sortedRocks[i];
+                const hasNear = initialLavaSources.some(s => Math.abs(s.y - rock.y) < 180 && Math.abs(s.x - rock.x) < 120);
+                if (!hasNear) {
+                    const isRightEdge = (i % 2 === 0);
+                    const sourceX = isRightEdge ? (rock.x + rock.w - 28) : (rock.x + 8);
+                    initialLavaSources.push({
+                        x: Math.round(sourceX),
+                        y: Math.round(rock.y - 14),
+                        w: 24,
+                        direction: isRightEdge ? 'right' : 'left',
+                        seed: i * 37 + floor * 19
+                    });
+                }
+            }
+        }
+
         console.log(`🗺️ [CANLI YOL ${targetTrackId}/30 - 2X UZUNLUQ: ${currentWorldHeight}px] "${selectedTrack.name}" aktivdir! Platforma: ${currentRocks.length}, Lava: ${initialLavaSources.length}`);
     } else {
         // Fallback əgər fayl yüklənməyibsə (2 qat)
@@ -339,49 +361,14 @@ function handleLavaBurn(player) {
         screenPulse.alpha = 0.85;
     }
 
-    if (player.hasShield) {
-        const stillActive = (typeof player.damageShield === 'function')
-            ? player.damageShield(3, 'lava')
-            : (player.breakShield(), false);
-
-        if (stillActive) {
-            if (typeof addFloatingText === 'function') {
-                addFloatingText(player.x, player.y - 25, `🛡️ -3 DEFANS [${player.shieldDefense}/10]`, '#00f0ff', 18);
-            }
-            if (typeof showToast === 'function') {
-                showToast(`🛡️ QALXAN LAVANI BLOKLADI! Qalan Defans: ${player.shieldDefense}/10`, 'warning');
-            }
-        } else {
-            if (typeof addFloatingText === 'function') {
-                addFloatingText(player.x, player.y - 25, '💥 QALXAN PARÇALANDI!', '#ef4444', 20);
-            }
-            if (typeof showToast === 'function') {
-                showToast('🔥 AXAN LAVA QALXANINIZI PARÇALADI VƏ SİZİ XİLAS ETDİ!', 'warning');
-            }
-        }
-        return;
-    }
-
-    if (player.hasLifeFlower && typeof player.consumeLifeFlower === 'function') {
-        player.consumeLifeFlower();
-        if (typeof showToast === 'function') {
-            showToast('🌸 AXAN LAVAYA DƏYDİNİZ! Yaşam Çiçəyi yanaraq canınızı qorudu!', 'warning');
-        }
-        return;
-    }
-
-    if (typeof showToast === 'function') {
-        showToast('🔥 DİQQƏT! AXAN LAVAYA DƏYDİNİZ VƏ YANDINIZ!', 'danger');
-    }
-
-    if (typeof addFloatingText === 'function') {
-        addFloatingText(player.x, player.y - 25, '🔥 YANDIN!', '#ef4444', 20);
-    }
-
-    if (typeof triggerGameOver === 'function') {
+    // 🛡️ Qalxan (1 dəfə zərərdən qoruma), Yaşam Çiçəyi və ya Monsun Canı (HP)
+    if (typeof player !== 'undefined' && player && typeof player.takeDamage === 'function') {
+        player.takeDamage(1, 'lava');
+    } else if (typeof triggerGameOver === 'function') {
         triggerGameOver();
     }
 }
+
 window.handleLavaBurn = handleLavaBurn;
 
 // 5. AĞILLI ŞÜA İZLƏMƏ: Lavanın qaya platformalarına dəyib yön dəyişməsi və canavara tökülməsi
@@ -513,7 +500,11 @@ function drawPlatforms(ctx) {
     const c = ctx || (typeof window !== 'undefined' ? window.ctx : null);
     if (!c) return;
 
-    const t = lavaFlowOffset;
+    // 🌊 CANLI LAVA AXINI: Oyun açıldıqda, introda və oyun boyu fasiləsiz axır (heç vaxt donmur)
+    const t = (typeof performance !== 'undefined' && typeof performance.now === 'function') 
+        ? (performance.now() / 1000) 
+        : lavaFlowOffset;
+    lavaFlowOffset = t;
     activeLavaHazardBoxes = [];
 
     // Canavarın səthi (Lavanın töküldüyü son nöqtə)
@@ -523,8 +514,15 @@ function drawPlatforms(ctx) {
 
     const useEngine = (typeof LavaEngine !== 'undefined' && LavaEngine);
 
-    // Kaskad şüalarını hesablayırıq
-    const cascadePaths = traceLavaCascadePaths(initialLavaSources, currentRocks, monsterBottomY);
+    // Kaskad şüalarını hesablayırıq (Dinamik Keşlənmə: Hər kadr təkrar hesablanmır, CPU gücünə 95% qənaət edir)
+    if (!window._cachedCascadePaths || 
+        Math.abs((window._lastMonsterBottomY || 0) - monsterBottomY) > 3 || 
+        window._cachedSourcesLen !== initialLavaSources.length) {
+        window._cachedCascadePaths = traceLavaCascadePaths(initialLavaSources, currentRocks, monsterBottomY);
+        window._lastMonsterBottomY = monsterBottomY;
+        window._cachedSourcesLen = initialLavaSources.length;
+    }
+    const cascadePaths = window._cachedCascadePaths;
 
     const camY = (typeof window !== 'undefined' && typeof window.cameraY === 'number') ? window.cameraY : 0;
     const viewH = 750;
