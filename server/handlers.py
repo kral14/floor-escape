@@ -1,3 +1,4 @@
+import time
 import os
 import json
 import random
@@ -243,6 +244,22 @@ def handle_post(req, parsed, data):
                     req.send_json({'success': False, 'message': 'PIN şifrə yanlışdır!'}, 401)
                     return True
 
+                # 🔄 CANLI SESSİYA ÖTÜRÜLMƏSİ (Seamless Session Handover):
+                # Əgər bu oyunçu artıq 1-ci yerdə oyundadırsa:
+                # 1-ci yeri dərhal cari irəliləyişini bazaya yazmağa məcbur edib çıxarırıq!
+                try:
+                    from server.ws import is_player_online, kick_and_sync_player
+                    if is_player_online(row['player_id']):
+                        kick_and_sync_player(row['player_id'], reason="Başqa bir cihazdan daxil olundu.")
+                        time.sleep(0.3)
+                        # 1-ci cihazın ən son tərəqqisini bazadan yenidən oxuyuruq
+                        cursor.execute('SELECT * FROM players WHERE player_id = ?', (row['player_id'],))
+                        fresh = cursor.fetchone()
+                        if fresh:
+                            row = fresh
+                except Exception as e:
+                    print(f"Handover login xətası: {e}")
+
                 cursor.execute('UPDATE players SET last_login = CURRENT_TIMESTAMP WHERE player_id = ?', (row['player_id'],))
                 conn.commit()
 
@@ -315,8 +332,13 @@ def handle_post(req, parsed, data):
                     'bestFloor': final_floor
                 })
                 return True
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            return True
         except Exception as e:
-            req.send_json({'success': False, 'message': f'Sinxronizasiya xətası: {str(e)}'}, 200)
+            try:
+                req.send_json({'success': False, 'message': f'Sinxronizasiya xətası: {str(e)}'}, 200)
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                pass
             return True
 
     # 4. API: Çata Mesaj Göndərmək
@@ -376,6 +398,94 @@ def handle_post(req, parsed, data):
         return True
 
     # 6. API: Admin Hədiyyə Kodu Yaratmaq və Məktub Göndərmək
+    
+    # 7. API: Admin Oyunçu Tərəqqisini və Mağaza Dərilərini Sıfırlamaq
+    if parsed.path == '/api/admin/reset_player':
+        player_id = (data.get('playerId') or '').strip()
+        reset_type = (data.get('resetType') or 'all').strip().lower()
+
+        if not player_id:
+            req.send_json({'success': False, 'message': 'Oyunçu ID tələb olunur!'}, 400)
+            return True
+
+        default_upgrades = {
+            'speedLvl': 1, 'magnetLvl': 1, 'coinValLvl': 1, 'coinRateLvl': 1,
+            'shieldLvl': 0, 'powerUpLvl': 0, 'dashCDLvl': 1, 'startGoldLvl': 1,
+            'equippedSkin': 'default', 'ownedSkins': ['default'],
+            'equippedSpawnAnim': None, 'ownedSpawnAnims': [],
+            'glacialReloadLvl': 0, 'seedLifeLvl': 1,
+            'hasTwinTurrets': False, 'turretLeftType': 'wall', 'turretRightType': 'wall',
+            'turretInterval': 7.0, 'turretIntervalLvl': 0, 'hasAwakeningKey': False, 'turretAwakened': False,
+            'turretEnabled': True,
+            'bulletWallEconLvl': 0, 'bulletIceEconLvl': 0, 'bulletShockEconLvl': 0, 'bulletMineEconLvl': 0, 'bulletPlasmaEconLvl': 0,
+            'cyberStars': 5, 'maxCyberStars': 5
+        }
+
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM players WHERE player_id = ?', (player_id,))
+                p_row = cursor.fetchone()
+                if not p_row:
+                    req.send_json({'success': False, 'message': 'Oyunçu tapılmadı!'}, 404)
+                    return True
+
+                current_upgs = safe_parse_json(p_row['perm_upgrades'], {})
+
+                if reset_type == 'all':
+                    # Bütün tərəqqi + Bütün mağaza dəriləri, animasiyaları, valyutalar və sandıqlar tam sıfırlanır
+                    cursor.execute("""
+                        UPDATE players 
+                        SET gold = 75, diamonds = 0, red_diamonds = 0, 
+                            best_floor = 1, total_score = 0, 
+                            perm_upgrades = ?, claimed_chests = '[]'
+                        WHERE player_id = ?
+                    """, (json.dumps(default_upgrades), player_id))
+                elif reset_type == 'resources':
+                    cursor.execute("UPDATE players SET gold = 75, diamonds = 0, red_diamonds = 0 WHERE player_id = ?", (player_id,))
+                elif reset_type == 'floor':
+                    cursor.execute("UPDATE players SET best_floor = 1, total_score = 0 WHERE player_id = ?", (player_id,))
+                elif reset_type == 'chests':
+                    cursor.execute("UPDATE players SET claimed_chests = '[]' WHERE player_id = ?", (player_id,))
+                elif reset_type == 'skins':
+                    # YALNIZ MAĞAZA DƏRİLƏRİ VƏ ANİMASİYALARI SIFIRLANIR
+                    current_upgs['ownedSkins'] = ['default']
+                    current_upgs['equippedSkin'] = 'default'
+                    current_upgs['ownedSpawnAnims'] = []
+                    current_upgs['equippedSpawnAnim'] = None
+                    current_upgs['seedLifeLvl'] = 1
+                    current_upgs['glacialReloadLvl'] = 0
+                    current_upgs['cyberStars'] = 5
+                    cursor.execute("UPDATE players SET perm_upgrades = ? WHERE player_id = ?", (json.dumps(current_upgs), player_id))
+                elif reset_type == 'upgrades':
+                    # Laboratoriya yüksəltmələri sıfırlanır (dərilər toxunulmaz saxlanılır)
+                    keep_skins = current_upgs.get('ownedSkins') or ['default']
+                    keep_eq_skin = current_upgs.get('equippedSkin') or 'default'
+                    keep_anims = current_upgs.get('ownedSpawnAnims') or []
+                    keep_eq_anim = current_upgs.get('equippedSpawnAnim')
+                    new_upgs = dict(default_upgrades)
+                    new_upgs['ownedSkins'] = keep_skins
+                    new_upgs['equippedSkin'] = keep_eq_skin
+                    new_upgs['ownedSpawnAnims'] = keep_anims
+                    new_upgs['equippedSpawnAnim'] = keep_eq_anim
+                    cursor.execute("UPDATE players SET perm_upgrades = ? WHERE player_id = ?", (json.dumps(new_upgs), player_id))
+
+                conn.commit()
+
+                # Oyunçu aktivdirsə canlı sessiyasını xəbərdar edirik və ya çıxarırıq ki, brauzer bazanı köhnə datayla əzməsin
+                try:
+                    from server.ws import is_player_online, kick_player_without_sync
+                    if is_player_online(player_id):
+                        kick_player_without_sync(player_id, reason="Admin tərəfindən hesab göstəriciləriniz və mağaza dəriləriniz sıfırlandı.")
+                except Exception:
+                    pass
+
+                req.send_json({'success': True, 'message': 'Oyunçunun seçilmiş göstəriciləri uğurla sıfırlandı!'})
+                return True
+        except Exception as e:
+            req.send_json({'success': False, 'message': f'Sıfırlama xətası: {str(e)}'}, 500)
+            return True
+
     if parsed.path == '/api/admin/send_gift':
         target_type = (data.get('targetType') or 'ALL').strip().upper()
         player_id = (data.get('playerId') or 'ALL').strip()
@@ -393,10 +503,7 @@ def handle_post(req, parsed, data):
             req.send_json({'success': False, 'message': 'Fərdi oyunçu üçün Player ID seçilməlidir!'}, 400)
             return True
 
-        custom_token = (data.get('token') or '').strip()
-        if custom_token:
-            token = custom_token
-        elif create_signed_gift_code:
+        if create_signed_gift_code:
             token, _ = create_signed_gift_code(blue, red)
         else:
             token = generate_random_code()
@@ -412,32 +519,6 @@ def handle_post(req, parsed, data):
                         req.send_json({'success': False, 'message': f'ID {player_id} olan oyunçu tapılmadı!'}, 404)
                         return True
                     target_name = p_row['username']
-
-                # Dublikatın qarşısını almaq: əgər eyni kodla məktub artıq varsa, təkrar bazaya INSERT etmə!
-                cursor.execute('SELECT id FROM inbox_messages WHERE gift_code = ?', (token,))
-                existing_msg = cursor.fetchone()
-                if existing_msg:
-                    new_msg_id = existing_msg['id']
-                    broadcast_inbox_message(target_type, player_id, {
-                        'id': new_msg_id,
-                        'title': title,
-                        'note': note,
-                        'gift_code': token,
-                        'blue_diamonds': blue,
-                        'red_diamonds': red,
-                        'expires_at': expires_at,
-                        'created_at': datetime.now(timezone.utc).isoformat(),
-                        'is_claimed': 0
-                    })
-                    req.send_json({
-                        'success': True,
-                        'message': f'Hədiyyə artıq mövcuddur və {"hamıya" if target_type == "ALL" else target_name + "-a"} canlı çatdırıldı!',
-                        'code': token,
-                        'target': target_name,
-                        'blueDiamonds': blue,
-                        'redDiamonds': red
-                    })
-                    return True
 
                 cursor.execute('''
                     INSERT INTO gift_codes_advanced (code, target_type, target_player_id, blue_diamonds, red_diamonds, expires_at)

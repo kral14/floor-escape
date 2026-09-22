@@ -51,7 +51,7 @@ const LightningSpawnEffect = {
             c.strokeStyle = '#ffffff';
             c.lineWidth = 3.2;
             c.shadowColor = '#facc15';
-            c.shadowBlur = 20;
+            c.shadowBlur = 0;
 
             for (let b = 0; b < 2; b++) {
                 const seed = Math.sin(t * 22 + b * 5.1);

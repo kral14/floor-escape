@@ -61,10 +61,13 @@ class GameHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def send_json(self, data, status=200):
-        self.send_response(status)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode('utf-8'))
+        try:
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode('utf-8'))
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            pass
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -114,10 +117,15 @@ class GameHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             self.send_response(404)
             self.end_headers()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            pass
         except Exception as e:
             import traceback
             traceback.print_exc()
-            self.send_json({'success': False, 'error': str(e)}, 500)
+            try:
+                self.send_json({'success': False, 'error': str(e)}, 500)
+            except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+                pass
 
     def log_message(self, format, *args):
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format % args))

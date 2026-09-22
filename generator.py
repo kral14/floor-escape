@@ -78,6 +78,18 @@ def set_current_server_url(url):
     global CURRENT_SERVER_URL
     CURRENT_SERVER_URL = (url or DEFAULT_SERVER_URL).strip().rstrip('/')
 
+def safe_parse_json(val, default=None):
+    if default is None:
+        default = {}
+    if val is None:
+        return default
+    if isinstance(val, (dict, list)):
+        return val
+    try:
+        return json.loads(val)
+    except Exception:
+        return default
+
 def get_current_server_url():
     return CURRENT_SERVER_URL
 
@@ -95,6 +107,122 @@ def check_postgres_connection():
     except Exception as e:
         return False, f"Xəta: {str(e)}"
 
+def get_player_full_data(player_id, server_url=None):
+    """Oyunçunun bütün bazadakı göstəricilərini oxuyur"""
+    if USE_POSTGRES:
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM players WHERE player_id = ?', (player_id,))
+                row = cursor.fetchone()
+                if row:
+                    p = dict(row)
+                    if isinstance(p.get('perm_upgrades'), str):
+                        try: p['perm_upgrades'] = json.loads(p['perm_upgrades'])
+                        except Exception: p['perm_upgrades'] = {}
+                    if isinstance(p.get('claimed_chests'), str):
+                        try: p['claimed_chests'] = json.loads(p['claimed_chests'])
+                        except Exception: p['claimed_chests'] = []
+                    return p
+        except Exception as e:
+            print(f"PostgreSQL-dən oyunçu detalları xətası: {e}")
+
+    url = (server_url or get_current_server_url()).strip().rstrip('/')
+    if url:
+        try:
+            req = urllib.request.Request(f"{url}/api/admin/player_details?playerId={player_id}", headers={'User-Agent': 'FloorEscapeAdmin/1.0'})
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if data.get('success'):
+                    return data.get('player')
+        except Exception as e:
+            print(f"API detallar xətası: {e}")
+    return None
+
+def reset_player_progress(player_id, reset_type='all', server_url=None):
+    """Oyunçunun tərəqqisini və mağaza dərilərini sıfırlayır (həm birbaşa baza, həm server API vasitəsilə)"""
+    url = (server_url or get_current_server_url()).strip().rstrip('/')
+    api_success = False
+
+    # 1. Server API vasitəsilə sıfırlama (Canlı oyundadırsa WebSocket bildirişi də göndərilir)
+    if url:
+        try:
+            payload = json.dumps({'playerId': player_id, 'resetType': reset_type}).encode('utf-8')
+            req = urllib.request.Request(f"{url}/api/admin/reset_player", data=payload, headers={'Content-Type': 'application/json', 'User-Agent': 'FloorEscapeAdmin/1.0'})
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if data.get('success'):
+                    api_success = True
+        except Exception:
+            pass
+
+    # 2. Baza vasitəsilə dəqiqləşdirmə (Fallback və ya birbaşa)
+    if USE_POSTGRES:
+        default_upgs = {
+            'speedLvl': 1, 'magnetLvl': 1, 'coinValLvl': 1, 'coinRateLvl': 1,
+            'shieldLvl': 0, 'powerUpLvl': 0, 'dashCDLvl': 1, 'startGoldLvl': 1,
+            'equippedSkin': 'default', 'ownedSkins': ['default'],
+            'equippedSpawnAnim': None, 'ownedSpawnAnims': [],
+            'glacialReloadLvl': 0, 'seedLifeLvl': 1,
+            'hasTwinTurrets': False, 'turretLeftType': 'wall', 'turretRightType': 'wall',
+            'turretInterval': 7.0, 'turretIntervalLvl': 0, 'hasAwakeningKey': False, 'turretAwakened': False,
+            'turretEnabled': True,
+            'bulletWallEconLvl': 0, 'bulletIceEconLvl': 0, 'bulletShockEconLvl': 0, 'bulletMineEconLvl': 0, 'bulletPlasmaEconLvl': 0,
+            'cyberStars': 5, 'maxCyberStars': 5
+        }
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                if reset_type == 'all':
+                    # Bütün resurslar + Bütün laboratoriya + Bütün mağaza dəriləri və animasiyaları tam sıfırlanır
+                    cursor.execute("""
+                        UPDATE players 
+                        SET gold = 75, diamonds = 0, red_diamonds = 0, 
+                            best_floor = 1, total_score = 0, 
+                            perm_upgrades = ?, claimed_chests = '[]'
+                        WHERE player_id = ?
+                    """, (json.dumps(default_upgs), player_id))
+                elif reset_type == 'resources':
+                    cursor.execute("UPDATE players SET gold = 75, diamonds = 0, red_diamonds = 0 WHERE player_id = ?", (player_id,))
+                elif reset_type == 'skins':
+                    # YALNIZ MAĞAZA DƏRİLƏRİ VƏ ANİMASİYALARI SIFIRLANIR
+                    cursor.execute("SELECT perm_upgrades FROM players WHERE player_id = ?", (player_id,))
+                    row = cursor.fetchone()
+                    cur_u = safe_parse_json(row['perm_upgrades'] if row else '{}', {})
+                    cur_u['ownedSkins'] = ['default']
+                    cur_u['equippedSkin'] = 'default'
+                    cur_u['ownedSpawnAnims'] = []
+                    cur_u['equippedSpawnAnim'] = None
+                    cur_u['seedLifeLvl'] = 1
+                    cur_u['glacialReloadLvl'] = 0
+                    cur_u['cyberStars'] = 5
+                    cursor.execute("UPDATE players SET perm_upgrades = ? WHERE player_id = ?", (json.dumps(cur_u), player_id))
+                elif reset_type == 'upgrades':
+                    cursor.execute("SELECT perm_upgrades FROM players WHERE player_id = ?", (player_id,))
+                    row = cursor.fetchone()
+                    cur_u = safe_parse_json(row['perm_upgrades'] if row else '{}', {})
+                    keep_skins = cur_u.get('ownedSkins') or ['default']
+                    keep_eq_skin = cur_u.get('equippedSkin') or 'default'
+                    keep_anims = cur_u.get('ownedSpawnAnims') or []
+                    keep_eq_anim = cur_u.get('equippedSpawnAnim')
+                    new_u = dict(default_upgs)
+                    new_u['ownedSkins'] = keep_skins
+                    new_u['equippedSkin'] = keep_eq_skin
+                    new_u['ownedSpawnAnims'] = keep_anims
+                    new_u['equippedSpawnAnim'] = keep_eq_anim
+                    cursor.execute("UPDATE players SET perm_upgrades = ? WHERE player_id = ?", (json.dumps(new_u), player_id))
+                elif reset_type == 'floor':
+                    cursor.execute("UPDATE players SET best_floor = 1, total_score = 0 WHERE player_id = ?", (player_id,))
+                elif reset_type == 'chests':
+                    cursor.execute("UPDATE players SET claimed_chests = '[]' WHERE player_id = ?", (player_id,))
+                conn.commit()
+                return True, "Uğurla sıfırlandı!"
+        except Exception as e:
+            return False, f"Baza xətası: {str(e)}"
+
+    if api_success:
+        return True, "Server vasitəsilə sıfırlandı!"
+    return False, "Sıfırlama uğursuz oldu."
 def get_all_players_from_db(server_url=None):
     # 1. İlk öncə birbaşa PostgreSQL bazasından oxumaq (Ən sürətli və dəqiq)
     if USE_POSTGRES:
@@ -302,6 +430,8 @@ def launch_gui():
 
     btn_refresh = tk.Button(search_bar, text="🔄 Siyahını Yenilə", bg="#0369a1", fg="#ffffff", font=("Segoe UI", 9, "bold"), cursor="hand2", padx=8, pady=2, relief=tk.FLAT)
     btn_refresh.pack(side=tk.RIGHT)
+    btn_inspect = tk.Button(search_bar, text="🎮 Tərəqqi & Sıfırla", bg="#0284c7", fg="#ffffff", font=("Segoe UI", 9, "bold"), cursor="hand2", padx=10, pady=2, relief=tk.FLAT, command=lambda: open_player_progress_window())
+    btn_inspect.pack(side=tk.RIGHT, padx=(0, 8))
 
     # Cədvəl
     tree_frame = tk.Frame(player_box, bg="#0f172a")
@@ -387,6 +517,165 @@ def launch_gui():
                     str(p.get('last_login', ''))[:19]
                 ))
 
+    # =========================================================================
+    # 🎮 OYUNÇU İRƏLİLƏYİŞ VƏ SIFIRLAMA MODAL PƏNCƏRƏSİ
+    # =========================================================================
+    def open_player_progress_window(pid=None):
+        target_pid = (pid or selected_id_var.get()).strip()
+        if not target_pid:
+            messagebox.showwarning("Xəbərdarlıq", "Zəhmət olmasa siyahıdan bir oyunçu seçin!")
+            return
+
+        p_data = get_player_full_data(target_pid)
+        if not p_data:
+            messagebox.showerror("Xəta", f"'{target_pid}' ID-li oyunçunun məlumatlarını oxumaq mümkün olmadı!")
+            return
+
+        win = tk.Toplevel(root)
+        win.title(f"🎮 Oyunçu İrəliləyişi və Sıfırlama: {p_data.get('username')} ({target_pid})")
+        win.geometry("680x640")
+        win.minsize(580, 500)
+        win.configure(bg="#0b1120")
+        win.grab_set()
+
+        # Konteyner
+        p_frame = tk.Frame(win, bg="#0b1120", padx=16, pady=14)
+        p_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Başlıq
+        top_hdr = tk.Frame(p_frame, bg="#0b1120")
+        top_hdr.pack(fill=tk.X, pady=(0, 10))
+
+        u_name = p_data.get('username', 'Naməlum')
+        tk.Label(top_hdr, text=f"👤 {u_name} (ID: {target_pid})", bg="#0b1120", fg="#38bdf8", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        tk.Label(top_hdr, text=f"Son Giriş: {p_data.get('last_login', 'Yoxdur')} • Qeydiyyat: {p_data.get('created_at', 'Yoxdur')}", bg="#0b1120", fg="#94a3b8", font=("Segoe UI", 8)).pack(anchor="w")
+
+        # Məlumatları yeniləmək üçün daxili köməkçi
+        def refresh_win_data():
+            updated = get_player_full_data(target_pid)
+            if updated:
+                lbl_res_gold.config(text=f"🪙 Qızıl: {updated.get('gold', 0)}")
+                lbl_res_blue.config(text=f"💎 Mavi: {updated.get('diamonds', 0)}")
+                lbl_res_red.config(text=f"🔴 Qırmızı: {updated.get('red_diamonds', 0)}")
+                lbl_floor_val.config(text=f"🏆 Qat: {updated.get('best_floor', 1)} | Xal: {updated.get('total_score', 0)}")
+                
+                # Upgrades
+                upgs = updated.get('perm_upgrades') or {}
+                upg_txt = f"Sürət: Lv.{upgs.get('speedLvl', 0)} | Maqnit: Lv.{upgs.get('magnetLvl', 0)} | Qızıl: Lv.{upgs.get('startGoldLvl', 0)} | Qalxan: Lv.{upgs.get('shieldLvl', 0)} | Can: Lv.{upgs.get('maxHpLvl', 0)}"
+                lbl_upg_txt.config(text=upg_txt)
+                
+                skins = upgs.get('ownedSkins') or upgs.get('unlockedSkins') or ['default']
+                anims = upgs.get('ownedSpawnAnims') or upgs.get('unlockedSpawnAnims') or []
+                lbl_skins_txt.config(text=f"Dərilər ({len(skins)}): {', '.join(skins)} | Animasiyalar: {', '.join(anims) if anims else 'Standart'}")
+
+                chests = updated.get('claimed_chests') or []
+                lbl_chests_txt.config(text=f"Açılmış Sandıqlar: {len(chests)} ədəd ({', '.join(map(str, chests[:6]))})")
+            
+            # Ana cədvəli də yeniləyirik
+            populate_players()
+
+        # Tək-tək sıfırlama icraçısı
+        def do_reset_section(rtype, label_name):
+            if messagebox.askyesno("Təsdiq", f"'{u_name}' üçün [{label_name}] sıfırlansın?"):
+                ok, msg = reset_player_progress(target_pid, rtype)
+                if ok:
+                    messagebox.showinfo("Uğurlu", f"{label_name} sıfırlandı!")
+                    refresh_win_data()
+                else:
+                    messagebox.showerror("Xəta", msg)
+
+        # 1. Resurslar Kartı
+        card_res = tk.LabelFrame(p_frame, text=" 💰 Valyutalar və Resurslar ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"), padx=10, pady=8)
+        card_res.pack(fill=tk.X, pady=(0, 8))
+
+        rf = tk.Frame(card_res, bg="#0f172a")
+        rf.pack(fill=tk.X)
+        lbl_res_gold = tk.Label(rf, text=f"🪙 Qızıl: {p_data.get('gold', 0)}", bg="#0f172a", fg="#facc15", font=("Segoe UI", 10, "bold"))
+        lbl_res_gold.pack(side=tk.LEFT, padx=(0, 14))
+        lbl_res_blue = tk.Label(rf, text=f"💎 Mavi: {p_data.get('diamonds', 0)}", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 10, "bold"))
+        lbl_res_blue.pack(side=tk.LEFT, padx=(0, 14))
+        lbl_res_red = tk.Label(rf, text=f"🔴 Qırmızı: {p_data.get('red_diamonds', 0)}", bg="#0f172a", fg="#f43f5e", font=("Segoe UI", 10, "bold"))
+        lbl_res_red.pack(side=tk.LEFT, padx=(0, 14))
+
+        tk.Button(rf, text="🔄 Resursları 0 Et", bg="#7f1d1d", fg="#fca5a5", font=("Segoe UI", 8, "bold"), cursor="hand2", command=lambda: do_reset_section('resources', 'Valyutalar')).pack(side=tk.RIGHT)
+
+        # 2. Qat və Rekord Kartı
+        card_floor = tk.LabelFrame(p_frame, text=" 🏆 Qat Rekordu və Xal ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"), padx=10, pady=8)
+        card_floor.pack(fill=tk.X, pady=(0, 8))
+
+        ff = tk.Frame(card_floor, bg="#0f172a")
+        ff.pack(fill=tk.X)
+        lbl_floor_val = tk.Label(ff, text=f"🏆 Qat: {p_data.get('best_floor', 1)} | Xal: {p_data.get('total_score', 0)}", bg="#0f172a", fg="#e2e8f0", font=("Segoe UI", 10, "bold"))
+        lbl_floor_val.pack(side=tk.LEFT)
+
+        tk.Button(ff, text="🔄 Qatı 1 Et", bg="#7f1d1d", fg="#fca5a5", font=("Segoe UI", 8, "bold"), cursor="hand2", command=lambda: do_reset_section('floor', 'Qat və Xal')).pack(side=tk.RIGHT)
+
+        # 3. Laboratoriya Kartı
+        card_upg = tk.LabelFrame(p_frame, text=" 🧪 Laboratoriya Yüksəltmələri (Perm Upgrades) ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"), padx=10, pady=8)
+        card_upg.pack(fill=tk.X, pady=(0, 8))
+
+        uf = tk.Frame(card_upg, bg="#0f172a")
+        uf.pack(fill=tk.X)
+        upgs = p_data.get('perm_upgrades') or {}
+        upg_txt = f"Sürət: Lv.{upgs.get('speedLvl', 0)} | Maqnit: Lv.{upgs.get('magnetLvl', 0)} | Qızıl: Lv.{upgs.get('startGoldLvl', 0)} | Qalxan: Lv.{upgs.get('shieldLvl', 0)} | Can: Lv.{upgs.get('maxHpLvl', 0)}"
+        lbl_upg_txt = tk.Label(uf, text=upg_txt, bg="#0f172a", fg="#93c5fd", font=("Segoe UI", 9))
+        lbl_upg_txt.pack(side=tk.LEFT)
+
+        tk.Button(uf, text="🔄 Laboratoriyanı 0 Et", bg="#7f1d1d", fg="#fca5a5", font=("Segoe UI", 8, "bold"), cursor="hand2", command=lambda: do_reset_section('upgrades', 'Laboratoriya Yüksəltmələri')).pack(side=tk.RIGHT)
+
+        # 4. Dərilər və Animasiyalar (Mağaza Alışları)
+        card_skins = tk.LabelFrame(p_frame, text=" 🎨 Mağaza: Dərilər və Doğuluş Animasiyaları ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"), padx=10, pady=8)
+        card_skins.pack(fill=tk.X, pady=(0, 8))
+
+        sf = tk.Frame(card_skins, bg="#0f172a")
+        sf.pack(fill=tk.X)
+        skins = upgs.get('ownedSkins') or upgs.get('unlockedSkins') or ['default']
+        anims = upgs.get('ownedSpawnAnims') or upgs.get('unlockedSpawnAnims') or []
+        lbl_skins_txt = tk.Label(sf, text=f"Dərilər ({len(skins)}): {', '.join(skins)} | Animasiyalar: {', '.join(anims) if anims else 'Standart'}", bg="#0f172a", fg="#c084fc", font=("Segoe UI", 9), wraplength=420, justify="left")
+        lbl_skins_txt.pack(side=tk.LEFT)
+
+        tk.Button(sf, text="🔄 Dəriləri Sıfırla", bg="#7f1d1d", fg="#fca5a5", font=("Segoe UI", 8, "bold"), cursor="hand2", command=lambda: do_reset_section('skins', 'Mağaza Dəriləri və Animasiyaları')).pack(side=tk.RIGHT)
+
+        # 5. Sandıqlar Kartı
+        card_chests = tk.LabelFrame(p_frame, text=" 🎁 Açılmış Qat Sandıqları ", bg="#0f172a", fg="#38bdf8", font=("Segoe UI", 9, "bold"), padx=10, pady=8)
+        card_chests.pack(fill=tk.X, pady=(0, 8))
+
+        cf = tk.Frame(card_chests, bg="#0f172a")
+        cf.pack(fill=tk.X)
+        chests = p_data.get('claimed_chests') or []
+        lbl_chests_txt = tk.Label(cf, text=f"Açılmış Sandıqlar: {len(chests)} ədəd ({', '.join(map(str, chests[:6]))})", bg="#0f172a", fg="#cbd5e1", font=("Segoe UI", 9))
+        lbl_chests_txt.pack(side=tk.LEFT)
+
+        tk.Button(cf, text="🔄 Sandıqları Sıfırla", bg="#7f1d1d", fg="#fca5a5", font=("Segoe UI", 8, "bold"), cursor="hand2", command=lambda: do_reset_section('chests', 'Açılmış Sandıqlar')).pack(side=tk.RIGHT)
+
+        # 🔥 6. BÖYÜK QIRMIZI DÜYMƏ: BÜTÜN İRƏLİLƏYİŞİ TAM SIFIRLA
+        bot_bar = tk.Frame(p_frame, bg="#0b1120", pady=10)
+        bot_bar.pack(fill=tk.X, side=tk.BOTTOM)
+
+        def do_hard_reset_all():
+            confirm = messagebox.askyesno("🔥 DİQQƏT: TAM SIFIRLAMA", f"'{u_name}' (ID: {target_pid}) oyunçusunun BÜTÜN İRƏLİLƏYİŞİ, resursları, laboratoriyası və dəriləri tamamilə 0 ediləcək!\n\nBu əməliyyat geri qaytarıla bilməz. Əminsiniz?")
+            if confirm:
+                ok, msg = reset_player_progress(target_pid, 'all')
+                if ok:
+                    messagebox.showinfo("Uğurlu", f"'{u_name}' üçün bütün irəliləyişlər tam sıfırlandı!")
+                    refresh_win_data()
+                else:
+                    messagebox.showerror("Xəta", msg)
+
+        btn_hard_reset = tk.Button(
+            bot_bar,
+            text="🔥 BÜTÜN İRƏLİLƏYİŞİ VƏ YÜKSƏLTMƏLƏRİ TAM SIFIRLA (HARD RESET)",
+            bg="#dc2626",
+            fg="#ffffff",
+            font=("Segoe UI", 10, "bold"),
+            cursor="hand2",
+            padx=16,
+            pady=8,
+            relief=tk.FLAT,
+            command=do_hard_reset_all
+        )
+        btn_hard_reset.pack(fill=tk.X)
+
     def on_tree_select(event):
         sel = tree.selection()
         if sel:
@@ -397,6 +686,15 @@ def launch_gui():
                 target_mode_var.set("SINGLE")
 
     tree.bind("<<TreeviewSelect>>", on_tree_select)
+    def on_tree_double_click(event):
+        sel = tree.selection()
+        if sel:
+            item = tree.item(sel[0])
+            vals = item.get('values', [])
+            if vals:
+                open_player_progress_window(str(vals[0]))
+
+    tree.bind("<Double-1>", on_tree_double_click)
     search_var.trace_add("write", filter_players)
     btn_refresh.config(command=populate_players)
     btn_ping.config(command=populate_players)

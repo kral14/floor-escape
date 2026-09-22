@@ -28,7 +28,7 @@
         c.save();
         c.strokeStyle = '#fef08a';
         c.lineWidth = 1.5;
-        c.shadowBlur = 12;
+        c.shadowBlur = 0;
         c.shadowColor = '#facc15';
         for (let j = 0; j < 3; j++) {
             const seedAngle = time * 8 + j * 2.1;
@@ -46,7 +46,7 @@
         c.restore();
 
         // 2. 4 Ədəd İti Elektrik Qanadı / Generator Spikeləri
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         c.shadowColor = glow;
         for (let i = 0; i < 4; i++) {
             c.save();
@@ -84,7 +84,7 @@
         c.stroke();
 
         // 4. Parlaq Ağ-Sarı Şimşək Nüvəsi (⚡)
-        c.shadowBlur = 15;
+        c.shadowBlur = 0;
         c.shadowColor = '#ffffff';
         c.fillStyle = '#ffffff';
         c.beginPath();

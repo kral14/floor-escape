@@ -37,6 +37,7 @@ class Player {
         this.singularityRot = { rx: 0, ry: 0, rz: 0 };
         this.vx = 0;
         this.vy = 0;
+        this.singleBlinkTimer = 46;
         this.applySkin();
     }
 
@@ -78,6 +79,7 @@ class Player {
         this.facing = -Math.PI / 2;
         this.visualAngle = 0; // İlk doğanda şaquli düz durur
         this.canPassBorder = false;
+        this.singleBlinkTimer = 46;
         this.hasHyperJump = false;
         this.flapPhase = 0;
         this.draculaDust = [];
@@ -129,20 +131,40 @@ class Player {
             return;
         }
 
+        // 💫 Yanıb-sönmə taymeri (hərəkət dondurulmur, oyunçu sərbəst hərəkət edə bilər)
+        if (this.singleBlinkTimer > 0) {
+            this.singleBlinkTimer--;
+        }
+
+        // 🔥 ÇOXİSTİQAMƏTLİ LAVA VƏ CANAVAR TƏHLÜKƏ SENSORU
+        const dirDangers = (typeof getLavaDirectionalDangers === 'function') 
+            ? getLavaDirectionalDangers(this) 
+            : { right: 0, left: 0, bottom: 0, top: 0 };
+
+        this.dangerRight = (this.dangerRight || 0) * 0.65 + (dirDangers.right || 0) * 0.35;
+        this.dangerLeft = (this.dangerLeft || 0) * 0.65 + (dirDangers.left || 0) * 0.35;
+        this.dangerBottom = (this.dangerBottom || 0) * 0.65 + (dirDangers.bottom || 0) * 0.35;
+        this.dangerTop = (this.dangerTop || 0) * 0.65 + (dirDangers.top || 0) * 0.35;
+
+        if (this.dangerRight < 0.005) this.dangerRight = 0;
+        if (this.dangerLeft < 0.005) this.dangerLeft = 0;
+        if (this.dangerBottom < 0.005) this.dangerBottom = 0;
+        if (this.dangerTop < 0.005) this.dangerTop = 0;
+
+        this.lavaDanger = Math.max(this.dangerRight, this.dangerLeft, this.dangerBottom, this.dangerTop);
+
         // Sürət = Qalıcı Baza Sürət + Oyundaxili Əlavə
-        let currentSpeed = getBaseSpeed() + gameState.inGameSpeedLvl * 0.5;
+        let baseSpeed = getBaseSpeed() + gameState.inGameSpeedLvl * 0.5;
 
         // ⚡ Kvant Qığılcımı (Spark) Dərisi Bonusu: +10% Hərəkət Sürəti
         if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin === 'spark') {
-            currentSpeed *= 1.10;
+            baseSpeed *= 1.10;
         }
 
         // Ay Qravitasiyası anomaliyası zamanı süzülən sürət
         if (typeof gameState !== 'undefined' && gameState.activeModifier === 'gravity') {
-            currentSpeed *= 1.25;
+            baseSpeed *= 1.25;
         }
-
-        let dx = 0, dy = 0;
 
         const isWallA = (typeof keybinds !== 'undefined' && (keybinds.wall === 'a' || keybinds.wall === 'keya'));
 
@@ -151,6 +173,54 @@ class Player {
         const isLeft = !!((keys['a'] || keys['keya'] || keys['arrowleft'] || keys['left'] || keys['touch_left'] || keys['ф']) && !isWallA);
         const isRight = !!(keys['d'] || keys['keyd'] || keys['arrowright'] || keys['right'] || keys['touch_right'] || keys['в']);
 
+        // 🎯 TƏK KLİK ADDIMI VƏ ORTAQ SÜRƏT BALANSI (Fair Tap Step System)
+        if (!this.keyHoldFrames) {
+            this.keyHoldFrames = { up: 0, down: 0, left: 0, right: 0 };
+        }
+        this.keyHoldFrames.up = isUp ? (this.keyHoldFrames.up + 1) : 0;
+        this.keyHoldFrames.down = isDown ? (this.keyHoldFrames.down + 1) : 0;
+        this.keyHoldFrames.left = isLeft ? (this.keyHoldFrames.left + 1) : 0;
+        this.keyHoldFrames.right = isRight ? (this.keyHoldFrames.right + 1) : 0;
+
+        const maxHold = Math.max(
+            this.keyHoldFrames.up,
+            this.keyHoldFrames.down,
+            this.keyHoldFrames.left,
+            this.keyHoldFrames.right
+        );
+
+        // Ayarlardan seçilmiş tək klik məsafəsi (Defolt: 10px)
+        const rawTapDistance = (typeof window.tapStepDistance === 'number' && window.tapStepDistance > 0)
+            ? window.tapStepDistance
+            : (parseInt(localStorage.getItem('floor_escape_tap_step'), 10) || 10);
+
+        // ⚖️ ORTAQ BALANS: Ayardakı tək klik addımı heç vaxt cari baza sürətin təbii həddindən çox ola bilməz!
+        // Yəni sürət azdırsa, ayardan artırmaqla oyunda sürətlənmək MÜMKÜN DEYİL!
+        // Maksimum tək klik həddi = cari baza sürətin 1.6 qatı ilə məhdudlaşdırılır.
+        const maxPermittedTap = Math.max(5, baseSpeed * 1.6);
+        const effectiveTapDistance = Math.min(rawTapDistance, maxPermittedTap);
+
+        let speedMultiplier = 1.0;
+        if (maxHold > 0 && maxHold <= 7) {
+            // Tək klik mərhələsi (~110ms): yalnız təhlükəsiz mikro-addım atır (lavaya düşməmək üçün)
+            const tapFrameSpeed = effectiveTapDistance / 7;
+            speedMultiplier = Math.min(0.85, tapFrameSpeed / Math.max(1, baseSpeed));
+        } else if (maxHold > 7 && maxHold <= 22) {
+            // Basıb saxladıqda rəvan sürətlənmə
+            const holdProgress = (maxHold - 7) / 15;
+            const tapFrameSpeed = effectiveTapDistance / 7;
+            const startMult = Math.min(0.85, tapFrameSpeed / Math.max(1, baseSpeed));
+            speedMultiplier = startMult + (1.0 - startMult) * holdProgress;
+        } else {
+            // Basılı saxlayanda tam təbii sürət
+            speedMultiplier = 1.0;
+        }
+
+        // QƏTİYYƏN 1.0-DAN YUXARI ÇIXA BİLMƏZ (Oyundaxili təbii sürət həddi qorunur)
+        speedMultiplier = Math.min(1.0, Math.max(0.15, speedMultiplier));
+        const currentSpeed = baseSpeed * speedMultiplier;
+
+        let dx = 0, dy = 0;
         if (isUp) dy = -currentSpeed;
         if (isDown) dy = currentSpeed;
         if (isLeft) dx = -currentSpeed;
@@ -347,7 +417,11 @@ class Player {
         if (typeof gameState !== 'undefined') {
             gameState.dashInvulnerable = invulnDuration;
         }
-        this.y = Math.max(70, this.y - 160); // Təhlükəsiz zonaya fırladır
+        // [YERİNDƏ QALMA]: Dəqiq 1 dəfə yanıb-sönür və bu zaman hərəkət dondurulur
+        this.singleBlinkTimer = 46;
+        this.vx = 0;
+        this.vy = 0;
+        // [YERİNDƏ QALMA]: Koordinat dəyişmir, oyunçu yerində qalır
         
         if (typeof audio !== 'undefined' && audio.playShieldBreak) {
             audio.playShieldBreak();
@@ -443,7 +517,12 @@ class Player {
             if (typeof gameState !== 'undefined') {
                 gameState.dashInvulnerable = invuln;
             }
-            this.y = Math.max(70, this.y - 170);
+            // [YERİNDƏ QALMA]: Başqa yerə tullanmır, yerində qalır!
+            // Hərəkət dondurulur
+            this.singleBlinkTimer = 46; // Dəqiq 1 dəfə yanıb-sönmə
+            this.vx = 0;
+            this.vy = 0;
+            // [YERİNDƏ QALMA]: Koordinat dəyişmir, oyunçu yerində qalır
 
             if (typeof addFloatingText === 'function') {
                 addFloatingText(this.x, this.y - 25, `💔 -1 CAN! [${this.hp}/${this.maxHp || 3}]`, '#ef4444', 22);
@@ -490,7 +569,11 @@ class Player {
         if (typeof gameState !== 'undefined') {
             gameState.dashInvulnerable = invulnDuration;
         }
-        this.y = Math.max(70, this.y - 170); // Təhlükəsiz zonaya fırladır
+        // [YERİNDƏ QALMA]: Dəqiq 1 dəfə yanıb-sönür və bu zaman hərəkət dondurulur
+        this.singleBlinkTimer = 46;
+        this.vx = 0;
+        this.vy = 0;
+        // [YERİNDƏ QALMA]: Koordinat dəyişmir, oyunçu yerində qalır
 
         if (typeof audio !== 'undefined' && audio.playShieldBreak) {
             audio.playShieldBreak();
@@ -535,7 +618,10 @@ class Player {
     // 🚀 KVANT SIÇRAYIŞI (REAKTİV İMPULS)
     hyperJump() {
         this.hasHyperJump = false;
-        this.y = Math.max(65, this.y - 190);
+        // [YERİNDƏ QALMA]: Kvant Sıçrayışı da oyunçunu başqa yerə tullamır, yerində qoruyur!
+        this.singleBlinkTimer = 46;
+        this.vx = 0;
+        this.vy = 0;
         if (typeof gameState !== 'undefined') {
             gameState.dashInvulnerable = 60;
         }
@@ -589,6 +675,17 @@ class Player {
     }
 
     draw() {
+        // 💫 Can itirəndə dəqiq 2 DƏFƏ zərif sönüb-yanma (Double Blink)
+        const prevAlpha = ctx.globalAlpha;
+        if (this.singleBlinkTimer > 0) {
+            const progress = this.singleBlinkTimer / 46; // 1.0 -> 0.0
+            // Dəqiq 2 tam dövr: 0 -> 1 -> 0 -> 1 -> 0
+            const fade = Math.abs(Math.sin((1 - progress) * 2 * Math.PI));
+            ctx.globalAlpha = Math.max(0.15, 1.0 - (fade * 0.85));
+        } else if (typeof gameState !== 'undefined' && gameState.isDashing) {
+            ctx.globalAlpha = 0.65;
+        }
+
         this.trail.forEach((t, i) => {
             ctx.beginPath();
             ctx.arc(t.x, t.y, this.radius * (i / this.trail.length) * 0.65, 0, Math.PI * 2);
@@ -598,12 +695,21 @@ class Player {
 
         // Xarici Geniş Radial Neon Aura
         ctx.save();
-        ctx.shadowBlur = gameState.dashInvulnerable > 0 ? 30 : 20;
+        ctx.shadowBlur = 0;
         ctx.shadowColor = gameState.dashInvulnerable > 0 ? '#ffffff' : (this.glowColor || '#00ffcc');
         
+        const danger = this.lavaDanger || 0;
         const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 2.0);
-        grad.addColorStop(0, gameState.dashInvulnerable > 0 ? 'rgba(255, 255, 255, 0.4)' : `${this.trailColor || 'rgba(0, 255, 204,'} 0.25)`);
-        grad.addColorStop(1, `${this.trailColor || 'rgba(0, 255, 204,'} 0)`);
+        if (gameState.dashInvulnerable > 0) {
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        } else if (danger > 0.05) {
+            grad.addColorStop(0, `rgba(239, 68, 68, ${0.25 + danger * 0.55})`);
+            grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        } else {
+            grad.addColorStop(0, `${this.trailColor || 'rgba(0, 255, 204,'} 0.25)`);
+            grad.addColorStop(1, `${this.trailColor || 'rgba(0, 255, 204,'} 0)`);
+        }
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius * 2.0, 0, Math.PI * 2);
         ctx.fillStyle = grad;
@@ -627,7 +733,7 @@ class Player {
                 ctx.globalAlpha = Math.pow(p.life / p.max, 1.3);
                 ctx.fillStyle = p.petal ? '#c4ecab' : '#b6ffce';
                 ctx.shadowColor = '#93e9a5';
-                ctx.shadowBlur = p.petal ? 0 : 6;
+                ctx.shadowBlur = 0;
                 if (p.petal) {
                     ctx.beginPath();
                     ctx.ellipse(0, 0, 3.8, 1.8, 0, 0, Math.PI * 2);
@@ -676,6 +782,76 @@ class Player {
             ctx.fill();
         }
 
+        // 🔥 ÇOXİSTİQAMƏTLİ TƏHLÜKƏ SƏRHƏDİ (HANSI TƏRƏF TƏHLÜKƏDƏDİRSƏ, MƏHZ HƏMİN TƏRƏF QIZARIR!)
+        const dangerDirections = [
+            { key: 'right', angle: 0, danger: this.dangerRight || 0 },
+            { key: 'bottom', angle: Math.PI / 2, danger: this.dangerBottom || 0 },
+            { key: 'left', angle: Math.PI, danger: this.dangerLeft || 0 },
+            { key: 'top', angle: -Math.PI / 2, danger: this.dangerTop || 0 }
+        ];
+
+        for (let dIdx = 0; dIdx < dangerDirections.length; dIdx++) {
+            const dir = dangerDirections[dIdx];
+            if (dir.danger > 0.05) {
+                ctx.save();
+                const ang = dir.angle;
+                const dVal = dir.danger;
+                const cosA = Math.cos(ang);
+                const sinA = Math.sin(ang);
+
+                // 1. Gövdənin məhz həmin tərəfinin qırmızılaşması (Yönlü Qradiyent)
+                const gradX1 = this.x - cosA * this.radius;
+                const gradY1 = this.y - sinA * this.radius;
+                const gradX2 = this.x + cosA * this.radius;
+                const gradY2 = this.y + sinA * this.radius;
+
+                const dirGrad = ctx.createLinearGradient(gradX1, gradY1, gradX2, gradY2);
+                dirGrad.addColorStop(0, 'rgba(239, 68, 68, 0)');
+                dirGrad.addColorStop(0.45, 'rgba(239, 68, 68, 0)');
+                dirGrad.addColorStop(0.75, `rgba(239, 68, 68, ${dVal * 0.45})`);
+                dirGrad.addColorStop(1.0, `rgba(239, 68, 68, ${dVal * 0.90})`);
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius + 1.2, 0, Math.PI * 2);
+                ctx.fillStyle = dirGrad;
+                ctx.fill();
+
+                // 2. YÖNLÜ SƏRHƏD QÖVSÜ: Məhz həmin təhlükə tərəfində daralan qırmızı kiber qövs (~105 dərəcə)
+                const arcSpread = Math.PI * 0.29;
+                const warnPulse = 1 + Math.sin(animTime * 22) * 0.07 * dVal;
+                const ringRadius = (this.radius + 3 + (1 - dVal) * 14) * warnPulse;
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, ringRadius, ang - arcSpread, ang + arcSpread);
+                ctx.strokeStyle = dVal > 0.8 ? '#ef4444' : `rgba(239, 68, 68, ${0.4 + dVal * 0.6})`;
+                ctx.lineWidth = dVal > 0.8 ? 3.0 : 2.0;
+                ctx.setLineDash(dVal > 0.7 ? [6, 3] : [4, 4]);
+                ctx.stroke();
+
+                // 3. KRİTİK LİMİT NİŞANI: Məhz həmin tərəfdə qırmızı limit nöqtələri
+                if (dVal > 0.72) {
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#ef4444';
+                    const tipX = this.x + cosA * (ringRadius + 3);
+                    const tipY = this.y + sinA * (ringRadius + 3);
+                    ctx.beginPath();
+                    ctx.arc(tipX, tipY, 3.0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const leftX = this.x + Math.cos(ang - arcSpread) * ringRadius;
+                    const leftY = this.y + Math.sin(ang - arcSpread) * ringRadius;
+                    const rightX = this.x + Math.cos(ang + arcSpread) * ringRadius;
+                    const rightY = this.y + Math.sin(ang + arcSpread) * ringRadius;
+                    ctx.beginPath();
+                    ctx.arc(leftX, leftY, 2.0, 0, Math.PI * 2);
+                    ctx.arc(rightX, rightY, 2.0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
         // 🌸 Yaşam Çiçəkləri (Ön Plan)
         if (typeof drawIngameLifeFlowers === 'function') {
             drawIngameLifeFlowers(ctx, this, animTime, true);
@@ -697,7 +873,7 @@ class Player {
             const wingPulse = Math.sin(qTime) * 3;
             const glowPulse = 16 + Math.sin(qTime * 1.5) * 6;
 
-            ctx.shadowBlur = glowPulse;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#f59e0b';
 
             // 1. İki Böyük Reaktiv Kvant Qanadı (Sol və Sağda yuxarı açılan kiber qanadlar)
@@ -771,7 +947,7 @@ class Player {
             const shieldRad = (this.radius * 1.55 + 5) * shieldPulse;
 
             // 1. Xarici Zərif Neon Qübbə Xətti
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#00f0ff';
             ctx.strokeStyle = 'rgba(0, 240, 255, 0.95)';
             ctx.lineWidth = 2.2;
@@ -794,7 +970,7 @@ class Player {
             for (let s = 0; s < 3; s++) {
                 ctx.rotate((Math.PI * 2) / 3);
                 ctx.fillStyle = '#ffffff';
-                ctx.shadowBlur = 12;
+                ctx.shadowBlur = 0;
                 ctx.shadowColor = '#00f0ff';
                 ctx.beginPath();
                 ctx.arc(shieldRad + 3.5, 0, 3, 0, Math.PI * 2);
@@ -813,6 +989,7 @@ class Player {
 
         // 🏷️ Animasiya Üzərindəki Status Badge-i (Ulduz, Kvant Buz Zirehi və s.)
         this.drawAnimBadge(ctx);
+        ctx.globalAlpha = prevAlpha;
     }
 
     // ❤️ Can artıq yuxarı HUD panelində (stat-hp-panel) göstərilir, Monsun üzərində çəkilmir
@@ -895,7 +1072,7 @@ class Player {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 1.3;
         ctx.shadowColor = glowColor;
-        ctx.shadowBlur = isZero ? 12 : 7;
+        ctx.shadowBlur = 0;
 
         ctx.beginPath();
         ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, 9);
@@ -903,7 +1080,7 @@ class Player {
         ctx.stroke();
 
         // Daxili Mətn və İkon
-        ctx.shadowBlur = isZero ? 8 : 4;
+        ctx.shadowBlur = 0;
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';

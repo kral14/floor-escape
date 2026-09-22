@@ -63,11 +63,11 @@ const CrystalSpawnEffect = {
         c.rect(-220, -132, 440, 258 * fracture);
         c.clip();
         c.shadowColor = '#b899ff';
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         for (const side of [-1, 1]) {
             line(crack.map(([x, y]) => [x + side * open * 68, y]), '#d9c5ff', 2.3, fade);
         }
-        c.shadowBlur = 0;
+        c.shadowBlur =0;
         c.restore();
 
         // The split reveals a deep, luminous opening;
@@ -147,7 +147,7 @@ const CrystalSpawnEffect = {
             c.save();
             c.globalCompositeOperation = 'lighter';
             c.shadowColor = '#b49dff';
-            c.shadowBlur = 20;
+            c.shadowBlur = 0;
             const bolt = [
                 [12, -h / scale], [-6, -198], [13, -172], [-15, -148],
                 [4, -121], [-9, -83], [10, -49], [-6, -12],
@@ -158,7 +158,7 @@ const CrystalSpawnEffect = {
             line(bolt, '#ffffff', 1.5, strike);
             line([[-6, -12], [-41, 3], [-23, 16], [-55, 39]], '#d2c2ff', 1.5, strike * 0.7);
             line([[4, -121], [35, -103], [25, -82], [49, -65]], '#d2c2ff', 1.5, strike * 0.7);
-            c.shadowBlur = 0;
+            c.shadowBlur =0;
 
             const glow = c.createRadialGradient(0, 0, 1, 0, 0, 145);
             glow.addColorStop(0, 'rgba(187, 165, 255, 0.27)');

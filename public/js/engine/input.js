@@ -148,7 +148,25 @@ window.addEventListener('keydown', e => {
     if (k) keys[k] = true;
     if (c) keys[c] = true;
 
-    if (e.code === 'Space' || e.key === ' ') {
+    // 🔄 R / KeyR: YALNIZ GAME OVER olduqda oyunu dərhal yenidən başlatma qısayolu!
+        if (!e.repeat && (e.code === 'KeyR' || k === 'r' || k === 'к')) {
+            const isGameOver = typeof gameState !== 'undefined' && gameState.gameOver;
+            const modal = document.getElementById('modal-overlay');
+            const isModalVisible = modal && !modal.classList.contains('hidden');
+
+            if (isGameOver || isModalVisible) {
+                e.preventDefault();
+                if (typeof restartGame === 'function') {
+                    restartGame();
+                    if (typeof showToast === 'function') {
+                        showToast('🔄 Oyun yenidən başladıldı! [R]', 'info');
+                    }
+                }
+                return;
+            }
+        }
+
+        if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
         triggerPlayerDash();
         return;

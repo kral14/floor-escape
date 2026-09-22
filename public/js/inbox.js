@@ -98,6 +98,40 @@
                     const data = JSON.parse(evt.data);
                     if (data && data.type === 'NEW_INBOX_MESSAGE') {
                         onRealtimeMessageReceived(data.message);
+                    } else if (data && data.type === 'ADMIN_FORCE_RESET') {
+                        window._isSessionBlocked = true;
+                        try {
+                            localStorage.removeItem('floor_escape_player');
+                            localStorage.removeItem('floor_escape_upgrades');
+                            localStorage.removeItem('floor_escape_red_diamonds');
+                            localStorage.removeItem('floor_escape_diamonds');
+                            localStorage.removeItem('floor_escape_gold');
+                            localStorage.removeItem('floor_escape_active_skin_subtab');
+                        } catch(e) {}
+                        alert(data.message || '⚠️ Admin tərəfindən bütün mağaza dəriləriniz və tərəqqiniz sıfırlandı!');
+                        window.location.replace('index.html');
+                    } else if (data && (data.type === 'FORCE_SYNC_AND_LOGOUT' || data.type === 'SESSION_KICKED' || data.type === 'SESSION_BLOCKED')) {
+                        window._isSessionBlocked = true;
+                        // 1. Cari oyunçu vəziyyətini dərhal bazaya sinxron edirik
+                        try {
+                            if (typeof syncPlayerDataCloud === 'function') {
+                                syncPlayerDataCloud(true);
+                            }
+                        } catch(e) {}
+                        
+                        // 2. Lokal açarları təmizləyirik
+                        try { localStorage.removeItem('floor_escape_player'); } catch(e) {}
+
+                        // 3. Oyunçuya xəbərdarlıq edib ana səhifəyə yönləndiririk
+                        alert(data.message || '⚠️ Hesabınıza başqa bir cihazdan daxil olundu! Cari irəliləyişiniz bazaya uğurla qeyd edildi.');
+                        window.location.replace('index.html');
+                        window._isSessionBlocked = true;
+                        alert(data.message || '⚠️ Bu hesab artıq başqa bir yerdə oyundadır! Eyni vaxtda ikinci giriş qadağandır.');
+                        try { localStorage.removeItem('floor_escape_player'); } catch(e) {}
+                        window.location.replace('index.html');
+                    } else if (data && data.type === 'PROGRESS_RESET') {
+                        alert('🔄 Admin tərəfindən irəliləyişləriniz sıfırlandı! Səhifə yenilənir...');
+                        window.location.reload();
                     }
                 } catch (e) {
                     console.error('WebSocket mesajı oxunarkən xəta:', e);
@@ -105,8 +139,8 @@
             };
 
             ws.onclose = () => {
+                if (window._isSessionBlocked) return; // Bloklanıbsa təkrar qoşulma
                 if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
-                // WebSocket ayrılarsa, hər 10 saniyədən bir təkrar yoxlanılır
                 wsReconnectTimeout = setTimeout(initWebSocket, 10000);
             };
 

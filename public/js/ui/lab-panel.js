@@ -244,7 +244,18 @@ function buyPermUpgrade(type) {
     }
 
     if (typeof audio !== 'undefined') audio.init();
-    let key = type === 'speed' ? 'speedLvl' : type === 'magnet' ? 'magnetLvl' : type === 'coinVal' ? 'coinValLvl' : type === 'coinRate' ? 'coinRateLvl' : type === 'shield' ? 'shieldLvl' : 'powerUpLvl';
+    const keyMap = {
+        'speed': 'speedLvl',
+        'magnet': 'magnetLvl',
+        'coinVal': 'coinValLvl',
+        'coinRate': 'coinRateLvl',
+        'coinSpawn': 'coinRateLvl',
+        'dashCD': 'dashCDLvl',
+        'startGold': 'startGoldLvl',
+        'shield': 'shieldLvl',
+        'powerUp': 'powerUpLvl'
+    };
+    const key = keyMap[type] || `${type}Lvl`;
     let currentLvl = permUpgrades[key] || 0;
 
     if (currentLvl >= MAX_PERM_LVL) {

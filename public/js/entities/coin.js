@@ -31,7 +31,7 @@ class Coin {
         const currentY = this.y + bob;
 
         ctx.save();
-        ctx.shadowBlur = this.isGliding ? 18 : 12;
+        ctx.shadowBlur = 0;
         ctx.shadowColor = '#ffd700';
 
         const grad = ctx.createRadialGradient(this.x, currentY, 0, this.x, currentY, this.radius * 2);

@@ -45,7 +45,7 @@ class Bullet {
 
         // 1. BARRİKADA
         if (this.type === 'wall') {
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#ffd000';
 
             ctx.fillStyle = 'rgba(40, 28, 10, 0.85)';
@@ -67,7 +67,7 @@ class Bullet {
         }
         // 2. BUZ
         else if (this.type === 'ice') {
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#00ffff';
 
             ctx.fillStyle = 'rgba(8, 35, 45, 0.85)';
@@ -101,7 +101,7 @@ class Bullet {
         }
         // 3. ELEKTRİK ŞOKU
         else if (this.type === 'shock') {
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#c084fc';
 
             ctx.fillStyle = 'rgba(32, 18, 52, 0.85)';
@@ -125,7 +125,7 @@ class Bullet {
         }
         // 4. MİNA
         else if (this.type === 'mine') {
-            ctx.shadowBlur = 20;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#f43f5e';
 
             ctx.fillStyle = 'rgba(48, 12, 22, 0.85)';
@@ -152,7 +152,7 @@ class Bullet {
         }
         // 5. PLAZMA
         else if (this.type === 'plasma') {
-            ctx.shadowBlur = 22;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#34d399';
 
             ctx.fillStyle = 'rgba(8, 38, 28, 0.85)';

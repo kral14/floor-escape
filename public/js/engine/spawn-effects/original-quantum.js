@@ -49,7 +49,7 @@
         ctx.save();
         ctx.strokeStyle = color;
         ctx.shadowColor = glow;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = lineWidth;
         ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         if (dash.length) ctx.setLineDash(dash);
@@ -86,7 +86,7 @@
         ctx.save();
         ctx.strokeStyle = accentColor || '#ffffff';
         ctx.shadowColor = glowColor;
-        ctx.shadowBlur = 8 + glowBoost;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = (2 + extraW) * leftWingTip.k;
         ctx.globalAlpha = Math.min(0.95, 0.45 + speed * 0.4);
 
@@ -118,7 +118,7 @@
           ctx.save();
           ctx.strokeStyle = baseColor;
           ctx.shadowColor = glowColor;
-          ctx.shadowBlur = 4 + glowBoost * 0.5;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = (1.5 + extraW) * p1.k;
           ctx.globalAlpha = Math.min(1, 0.75 + speed * 0.25);
           ctx.beginPath();
@@ -139,7 +139,7 @@
           ctx.save();
           ctx.fillStyle = accentColor || '#ffffff';
           ctx.shadowColor = glowColor;
-          ctx.shadowBlur = 12 + glowBoost;
+          ctx.shadowBlur = 0;
           ctx.globalAlpha = Math.min(1, 0.8 + speed * 0.2);
           ctx.beginPath();
           const sz = beadSize * bead.k;
@@ -308,7 +308,7 @@
             const depthRatio = Math.max(0.3, Math.min(1.4, proj.k));
             ctx.fillStyle = `hsla(${p.hue}, 95%, 65%, ${p.alpha * depthRatio})`;
             ctx.shadowColor = '#06b6d4';
-            ctx.shadowBlur = 6 * depthRatio;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(proj.x, proj.y, Math.max(0.5, p.size * depthRatio), 0, Math.PI * 2);
             ctx.fill();
@@ -326,7 +326,7 @@
         ctx.lineWidth = 3.5 * coreProj.k;
         ctx.strokeStyle = '#38bdf8';
         ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 0;
         ctx.stroke();
         ctx.restore();
 
@@ -414,7 +414,7 @@
           ctx.save();
           ctx.fillStyle = s.color;
           ctx.shadowColor = s.color;
-          ctx.shadowBlur = 8 * proj.k;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.arc(proj.x, proj.y, s.size * proj.k, 0, Math.PI * 2);
           ctx.fill();
@@ -427,7 +427,7 @@
         ctx.arc(coreProj.x, coreProj.y, 32 * coreProj.k, 0, Math.PI * 2);
         ctx.fillStyle = '#fffbeb';
         ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 24;
+        ctx.shadowBlur = 0;
         ctx.fill();
         ctx.lineWidth = 3 * coreProj.k;
         ctx.strokeStyle = '#f97316';
@@ -545,7 +545,7 @@
           ctx.save();
           ctx.fillStyle = '#c084fc';
           ctx.shadowColor = '#a855f7';
-          ctx.shadowBlur = 7 * n.proj.k;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.arc(n.proj.x, n.proj.y, n.size * n.proj.k, 0, Math.PI * 2);
           ctx.fill();
@@ -560,7 +560,7 @@
         ctx.strokeStyle = '#d8b4fe';
         ctx.lineWidth = 2.5 * coreProj.k;
         ctx.shadowColor = '#c084fc';
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 0;
         ctx.fill();
         ctx.stroke();
 
@@ -622,7 +622,7 @@
           ctx.save();
           ctx.fillStyle = '#2dd4bf';
           ctx.shadowColor = '#14b8a6';
-          ctx.shadowBlur = 7 * proj.k;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.arc(proj.x, proj.y, sp.size * proj.k, 0, Math.PI * 2);
           ctx.fill();
@@ -657,7 +657,7 @@
         ctx.strokeStyle = '#5eead4';
         ctx.lineWidth = 2.5 * coreProj.k;
         ctx.shadowColor = '#2dd4bf';
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 0;
         ctx.fill();
         ctx.stroke();
 

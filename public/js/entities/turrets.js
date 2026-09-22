@@ -166,7 +166,7 @@ class TwinTurrets {
         // Oyanış (Awakened) Xüsusi Enerji Sahəsi
         if (permUpgrades.turretAwakened) {
             ctx.save();
-            ctx.shadowBlur = 18 + Math.sin(this.glowPhase * 2) * 6;
+            ctx.shadowBlur = 0;
             ctx.shadowColor = '#ff0055';
             ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
             ctx.lineWidth = 1.5;
@@ -177,13 +177,13 @@ class TwinTurrets {
         }
 
         // Enerji nüvəsi (seçilmiş mərmi rəngində parıltı)
-        ctx.shadowBlur = (permUpgrades.turretAwakened ? 20 : 12) + Math.sin(this.glowPhase) * 4;
+        ctx.shadowBlur = 0;
         ctx.shadowColor = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
         ctx.fillStyle = permUpgrades.turretAwakened ? '#ff0055' : activeColor;
         ctx.beginPath();
         ctx.arc(dir === 1 ? -2 : 2, 0, permUpgrades.turretAwakened ? 6 : 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         // Fırlanan/aşağı tuşlanan lülə
         ctx.save();

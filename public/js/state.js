@@ -1,3 +1,9 @@
+function getStartingGold() {
+    const lvl = (typeof permUpgrades !== 'undefined' && typeof permUpgrades.startGoldLvl === 'number') ? permUpgrades.startGoldLvl : 1;
+    return 75 + Math.max(0, lvl - 1) * 30;
+}
+window.getStartingGold = getStartingGold;
+
 // OYUN VƏZİYYƏTİ VƏ DAİMİ YADDAŞ MENECERİ
 
 const MAX_PERM_LVL = 10;
@@ -624,7 +630,7 @@ function loadActiveRun() {
                 monster.slowTimer = parseInt(saved.monsterSlowTimer) || 0;
                 monster.stunTimer = parseInt(saved.monsterStunTimer) || 0;
                 monster.plasmaTimer = parseInt(saved.monsterPlasmaTimer) || 0;
-                monster.baseSpeed = 0.22 + (gameState.floor - 1) * 0.06;
+                monster.baseSpeed = 11.5 + (gameState.floor - 1) * 1.8;
                 monster.speed = monster.slowTimer > 0 ? monster.baseSpeed * 0.45 : monster.baseSpeed;
 
                 // Boss dalğası və canını bərpa edirik

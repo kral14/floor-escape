@@ -595,7 +595,7 @@ function drawPlatforms(ctx) {
         // 1. Qaya xarici kölgəsi (Zəif PC / CPU rejimində söndürülür)
         if (enableShadows) {
             c.shadowColor = 'rgba(0, 0, 0, 0.6)';
-            c.shadowBlur = 12;
+            c.shadowBlur = 0;
             c.shadowOffsetY = 6;
         }
 
@@ -622,29 +622,30 @@ function drawPlatforms(ctx) {
         c.lineTo(rock.x + rock.w - 8, rock.y + 2);
         c.stroke();
 
-        // 4. Çatlar
-        c.strokeStyle = 'rgba(15, 23, 42, 0.75)';
-        c.lineWidth = 1.6;
-        c.beginPath();
-        c.moveTo(rock.x + rock.w * 0.25, rock.y + 2);
-        c.lineTo(rock.x + rock.w * 0.32, rock.y + rock.h * 0.6);
-        c.lineTo(rock.x + rock.w * 0.40, rock.y + rock.h - 3);
+        // 4. Çatlar (Yalnız Yüksək və Orta rejimdə görünür)
+        const currentQ = (typeof window !== 'undefined' && window.GRAPHICS_QUALITY) ? window.GRAPHICS_QUALITY : 'high';
+        if (currentQ === 'high') {
+            c.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            c.lineWidth = 1.6;
+            c.beginPath();
+            c.moveTo(rock.x + rock.w * 0.25, rock.y + 2);
+            c.lineTo(rock.x + rock.w * 0.32, rock.y + rock.h * 0.6);
+            c.lineTo(rock.x + rock.w * 0.40, rock.y + rock.h - 3);
 
-        c.moveTo(rock.x + rock.w * 0.70, rock.y + 2);
-        c.lineTo(rock.x + rock.w * 0.65, rock.y + rock.h * 0.5);
-        c.lineTo(rock.x + rock.w * 0.75, rock.y + rock.h - 3);
-        c.stroke();
-
-        // 5. Kiber işıqlar (GPU/CPU optimallaşdırılmış)
-        c.fillStyle = '#38bdf8';
-        if (enableShadows) {
-            c.shadowColor = '#38bdf8';
-            c.shadowBlur = 8;
+            c.moveTo(rock.x + rock.w * 0.70, rock.y + 2);
+            c.lineTo(rock.x + rock.w * 0.65, rock.y + rock.h * 0.5);
+            c.lineTo(rock.x + rock.w * 0.75, rock.y + rock.h - 3);
+            c.stroke();
         }
-        c.beginPath();
-        c.arc(rock.x + 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
-        c.arc(rock.x + rock.w - 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
-        c.fill();
+
+        // 5. Kiber işıqlar (Yalnız Yüksək və Orta rejimdə)
+        if (currentQ !== 'low') {
+            c.fillStyle = currentQ === 'high' ? '#38bdf8' : '#0284c7';
+            c.beginPath();
+            c.arc(rock.x + 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
+            c.arc(rock.x + rock.w - 8, rock.y + rock.h / 2, 2.5, 0, Math.PI * 2);
+            c.fill();
+        }
         c.shadowBlur = 0;
 
         c.restore();
@@ -744,7 +745,7 @@ function drawPlatforms(ctx) {
         c.globalAlpha = alpha;
         c.fillStyle = '#fde047';
         c.shadowColor = '#f97316';
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.beginPath();
         c.ellipse(dp.x, dp.y, dp.size * 0.7, dp.size * 1.3, 0, 0, Math.PI * 2);
         c.fill();
@@ -776,7 +777,7 @@ function drawHeightMinimap(ctx, player, worldHeight) {
 
     c.fillStyle = '#4ade80';
     c.shadowColor = '#4ade80';
-    c.shadowBlur = 8;
+    c.shadowBlur = 0;
     c.beginPath();
     c.arc(mapX + mapW / 2, mapY + 4, 4, 0, Math.PI * 2);
     c.fill();
@@ -791,7 +792,7 @@ function drawHeightMinimap(ctx, player, worldHeight) {
 
     c.fillStyle = '#38bdf8';
     c.shadowColor = '#00f0ff';
-    c.shadowBlur = 10;
+    c.shadowBlur = 0;
     c.beginPath();
     c.arc(mapX + mapW / 2, playerIndicatorY, 5, 0, Math.PI * 2);
     c.fill();
@@ -799,9 +800,107 @@ function drawHeightMinimap(ctx, player, worldHeight) {
     c.font = '900 9px Orbitron, monospace';
     c.textAlign = 'right';
     c.fillStyle = '#38bdf8';
-    c.shadowBlur = 6;
+    c.shadowBlur = 0;
     c.fillText(`${Math.round(progress * 100)}%`, mapX - 6, playerIndicatorY + 3);
 
     c.restore();
 }
 window.drawHeightMinimap = drawHeightMinimap;
+
+
+// 6. 🔥 ÇOXİSTİQAMƏTLİ LAVA TƏHLÜKƏ SENSORU (Multi-Directional Lava Proximity Warning System)
+function getLavaDirectionalDangers(player) {
+    const dangers = { right: 0, left: 0, bottom: 0, top: 0 };
+    if (!player || typeof gameState === 'undefined' || gameState.gameOver) {
+        return dangers;
+    }
+
+    const px = player.x;
+    const py = player.y;
+    const pr = player.radius || 16;
+
+    // 1. AŞAĞIDAKI LAVA CANAVARI:
+    if (typeof monster !== 'undefined' && monster && typeof monster.y === 'number') {
+        const monsterY = monster.surface ? monster.surface(px, monster.y) : monster.y;
+        const distToMonster = monsterY - (py + pr);
+        // Əgər canavar 85px-dən yaxındırsa qızarır, uzaqdadırsa ƏSLA qızarmır
+        if (distToMonster < 85 && distToMonster > -20) {
+            dangers.bottom = Math.max(dangers.bottom, (85 - Math.max(0, distToMonster)) / 70);
+        }
+    }
+
+    // 2. BÜTÜN LAVA ZONALARI (Şəlalələr, Kaskadlar və Qaya Platforması Lavaları)
+    const boxes = [];
+    if (typeof activeLavaHazardBoxes !== 'undefined' && Array.isArray(activeLavaHazardBoxes)) {
+        for (let i = 0; i < activeLavaHazardBoxes.length; i++) {
+            boxes.push(activeLavaHazardBoxes[i]);
+        }
+    }
+    // Həmçinin keşlənmiş kaskad axınları (100% dəqiq aşkar etmək üçün)
+    if (window._cachedCascadePaths && Array.isArray(window._cachedCascadePaths)) {
+        for (const p of window._cachedCascadePaths) {
+            if (p.falls) {
+                for (const f of p.falls) {
+                    boxes.push({ x: f.x + 4, y: f.y, w: Math.max(12, f.w - 8), h: f.h });
+                }
+            }
+            if (p.shelves) {
+                for (const s of p.shelves) {
+                    const sx = Math.min(s.hitX, s.outX) - 4;
+                    const ex = Math.max(s.hitX, s.outX) + 4;
+                    const rY = (s.rock && typeof s.rock.y === 'number') ? s.rock.y : py;
+                    boxes.push({ x: sx, y: rY - 2, w: Math.max(16, ex - sx), h: 10 });
+                }
+            }
+        }
+    }
+
+    // Bütün lava zonalarına olan məsafə və istiqamət analizi
+    for (let i = 0; i < boxes.length; i++) {
+        const b = boxes[i];
+        if (!b || typeof b.x !== 'number') continue;
+
+        // İlkin məsafə süzgəci
+        if (py < b.y - 85 || py > b.y + b.h + 85) continue;
+        if (px < b.x - 85 || px > b.x + b.w + 85) continue;
+
+        const cX = Math.max(b.x, Math.min(px, b.x + b.w));
+        const cY = Math.max(b.y, Math.min(py, b.y + b.h));
+
+        const dx = cX - px;
+        const dy = cY - py;
+        const dist = Math.hypot(dx, dy) - pr;
+
+        // Əgər 65px məsafədən yaxındırsa
+        if (dist < 65) {
+            const danger = Math.max(0, Math.min(1, (65 - dist) / 58));
+
+            // Üfüqi təhlükə: Sağ və ya Sol
+            if (dx > 4) {
+                dangers.right = Math.max(dangers.right, danger);
+            } else if (dx < -4) {
+                dangers.left = Math.max(dangers.left, danger);
+            }
+
+            // Şaquli təhlükə: Aşağı və ya Yuxarı
+            if (dy > 4) {
+                dangers.bottom = Math.max(dangers.bottom, danger);
+            } else if (dy < -4) {
+                dangers.top = Math.max(dangers.top, danger);
+            }
+        }
+    }
+
+    return dangers;
+}
+window.getLavaDirectionalDangers = getLavaDirectionalDangers;
+window.getLavaDangerInfo = function(player) {
+    const d = getLavaDirectionalDangers(player);
+    const maxD = Math.max(d.right, d.left, d.bottom, d.top);
+    return { danger: maxD };
+};
+window.getLavaDanger = function(player) {
+    const d = getLavaDirectionalDangers(player);
+    return Math.max(d.right, d.left, d.bottom, d.top);
+};
+window.activeLavaHazardBoxes = activeLavaHazardBoxes;

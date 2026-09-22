@@ -31,7 +31,7 @@
             const emberAlpha = Math.sin(emberProgress * Math.PI);
             const emberSize = (1.5 + (i % 2) * 1.2) * (1 - emberProgress * 0.4);
 
-            c.shadowBlur = 10;
+            c.shadowBlur = 0;
             c.shadowColor = '#f97316';
             c.fillStyle = `rgba(254, 240, 138, ${emberAlpha})`;
             c.beginPath();
@@ -48,7 +48,7 @@
 
         // Mərkəzi böyük alov dili
         c.fillStyle = '#f97316';
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         c.shadowColor = '#ef4444';
         c.beginPath();
         c.moveTo(-r * 0.55, -r * 0.6);
@@ -76,7 +76,7 @@
         const hornTipWaveL = Math.sin(time * 8) * (r * 0.08);
         const hornTipWaveR = Math.cos(time * 8) * (r * 0.08);
 
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         c.shadowColor = '#dc2626';
 
         // Sol Buynuz
@@ -124,7 +124,7 @@
         c.beginPath();
         c.arc(0, 0, r * 1.05 + bodyPulse, 0, Math.PI * 2);
         c.fillStyle = '#dc2626';
-        c.shadowBlur = 24 + Math.sin(time * 8) * 8;
+        c.shadowBlur = 0;
         c.shadowColor = '#ef4444';
         c.fill();
 
@@ -136,7 +136,7 @@
 
         // 5. Parıldayan Qəzəbli Gözlər
         const eyePulse = Math.sin(time * 12) * 4;
-        c.shadowBlur = 14 + eyePulse;
+        c.shadowBlur = 0;
         c.shadowColor = '#facc15';
         c.fillStyle = eyePulse > 1 ? '#ffffff' : '#fef08a';
 
@@ -160,7 +160,7 @@
         const mouthGlow = Math.sin(time * 7) * (r * 0.03);
         c.strokeStyle = '#f97316';
         c.lineWidth = 2.2;
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.shadowColor = '#f97316';
         c.beginPath();
         c.moveTo(-r * 0.35, r * 0.35);

@@ -142,14 +142,14 @@ function drawBorderLine() {
     if (isOpen) {
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 3.2;
-        ctx.shadowBlur = 22;
+        ctx.shadowBlur = 0;
         ctx.shadowColor = '#00ff88';
         ctx.lineDashOffset = -performance.now() * 0.025;
         ctx.setLineDash([14, 8]);
     } else {
         ctx.strokeStyle = '#ff0055';
         ctx.lineWidth = 2.5;
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 0;
         ctx.shadowColor = '#ff0055';
         ctx.lineDashOffset = 0;
         ctx.setLineDash([8, 8]);
@@ -157,7 +157,7 @@ function drawBorderLine() {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.lineDashOffset = 0;
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur =0;
 
     ctx.restore();
 }

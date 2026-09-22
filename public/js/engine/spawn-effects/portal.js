@@ -213,12 +213,12 @@ const PortalSpawnEffect = {
                 c.lineWidth = 2;
                 c.globalAlpha = (1 - settle) * 0.8;
                 c.shadowColor = '#83e9ff';
-                c.shadowBlur = 16;
+                c.shadowBlur = 0;
                 c.beginPath();
                 c.moveTo(-56, sy);
                 c.lineTo(56, sy);
                 c.stroke();
-                c.shadowBlur = 0;
+                c.shadowBlur =0;
             }
             c.restore();
         }

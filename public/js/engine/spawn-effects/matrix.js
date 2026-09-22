@@ -45,7 +45,7 @@ const MatrixSpawnEffect = {
         c.save();
         c.font = 'bold 11px monospace';
         c.fillStyle = '#4ade80';
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.shadowColor = '#22c55e';
         c.globalAlpha = Math.min(1, stream * fade + 0.2);
 

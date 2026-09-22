@@ -26,7 +26,7 @@
 
         // 1. Arxada Dinamik Dalğalanan İkili Neon Kiber Lentlər
         c.fillStyle = 'rgba(0, 255, 204, 0.85)';
-        c.shadowBlur = 12;
+        c.shadowBlur = 0;
         c.shadowColor = '#00ffcc';
 
         const wave1 = Math.sin(time * 8) * 4;
@@ -51,7 +51,7 @@
         c.fill();
 
         // 2. Kiber-Ninja Dəbilqə Korpusu
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         c.shadowColor = glow;
         c.beginPath();
         c.arc(0, 0, r * 1.05, 0, Math.PI * 2);
@@ -73,7 +73,7 @@
 
         // 3. Parlaq Kiber-Vizor (HUD Eynək)
         c.fillStyle = '#00ffcc';
-        c.shadowBlur = 12;
+        c.shadowBlur = 0;
         c.shadowColor = '#00ffcc';
         c.beginPath();
         if (c.roundRect) c.roundRect(-r * 0.7, -4.5, r * 1.4, 8, 3.5);

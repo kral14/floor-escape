@@ -33,7 +33,7 @@
             c.translate(sx, sy);
             c.rotate(shAngle + Math.PI / 2);
             c.fillStyle = '#38bdf8';
-            c.shadowBlur = 12;
+            c.shadowBlur = 0;
             c.shadowColor = '#38bdf8';
             c.beginPath();
             if (c.roundRect) c.roundRect(-r * 0.45, -2.5, r * 0.9, 5, 2);
@@ -45,7 +45,7 @@
         c.rotate(facing || 0);
 
         // 2. Altıbucaqlı Möhkəm Mecha Korpus (Hexagonal Armor Plate)
-        c.shadowBlur = 20;
+        c.shadowBlur = 0;
         c.shadowColor = glow;
         c.beginPath();
         for (let i = 0; i < 6; i++) {
@@ -91,7 +91,7 @@
         c.beginPath();
         c.arc(0, 0, r * 0.45, 0, Math.PI * 2);
         c.fillStyle = '#0284c7';
-        c.shadowBlur = 14;
+        c.shadowBlur = 0;
         c.shadowColor = '#38bdf8';
         c.fill();
 

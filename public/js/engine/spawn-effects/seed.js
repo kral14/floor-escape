@@ -455,7 +455,7 @@ const SeedSpawnEffect = {
                     c.restore();
                 }
                 c.shadowColor = '#ffdf87';
-                c.shadowBlur = 8 * (1 - decay);
+                c.shadowBlur = 0;
                 c.fillStyle = dryColor('#ffe09a', '#785332');
                 c.beginPath();
                 c.arc(0, 0, 4, 0, Math.PI * 2);
@@ -473,7 +473,7 @@ const SeedSpawnEffect = {
             c.globalAlpha = Math.pow(p.life / p.max, 1.3);
             c.fillStyle = p.petal ? '#c4ecab' : '#b6ffce';
             c.shadowColor = '#93e9a5';
-            c.shadowBlur = p.petal ? 0 : 7;
+            c.shadowBlur = 0;
             if (p.petal) {
                 c.beginPath();
                 c.ellipse(0, 0, 4.5, 2, 0, 0, Math.PI * 2);
@@ -514,7 +514,7 @@ const SeedSpawnEffect = {
             c.textAlign = "center";
             c.fillStyle = "#d8ffba";
             c.shadowColor = "#85eb95";
-            c.shadowBlur = 12;
+            c.shadowBlur = 0;
             c.fillText(`+${bonusCount} CAN`, curX, curY - 108 - Math.max(0, t - 6.1) * 13);
             c.restore();
         }
@@ -537,7 +537,7 @@ const SeedSpawnEffect = {
                 c.scale(side * flap, 1);
                 c.fillStyle = i % 2 ? '#e4ca85' : '#8befb6';
                 c.shadowColor = '#d3ffc3';
-                c.shadowBlur = 7;
+                c.shadowBlur = 0;
                 c.beginPath();
                 c.moveTo(0, 0);
                 c.bezierCurveTo(15, -22, 28, -13, 19, 1);
@@ -656,7 +656,7 @@ function drawIngameLifeFlowers(c, player, time, front) {
             c.restore();
         }
         c.shadowColor = '#ffdf87';
-        c.shadowBlur = 6 * (1 - decay);
+        c.shadowBlur = 0;
         c.fillStyle = dryColor('#ffe09a', '#785332');
         c.beginPath();
         c.arc(0, 0, 3.2, 0, Math.PI * 2);

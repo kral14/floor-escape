@@ -160,7 +160,7 @@
         ctx.save();
         ctx.strokeStyle = color;
         ctx.shadowColor = glow;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = lineWidth;
         ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         if (dash.length) ctx.setLineDash(dash);
@@ -197,7 +197,7 @@
         ctx.save();
         ctx.strokeStyle = accentColor || '#ffffff';
         ctx.shadowColor = glowColor;
-        ctx.shadowBlur = 8 + glowBoost;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = (2 + extraW) * leftWingTip.k;
         ctx.globalAlpha = Math.min(0.95, 0.45 + speed * 0.4);
 
@@ -229,7 +229,7 @@
           ctx.save();
           ctx.strokeStyle = baseColor;
           ctx.shadowColor = glowColor;
-          ctx.shadowBlur = 4 + glowBoost * 0.5;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = (1.5 + extraW) * p1.k;
           ctx.globalAlpha = Math.min(1, 0.75 + speed * 0.25);
           ctx.beginPath();
@@ -250,7 +250,7 @@
           ctx.save();
           ctx.fillStyle = accentColor || '#ffffff';
           ctx.shadowColor = glowColor;
-          ctx.shadowBlur = 12 + glowBoost;
+          ctx.shadowBlur = 0;
           ctx.globalAlpha = Math.min(1, 0.8 + speed * 0.2);
           ctx.beginPath();
           const sz = beadSize * bead.k;
@@ -294,7 +294,7 @@
             ctx.save();
             ctx.strokeStyle = color;
             ctx.shadowColor = glow;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 0;
             ctx.lineWidth = Math.max(0.5, lineWidth);
             ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
             if (dash && dash.length) ctx.setLineDash(dash);
@@ -332,7 +332,7 @@
             ctx.arc(0, 0, 36, 0, Math.PI * 2);
             ctx.strokeStyle = pal.glow;
             ctx.shadowColor = pal.glow;
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 0;
             ctx.lineWidth = 3.5;
             ctx.stroke();
             ctx.restore();
@@ -546,7 +546,7 @@
                 ctx.rotate(s.angle);
                 ctx.globalAlpha = 1.0;
                 ctx.shadowColor = s.colorGlow;
-                ctx.shadowBlur = 16;
+                ctx.shadowBlur = 0;
                 ctx.fillStyle = s.colorCore;
                 ctx.beginPath();
                 const spikes = 4, outerR = s.size, innerR = s.size * 0.34;
@@ -569,7 +569,7 @@
                 ctx.globalAlpha = Math.max(0, f.alpha);
                 ctx.fillStyle = f.color;
                 ctx.shadowColor = f.color;
-                ctx.shadowBlur = 7;
+                ctx.shadowBlur = 0;
                 ctx.fillRect(-f.size / 2, -f.size / 2, f.size, f.size * 1.4);
                 ctx.restore();
             }
@@ -620,12 +620,12 @@
             ctx.strokeStyle = '#2dd4bf';
             ctx.lineWidth = 1.8;
             ctx.shadowColor = '#14b8a6';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.ellipse(0, breathing * 0.5, 23, 25, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur =0;
 
             // Face Visor / Hologram Screen
             ctx.fillStyle = '#021815';
@@ -637,7 +637,7 @@
             const eyeGlow = '#67e8f9';
             ctx.fillStyle = eyeGlow;
             ctx.shadowColor = eyeGlow;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 0;
             for (const side of [-1, 1]) {
                 ctx.beginPath();
                 ctx.moveTo(side * 11, -3 + breathing * 0.3);
@@ -646,7 +646,7 @@
                 ctx.closePath();
                 ctx.fill();
             }
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur =0;
 
             // Digital smile line
             ctx.strokeStyle = '#5eead4';
@@ -793,7 +793,7 @@
                 ctx.save();
                 ctx.globalAlpha *= sparkFade;
                 ctx.shadowColor = pal.glow;
-                ctx.shadowBlur = 18;
+                ctx.shadowBlur = 0;
                 ctx.fillStyle = '#f0fdfa';
                 ctx.beginPath();
                 ctx.arc(0, 0, 4 + pulse, 0, Math.PI * 2);

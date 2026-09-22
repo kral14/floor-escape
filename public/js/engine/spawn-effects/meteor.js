@@ -23,7 +23,7 @@ const MeteorSpawnEffect = {
         if (t < 1.4 && mode !== 'out') {
             const meteorY = -240 + fall * 240;
             c.save();
-            c.shadowBlur = 25;
+            c.shadowBlur = 0;
             c.shadowColor = '#ef4444';
 
             // Odlu quyruq
@@ -64,7 +64,7 @@ const MeteorSpawnEffect = {
             c.save();
             c.strokeStyle = '#f97316';
             c.lineWidth = 2.4;
-            c.shadowBlur = 15;
+            c.shadowBlur = 0;
             c.shadowColor = '#ef4444';
             for (let i = 0; i < 6; i++) {
                 const angle = (i * Math.PI) / 3;

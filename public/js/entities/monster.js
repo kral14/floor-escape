@@ -3,7 +3,7 @@
 class Monster {
     constructor() {
         this.y = 0;
-        this.baseSpeed = 0.22;
+        this.baseSpeed = 11.5; // Sabit saniyəlik sürət (px/s)
         this.speed = 0.22;
         this.wallTimer = 0;      // Fiziki barrikada divarı
         this.shockTimer = 0;     // Şok elektrik iflici
@@ -45,7 +45,7 @@ class Monster {
         const fl = (typeof gameState !== 'undefined' && gameState.floor) ? gameState.floor : 1;
         const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(fl) : canvasHeight;
         this.y = worldH - 38;
-        this.baseSpeed = 0.22 + (fl - 1) * 0.06;
+        this.baseSpeed = 11.5 + (fl - 1) * 1.8; // Sabit saniyəlik sürət (px/s)
         this.speed = this.baseSpeed;
         this.wallTimer = 0;
         this.shockTimer = 0;
@@ -190,7 +190,7 @@ class Monster {
             c.strokeStyle = '#ff8536';
             c.lineWidth = 2;
             c.shadowColor = '#f75c16';
-            c.shadowBlur = 7;
+            c.shadowBlur = 0;
             c.beginPath();
             c.moveTo(122, 49);
             c.lineTo(128, 67);
@@ -404,7 +404,7 @@ class Monster {
             const rgb = f.color.slice(1).match(/../g).map(val => parseInt(val, 16));
             c.fillStyle = f.glow ? f.color : 'rgb(' + rgb.map(val => Math.round(val * light)).join(',') + ')';
             c.shadowColor = '#ff761b';
-            c.shadowBlur = f.glow ? 8 : 0;
+            c.shadowBlur = 0;
             c.beginPath();
             f.p.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
             c.closePath();
@@ -536,8 +536,10 @@ class Monster {
             currentSpeed *= 0.25; // 75% qlobal zaman ləngiməsi
         }
 
-        // 6. YÜKSƏLİŞ
-        this.y -= currentSpeed;
+        // 6. YÜKSƏLİŞ (FPS-dən 100% Asılı Olmayan Dəqiq Zaman İnteqrasiyası)
+        // istər 30, istər 60, istər 144 FPS olsun, canavarın 1 saniyədə qalxdığı məsafə mütləq sabit qalır
+        const dt = (typeof FIXED_PHYSICS_DELTA !== 'undefined' ? FIXED_PHYSICS_DELTA : (1000 / 60)) / 1000;
+        this.y -= currentSpeed * dt;
 
         // 💓 CANAVARIN YÜKSƏLİŞ HƏYƏCANI VƏ QATLARLA DƏYİŞƏN DİNAMİK RİTM
         if (typeof audio !== 'undefined' && typeof audio.updateMonsterBeat === 'function') {
@@ -597,7 +599,7 @@ class Monster {
         c.strokeStyle = this.iceTimer > 0 ? '#bbf7d0' : '#ffc15b';
         c.lineWidth = 3;
         c.shadowColor = this.iceTimer > 0 ? '#38bdf8' : '#ff8b32';
-        c.shadowBlur = 18;
+        c.shadowBlur = 0;
         c.beginPath();
         for (let x = 0; x <= w + 6; x += 6) {
             const y = this.surface(x, top);
@@ -645,7 +647,7 @@ class Monster {
             c.strokeStyle = '#facc15';
             c.lineWidth = 3;
             c.shadowColor = '#eab308';
-            c.shadowBlur = 15;
+            c.shadowBlur = 0;
             for (let i = 0; i < 4; i++) {
                 c.beginPath();
                 const sx = this.face * w + (Math.random() - 0.5) * 220;
@@ -668,7 +670,7 @@ class Monster {
 
             // 1. Güclü arxa fon kölgəsi və parıltı
             c.shadowColor = '#f59e0b';
-            c.shadowBlur = 20;
+            c.shadowBlur = 0;
 
             // 2. Əsas zirehli divar gövdəsi
             c.fillStyle = 'rgba(28, 16, 8, 0.94)';
@@ -719,7 +721,7 @@ class Monster {
             c.strokeStyle = '#fde047';
             c.lineWidth = 2;
             c.shadowColor = '#facc15';
-            c.shadowBlur = 12;
+            c.shadowBlur = 0;
             c.beginPath();
             c.moveTo(barX + 4, topY + 1);
             c.lineTo(barX + barW - 4, topY + 1);
@@ -828,7 +830,7 @@ class Monster {
                 c.fillStyle = b.bg;
                 c.strokeStyle = b.border;
                 c.lineWidth = 1.8;
-                c.shadowBlur = 12;
+                c.shadowBlur = 0;
                 c.shadowColor = b.clr;
                 c.beginPath();
                 if (typeof c.roundRect === 'function') {
@@ -952,7 +954,7 @@ class Monster {
                 c.strokeStyle = blink ? '#ef4444' : '#f59e0b';
                 c.lineWidth = 2.5;
                 c.shadowColor = '#ef4444';
-                c.shadowBlur = 15;
+                c.shadowBlur = 0;
                 c.setLineDash([6, 6]);
 
                 // Hədəf halqası
@@ -979,7 +981,7 @@ class Monster {
                 c.save();
                 c.fillStyle = '#f97316';
                 c.shadowColor = '#ef4444';
-                c.shadowBlur = 25;
+                c.shadowBlur = 0;
 
                 // Alov quyruğu
                 c.beginPath();
@@ -1058,7 +1060,7 @@ class Monster {
             c.strokeStyle = `rgba(234, 88, 12, ${sw.alpha * 0.9})`;
             c.lineWidth = 4;
             c.shadowColor = '#f97316';
-            c.shadowBlur = 20;
+            c.shadowBlur = 0;
 
             c.beginPath();
             c.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
@@ -1277,13 +1279,13 @@ class Monster {
         c.textAlign = 'left';
         c.fillStyle = '#f87171';
         c.shadowColor = '#ef4444';
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.fillText(`👾 LAVA OBSİDİAN BOSS — DALĞA ${this.currentBossWave}/${this.totalBossWaves}`, barX, barY - 7);
 
         c.textAlign = 'right';
         c.fillStyle = '#fef08a';
         c.shadowColor = '#f59e0b';
-        c.shadowBlur = 8;
+        c.shadowBlur = 0;
         c.fillText(`${Math.ceil(this.hp)} / ${this.maxHp} HP`, barX + barWidth, barY - 7);
 
         // 2. Fon qutusu
@@ -1291,7 +1293,7 @@ class Monster {
         c.strokeStyle = 'rgba(239, 68, 68, 0.65)';
         c.lineWidth = 1.8;
         c.shadowColor = 'rgba(239, 68, 68, 0.35)';
-        c.shadowBlur = 14;
+        c.shadowBlur = 0;
         c.beginPath();
         c.roundRect(barX, barY, barWidth, barHeight, 5);
         c.fill();
@@ -1316,7 +1318,7 @@ class Monster {
 
             c.fillStyle = hpGrad;
             c.shadowColor = '#f97316';
-            c.shadowBlur = 12;
+            c.shadowBlur = 0;
             c.beginPath();
             c.roundRect(barX + 2, barY + 2, (barWidth - 4) * hpRatio, barHeight - 4, 3);
             c.fill();

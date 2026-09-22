@@ -35,7 +35,7 @@ const VoidSpawnEffect = {
         c.rotate(vortexSpin);
         c.strokeStyle = '#c084fc';
         c.lineWidth = 2.2;
-        c.shadowBlur = 18;
+        c.shadowBlur = 0;
         c.shadowColor = '#e879f9';
         for (let arm = 0; arm < 3; arm++) {
             c.save();

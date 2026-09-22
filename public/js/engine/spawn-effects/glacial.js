@@ -172,7 +172,7 @@
         ctx.save();
         ctx.strokeStyle = color;
         ctx.shadowColor = '#00f0ff';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = 1.4;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
@@ -199,7 +199,7 @@
         // 1. Outer Neon Conduit Glow
         ctx.strokeStyle = `rgba(56, 189, 248, ${0.4 + speedFactor * 0.55})`;
         ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 12 + speedFactor * 16;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = 2.2 + speedFactor * 2.8;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
@@ -209,7 +209,7 @@
         // 2. Ultra-Bright Superconducting Core
         ctx.strokeStyle = '#e0f2fe';
         ctx.lineWidth = 1.2 + speedFactor * 1.2;
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
@@ -221,7 +221,7 @@
         const py = p1.y + dy * packetRatio;
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = '#67e8f9';
-        ctx.shadowBlur = 14;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.arc(px, py, 2.5 + speedFactor * 2, 0, Math.PI * 2);
         ctx.fill();
@@ -234,7 +234,7 @@
         ctx.save();
         if (glow) {
           ctx.shadowColor = glow;
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 0;
         }
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = lineWidth;
@@ -295,7 +295,7 @@
           ctx.save();
           ctx.fillStyle = '#67e8f9';
           ctx.shadowColor = '#00f0ff';
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.arc(pCore.x, pCore.y, 2.5 * pCore.k, 0, Math.PI * 2);
           ctx.fill();
@@ -399,7 +399,7 @@
               ctx.save();
               ctx.fillStyle = '#67e8f9';
               ctx.shadowColor = '#00f0ff';
-              ctx.shadowBlur = 10 + speedFactor * 12;
+              ctx.shadowBlur = 0;
               ctx.beginPath();
               ctx.arc(hexVertex.x, hexVertex.y, 3 * hexVertex.k, 0, Math.PI * 2);
               ctx.fill();
@@ -755,7 +755,7 @@
           ctx.save();
           ctx.strokeStyle = '#38bdf8';
           ctx.shadowColor = '#67e8f9';
-          ctx.shadowBlur = 14;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = 2.4;
           ctx.globalAlpha = Math.max(0, f.alpha);
           ctx.beginPath();
@@ -793,7 +793,7 @@
           ctx.save();
           ctx.strokeStyle = '#ffffff';
           ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = 16;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = j.width;
           ctx.beginPath();
           ctx.moveTo(j.x, j.y - j.length);
@@ -816,7 +816,7 @@
           ctx.globalAlpha = Math.max(0, s.alpha);
           ctx.fillStyle = s.color;
           ctx.shadowColor = '#67e8f9';
-          ctx.shadowBlur = 7;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.moveTo(0, -s.size);
           ctx.lineTo(s.size * 0.8, s.size * 0.8);
@@ -875,12 +875,12 @@
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 1.8;
         ctx.shadowColor = '#00f0ff';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.ellipse(0, breathing * 0.4, 22, 24, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         // Holographic Visor Screen
         ctx.fillStyle = '#030712';
@@ -891,7 +891,7 @@
         // Cyber Eyes (Angular vector slit glow)
         ctx.fillStyle = '#67e8f9';
         ctx.shadowColor = '#67e8f9';
-        ctx.shadowBlur = 7;
+        ctx.shadowBlur = 0;
         for (const side of [-1, 1]) {
           ctx.beginPath();
           ctx.moveTo(side * 10, -2 + breathing * 0.3);
@@ -900,7 +900,7 @@
           ctx.closePath();
           ctx.fill();
         }
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         // Digital Smile
         ctx.strokeStyle = '#38bdf8';

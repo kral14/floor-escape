@@ -139,7 +139,7 @@ class PowerUp {
         c.translate(this.x, cy);
 
         // 1. Xarici kiber-parıltı halqası
-        c.shadowBlur = 18;
+        c.shadowBlur = 0;
         c.shadowColor = this.cfg.glow;
 
         const pulseScale = 1 + Math.sin(Date.now() * 0.006 + this.bobOffset) * 0.08;
@@ -189,7 +189,7 @@ class PowerUp {
         c.stroke();
 
         // 4. Mərkəzi Simvol / Emoji
-        c.shadowBlur = 0;
+        c.shadowBlur =0;
         c.font = '12px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
         c.textAlign = 'center';
         c.textBaseline = 'middle';

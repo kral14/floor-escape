@@ -31,7 +31,7 @@
             c.beginPath();
             c.arc(ox, oy, 5, 0, Math.PI * 2);
             c.fillStyle = '#e879f9';
-            c.shadowBlur = 14;
+            c.shadowBlur = 0;
             c.shadowColor = '#c084fc';
             c.fill();
 
@@ -46,7 +46,7 @@
         c.save();
         c.rotate(facing || 0);
 
-        c.shadowBlur = 25;
+        c.shadowBlur = 0;
         c.shadowColor = glow;
         c.beginPath();
         c.arc(0, 0, r * 1.1, 0, Math.PI * 2);
@@ -60,7 +60,7 @@
 
         // 3. ƏZƏMƏTLİ QIZILI KİBER TAC
         c.save();
-        c.shadowBlur = 16;
+        c.shadowBlur = 0;
         c.shadowColor = '#facc15';
         c.fillStyle = '#f59e0b';
         c.strokeStyle = '#fef08a';
@@ -85,7 +85,7 @@
         c.restore();
 
         // 4. Mərkəzi Sirli Void Gözü
-        c.shadowBlur = 14;
+        c.shadowBlur = 0;
         c.shadowColor = '#ffffff';
         c.fillStyle = '#c084fc';
         c.beginPath();

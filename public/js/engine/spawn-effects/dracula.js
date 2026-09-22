@@ -295,7 +295,7 @@ const DraculaSpawnEffect = {
             c.translate(0, centerY);
             c.globalAlpha = opacity;
             c.shadowColor = '#9774be';
-            c.shadowBlur = Math.min(10, 14 * spread + 2);
+            c.shadowBlur = 0;
             c.beginPath();
             for (let j = 0; j <= 40; j++) {
                 const A = j * Math.PI / 20;
@@ -312,7 +312,7 @@ const DraculaSpawnEffect = {
             c.strokeStyle = '#80688e';
             c.lineWidth = 1.2;
             c.stroke();
-            c.shadowBlur = 0;
+            c.shadowBlur =0;
             c.restore();
         }
 
@@ -431,7 +431,7 @@ const DraculaSpawnEffect = {
                 c.lineWidth = 1.5;
                 c.lineJoin = 'round';
                 c.shadowColor = '#9c5265';
-                c.shadowBlur = 7;
+                c.shadowBlur = 0;
 
                 c.beginPath();
                 c.moveTo(0, 0);
@@ -443,7 +443,7 @@ const DraculaSpawnEffect = {
                 c.closePath();
                 c.fill();
                 c.stroke();
-                c.shadowBlur = 0;
+                c.shadowBlur =0;
 
                 c.strokeStyle = '#925564';
                 c.lineWidth = 1.5;
@@ -487,7 +487,7 @@ const DraculaSpawnEffect = {
             c.scale(0.84, 0.84);
             c.translate(0, 10);
             c.shadowColor = '#ffc26d';
-            c.shadowBlur = 17;
+            c.shadowBlur = 0;
             c.fillStyle = '#fff0a2';
             for (const side of [-1, 1]) {
                 c.beginPath();

@@ -91,12 +91,12 @@ const MonsCharacterRenderer = {
         ctx.strokeStyle = '#2dd4bf';
         ctx.lineWidth = 1.8;
         ctx.shadowColor = '#14b8a6';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.ellipse(0, breathing * 0.5, 23, 25, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         ctx.fillStyle = '#021815';
         ctx.beginPath();
@@ -106,7 +106,7 @@ const MonsCharacterRenderer = {
         const eyeGlow = '#67e8f9';
         ctx.fillStyle = eyeGlow;
         ctx.shadowColor = eyeGlow;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 0;
         for (const side of [-1, 1]) {
             ctx.beginPath();
             ctx.moveTo(side * 11, -3 + breathing * 0.3);
@@ -115,7 +115,7 @@ const MonsCharacterRenderer = {
             ctx.closePath();
             ctx.fill();
         }
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         ctx.strokeStyle = '#5eead4';
         ctx.lineWidth = 1.8;

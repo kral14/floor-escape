@@ -48,8 +48,8 @@
         c.beginPath();
         c.moveTo(flow(0, 0), y);
         // Sol tərəf aşağı
-        for (let i = 0; i <= 45; i++) {
-            let p = i / 45;
+        for (let i = 0; i <= 20; i++) {
+            let p = i / 20;
             c.lineTo(flow(0, p), y + p * height);
         }
 
@@ -69,24 +69,24 @@
         }
 
         // Sağ tərəf yuxarı
-        for (let i = 45; i >= 0; i--) {
-            let p = i / 45;
+        for (let i = 20; i >= 0; i--) {
+            let p = i / 20;
             c.lineTo(flow(1, p), y + p * height);
         }
         c.closePath();
         c.fillStyle = grad;
         c.shadowColor = '#ff4b00';
-        c.shadowBlur = 22;
+        c.shadowBlur = 0;
         c.fill();
         c.shadowBlur = 0;
         c.clip();
 
         // 95 Ədəd qızmar bükülən maye lifləri
-        for (let j = 0; j < 95; j++) {
-            let u = j / 94;
+        for (let j = 0; j < 6; j++) {
+            let u = (j + 1) / 7;
             c.beginPath();
-            for (let k = 0; k <= 44; k++) {
-                let p = k / 44;
+            for (let k = 0; k <= 8; k++) {
+                let p = k / 8;
                 let xx = flow(u, p) + Math.sin(p * 10 - t * (1.5 + u) + u * 31) * 6 * p;
                 if (k === 0) c.moveTo(xx, y);
                 else c.lineTo(xx, y + p * height);
@@ -98,11 +98,11 @@
         }
 
         // 105 Ədəd aşağı sürüşən soyumuş bazalt qabıqları
-        for (let j = 0; j < 105; j++) {
+        for (let j = 0; j < 6; j++) {
             const u = ((j * 0.618033) % 1);
             const p = ((t * (0.20 + u * 0.12) + j * 0.137) % 1);
             c.beginPath();
-            for (let k = 0; k < 7; k++) {
+            for (let k = 0; k < 3; k++) {
                 let q = p + k * 0.009;
                 let xx = flow(u, q) + Math.sin(q * 28 + j) * 3;
                 if (k === 0) c.moveTo(xx, y + q * height);
@@ -331,7 +331,7 @@
     function drawSpillwayLip(c, xx, ww, lip) {
         c.save();
         c.shadowColor = '#ff6500';
-        c.shadowBlur = 16;
+        c.shadowBlur = 0;
         c.strokeStyle = '#ff901e';
         c.lineWidth = 4;
         c.beginPath();
@@ -357,7 +357,7 @@
 
         // 1. Platformanın üzərinə yayılan qızmar obsidian-magma aurası
         c.shadowColor = '#ff4500';
-        c.shadowBlur = 24;
+        c.shadowBlur = 0;
 
         const baseGrad = c.createRadialGradient(hitX, rockY + 2, 4, hitX, rockY + 3, poolW * 0.9);
         baseGrad.addColorStop(0, '#ffec70');

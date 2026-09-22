@@ -1,7 +1,7 @@
 // ƏSAS OYUN MƏNTİQİ, FİZİKA VƏ OYUN DÖNGƏSİ (GAME LOOP & ENGINE COORDINATOR)
 
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) || canvas.getContext('2d');
 window.ctx = ctx;
 
 // SABİT STANDART QRİD VƏ OYUN MEYDANI ÖLÇÜLƏRİ (800x680: 20x17 xana, hər biri 40px)
@@ -98,60 +98,38 @@ if (activeQuality === 'auto') {
 }
 window.GRAPHICS_QUALITY = activeQuality;
 
-// ⚡ CPU REJİMİ OPTİMİZASİYASI: Bütün ctx.shadowBlur çağırışlarını CPU rejimində 0 edən ağıllı proxy
-(function installShadowOptimization(c) {
-    try {
-        const proto = CanvasRenderingContext2D.prototype;
-        const origDesc = Object.getOwnPropertyDescriptor(proto, 'shadowBlur');
-        if (origDesc && origDesc.set) {
-            Object.defineProperty(c, 'shadowBlur', {
-                set: function(val) {
-                    // Əgər CPU rejimindədirsə (GPU yoxdursa və ya low seçilibsə) kölgə hesablamalarını sıfırla
-                    if (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto')) {
-                        origDesc.set.call(this, 0);
-                    } else {
-                        origDesc.set.call(this, val);
-                    }
-                },
-                get: function() {
-                    if (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto')) {
-                        return 0;
-                    }
-                    return origDesc.get.call(this);
-                },
-                configurable: true
-            });
-        }
-    } catch(e) {
-        console.warn('Shadow optimization hook:', e);
-    }
-})(ctx);
+// [OPTIMIZED] Zero prototype interception for maximum V8 JIT speed
 
 // Əgər GPU varsa - kətanı və konteyneri GPU qatına veririk; Yoxdursa - CPU yükünü sıfırlayırıq
 function applyHardwareLayerSettings() {
     const screenCont = document.getElementById('game-screen-container');
     const cEl = document.getElementById('gameCanvas');
-    const isGPUActive = (window.GRAPHICS_QUALITY === 'high') || (window.GRAPHICS_QUALITY === 'auto' && window.HAS_HARDWARE_GPU);
-    
-    if (isGPUActive) {
-        if (screenCont) {
-            screenCont.style.transform = (screenCont.style.transform || '').replace(' translateZ(0)', '') + ' translateZ(0)';
-            screenCont.style.willChange = 'transform';
+    const bgGrid = document.querySelector('.bg-grid');
+    const bgLayer = document.querySelector('.bg-layer');
+    const q = window.GRAPHICS_QUALITY || 'high';
+
+    // 🎨 HTML Arxa Plan Qatlarının Keyfiyyətə Uyğunlaşdırılması (Gözlə dərhal görünən fərq)
+    if (bgGrid) {
+        if (q === 'high') {
+            bgGrid.style.display = 'block';
+            bgGrid.style.opacity = '0.55';
+        } else if (q === 'medium') {
+            bgGrid.style.display = 'block';
+            bgGrid.style.opacity = '0.25';
+        } else {
+            // Low (Maksimum FPS): Arxa plan animasiyalı toru tam gizlədilir!
+            bgGrid.style.display = 'none';
         }
-        if (cEl) {
-            cEl.style.transform = 'translateZ(0)';
-            cEl.style.willChange = 'transform';
-        }
-    } else {
-        // CPU Rejimi: qat çevrilmələrini və willChange-i ləğv et, prosessoru artıq kompozisiya işlərindən azad et
-        if (screenCont) {
-            screenCont.style.transform = (screenCont.style.transform || '').replace(' translateZ(0)', '');
-            screenCont.style.willChange = 'auto';
-        }
-        if (cEl) {
-            cEl.style.transform = 'none';
-            cEl.style.willChange = 'auto';
-        }
+    }
+    if (bgLayer) {
+        bgLayer.style.opacity = (q === 'low') ? '0.3' : '1';
+    }
+
+    if (screenCont) {
+        screenCont.style.willChange = (q === 'high') ? 'transform' : 'auto';
+    }
+    if (cEl) {
+        cEl.style.willChange = (q === 'high') ? 'transform' : 'auto';
     }
 }
 setTimeout(applyHardwareLayerSettings, 100);
@@ -191,22 +169,28 @@ function setTargetFPS(fps) {
 window.setTargetFPS = setTargetFPS;
 window.targetFPS = targetFPS;
 
+function toggleFpsMode() {
+    const list = [0, 60, 120, 144, 30];
+    const nextIdx = (list.indexOf(targetFPS) + 1) % list.length;
+    setTargetFPS(list[nextIdx]);
+}
+window.toggleFpsMode = toggleFpsMode;
+
 function setGraphicsQuality(mode) {
-    if (!['auto', 'high', 'low'].includes(mode)) return;
+    if (!['high', 'medium', 'low'].includes(mode)) return;
     savedQuality = mode;
     window.savedQuality = savedQuality;
     localStorage.setItem('floor_escape_graphics_quality', mode);
-    if (mode === 'auto') {
-        // GPU yoxdursa avtomatik CPU (low) rejiminə keçir
-        activeQuality = hwInfo.hasHardwareGPU ? 'high' : 'low';
-    } else {
-        activeQuality = mode;
-    }
-    window.GRAPHICS_QUALITY = activeQuality;
+    window.GRAPHICS_QUALITY = mode;
     applyHardwareLayerSettings();
     updateFpsUI();
+    const modeLabels = {
+        'high': '🌟 Yüksək (Ultra Qrafika)',
+        'medium': '⚖️ Orta (Balanslı 60 FPS)',
+        'low': '⚡ Aşağı (Maksimum FPS Rejimi)'
+    };
     if (typeof showToast === 'function') {
-        showToast(`🎨 Qrafika: ${mode === 'high' ? 'Yüksək (GPU Neon)' : mode === 'low' ? 'Yüngül (CPU Sürətli)' : 'Avtomatik'} rejim seçildi`, 'success');
+        showToast(`🎨 Qrafika Keyfiyyəti: ${modeLabels[mode] || mode} aktivdir!`, 'success');
     }
 }
 window.setGraphicsQuality = setGraphicsQuality;
@@ -727,8 +711,13 @@ function renderGame() {
     }
 
     // 🎯 ZƏRRƏCİKLƏR (Culling və CPU rejimində yükü qoruyan limitləmə)
-    const isCPUMode = (window.GRAPHICS_QUALITY === 'low' || (!window.HAS_HARDWARE_GPU && window.GRAPHICS_QUALITY === 'auto'));
-    const maxParticles = isCPUMode ? Math.min(particles.length, 30) : particles.length;
+    const qMode = window.GRAPHICS_QUALITY || 'high';
+    let maxParticles = particles.length;
+    if (qMode === 'low') {
+        maxParticles = Math.min(particles.length, 10);
+    } else if (qMode === 'medium') {
+        maxParticles = Math.min(particles.length, 25);
+    }
     for (let i = 0; i < maxParticles; i++) {
         const p = particles[i];
         if (p.y >= viewTop && p.y <= viewBottom) {
@@ -744,10 +733,7 @@ function renderGame() {
             ctx.font = `900 ${ft.size}px Orbitron, sans-serif`;
             ctx.fillStyle = ft.color;
             ctx.textAlign = 'center';
-            if (!isCPUMode) {
-                ctx.shadowColor = ft.color;
-                ctx.shadowBlur = 14;
-            }
+            ctx.shadowBlur = 0;
             ctx.globalAlpha = ft.alpha;
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
@@ -844,13 +830,28 @@ function gameLoop(timestamp) {
     physicsAccumulator += elapsed;
 
     fpsFramesCount++;
-    if (timestamp - fpsLastTime >= 1000) {
+    if (timestamp - fpsLastTime >= 500) {
         currentMeasuredFPS = Math.round((fpsFramesCount * 1000) / (timestamp - fpsLastTime));
         fpsFramesCount = 0;
         fpsLastTime = timestamp;
         const fpsBadge = document.getElementById('stat-fps');
+        const fpsDot = document.getElementById('fps-dot');
+        const fpsBox = document.getElementById('header-fps-box');
         if (fpsBadge) {
             fpsBadge.innerText = `${currentMeasuredFPS} FPS`;
+            if (currentMeasuredFPS >= 55) {
+                fpsBadge.className = 'font-orbitron font-bold text-xs text-emerald-400 tabular-nums';
+                if (fpsDot) fpsDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                if (fpsBox) fpsBox.className = 'h-9 px-2.5 rounded-xl glass-card flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-950/30 cursor-pointer hover:border-emerald-400/80 transition select-none shadow-sm';
+            } else if (currentMeasuredFPS >= 30) {
+                fpsBadge.className = 'font-orbitron font-bold text-xs text-amber-400 tabular-nums';
+                if (fpsDot) fpsDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+                if (fpsBox) fpsBox.className = 'h-9 px-2.5 rounded-xl glass-card flex items-center gap-1.5 border border-amber-500/40 bg-amber-950/30 cursor-pointer hover:border-amber-400/80 transition select-none shadow-sm';
+            } else {
+                fpsBadge.className = 'font-orbitron font-bold text-xs text-rose-400 tabular-nums';
+                if (fpsDot) fpsDot.className = 'w-2 h-2 rounded-full bg-rose-400 animate-ping';
+                if (fpsBox) fpsBox.className = 'h-9 px-2.5 rounded-xl glass-card flex items-center gap-1.5 border border-rose-500/40 bg-rose-950/30 cursor-pointer hover:border-rose-400/80 transition select-none shadow-sm';
+            }
         }
     }
 
@@ -998,7 +999,7 @@ function restartGame() {
     clearActiveRun();
     gameState.transitioning = false;
     keys = {};
-    gameState.gold = 75;
+    gameState.gold = (typeof getStartingGold === 'function') ? getStartingGold() : 75;
     gameState.floor = 1;
     gameState.scoreProgress = 0;
     gameState.scoreReq = gameState.getFloorRequirement(1);

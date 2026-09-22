@@ -129,7 +129,7 @@ class EscapePass {
         c.strokeStyle = '#d97706';
         c.lineWidth = 2;
         c.shadowColor = '#fbbf24';
-        c.shadowBlur = 15;
+        c.shadowBlur = 0;
 
         // Vərəq düzbucaqlısı
         c.beginPath();
@@ -169,7 +169,7 @@ class EscapePass {
         // Parıldayan Mərkəzi Kiber Möhür (Cyan Seal)
         c.fillStyle = '#06b6d4';
         c.shadowColor = '#22d3ee';
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.beginPath();
         c.arc(7, 4, 3, 0, Math.PI * 2);
         c.fill();
@@ -181,7 +181,7 @@ class EscapePass {
         c.textAlign = 'center';
         c.fillStyle = '#fef08a';
         c.shadowColor = '#f59e0b';
-        c.shadowBlur = 10;
+        c.shadowBlur = 0;
         c.fillText('📜 KEÇİD KAĞIZI', 0, -23);
 
         c.restore();

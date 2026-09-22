@@ -651,7 +651,7 @@
           // Shockwave Prismatic Accretion Rings
           ctx.strokeStyle = `rgba(216, 180, 254, ${alpha})`;
           ctx.shadowColor = '#e879f9';
-          ctx.shadowBlur = 24;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = 3.2;
           ctx.beginPath();
           ctx.arc(0, 0, imp.radius, 0, Math.PI * 2);
@@ -676,7 +676,7 @@
           // Outer Plasma Glow
           ctx.strokeStyle = l.color;
           ctx.shadowColor = l.color;
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = l.width * (1.2 + (1 - ratio) * 0.6);
           ctx.lineCap = 'round';
           ctx.lineJoin = 'miter';
@@ -712,7 +712,7 @@
           ctx.translate(p.x, p.y);
           ctx.rotate(p.angle);
           ctx.shadowColor = '#f0abfc';
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = 0;
 
           // Double Concentric Graviton Core
           ctx.fillStyle = '#ffffff';
@@ -737,7 +737,7 @@
           ctx.globalAlpha = Math.max(0, d.alpha);
           ctx.fillStyle = d.color;
           ctx.shadowColor = d.color;
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 0;
           ctx.fillRect(-d.size / 2, -d.size / 2, d.size, d.size * 1.4);
           ctx.restore();
         }
@@ -754,14 +754,14 @@
           ctx.font = '800 16px "JetBrains Mono", monospace';
           ctx.fillStyle = '#fdf2f8';
           ctx.shadowColor = '#f43f5e';
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = 0;
           ctx.fillText(dp.damageText, 0, 0);
 
           // Subtitle Telemetry
           ctx.font = '700 9px "JetBrains Mono", monospace';
           ctx.fillStyle = '#67e8f9';
           ctx.shadowColor = '#06b6d4';
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 0;
           ctx.fillText(dp.subText, 0, 14);
 
           ctx.restore();
@@ -821,7 +821,7 @@
           // Main Glowing Hyper-Laser Edge
           ctx.strokeStyle = `rgba(192, 132, 252, ${depthAlpha})`;
           ctx.shadowColor = '#e879f9';
-          ctx.shadowBlur = 8 + speedFactor * 16;
+          ctx.shadowBlur = 0;
           ctx.lineWidth = (1.5 + (avgW + 1) * 0.8 + speedFactor * 1.5) * p1.k;
           ctx.beginPath();
           ctx.moveTo(p1.x, p1.y);
@@ -839,7 +839,7 @@
           const nodeSize = (4.0 + (p.hyperDepth + 1) * 2.5 + speedFactor * 2) * p.k;
           ctx.fillStyle = '#ffffff';
           ctx.shadowColor = '#c084fc';
-          ctx.shadowBlur = 12 + speedFactor * 12;
+          ctx.shadowBlur = 0;
           ctx.beginPath();
           ctx.arc(p.x, p.y, nodeSize, 0, Math.PI * 2);
           ctx.fill();
@@ -855,7 +855,7 @@
               ctx.save();
               ctx.fillStyle = '#f0abfc';
               ctx.shadowColor = '#e879f9';
-              ctx.shadowBlur = 16 + speedFactor * 16;
+              ctx.shadowBlur = 0;
               ctx.beginPath();
               ctx.arc(anchor.x, anchor.y, (7.0 + orbPulse) * anchor.k, 0, Math.PI * 2);
               ctx.fill();
@@ -877,7 +877,7 @@
         ctx.save();
         ctx.strokeStyle = 'rgba(232, 121, 249, 0.85)';
         ctx.shadowColor = '#d946ef';
-        ctx.shadowBlur = 16 + speedFactor * 14;
+        ctx.shadowBlur = 0;
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         ctx.arc(0, 0, stasisRadius, 0, Math.PI * 2);
@@ -941,12 +941,12 @@
         ctx.strokeStyle = '#e879f9';
         ctx.lineWidth = 1.8;
         ctx.shadowColor = '#d946ef';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.ellipse(0, breathing * 0.4, 23, 25, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         // Dark Visor Face Shield
         ctx.fillStyle = '#090214';
@@ -957,7 +957,7 @@
         // Glowing Bioluminescent Hyper-Eyes
         ctx.fillStyle = '#f0abfc';
         ctx.shadowColor = '#e879f9';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 0;
         for (const side of [-1, 1]) {
           ctx.beginPath();
           ctx.moveTo(side * 10, -2 + breathing * 0.3);
@@ -966,7 +966,7 @@
           ctx.closePath();
           ctx.fill();
         }
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur =0;
 
         // Digital Smile
         ctx.strokeStyle = '#c084fc';
