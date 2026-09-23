@@ -381,8 +381,8 @@ function applyPlayerDataFromCloud(player) {
             permUpgrades.ownedSpawnAnims = [];
         }
 
-        if (permUpgrades.equippedSpawnAnim && (typeof SPAWN_ANIMS === 'undefined' || SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] || ['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim))) {
-            // retain valid equipped anim
+        if (permUpgrades.equippedSpawnAnim && Array.isArray(permUpgrades.ownedSpawnAnims) && permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
+            // retain valid equipped anim only if owned
         } else {
             permUpgrades.equippedSpawnAnim = null;
         }
@@ -418,6 +418,9 @@ function applyPlayerDataFromCloud(player) {
     if (typeof updateStatsUI === 'function') updateStatsUI();
     if (typeof renderLab === 'function') renderLab();
     if (typeof renderShop === 'function') renderShop();
+    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+    if (typeof renderSkinsShop === 'function') renderSkinsShop();
+    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
 }
 
 // Buluda sinxronizasiya (Avtomatik və ya dəyişikliklərdə dərhal bazaya yazır)
@@ -458,6 +461,10 @@ function syncPlayerDataCloud(immediate = false) {
                     // Mərkəzi bazadan birləşdirilmiş (merge edilmiş) avtoritar datanı tətbiq edirik
                     if (data.permUpgrades && typeof data.permUpgrades === 'object') {
                         permUpgrades = { ...DEFAULT_PERM_UPGRADES, ...data.permUpgrades };
+                        if (!Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = [];
+                        if (permUpgrades.equippedSpawnAnim && !permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
+                            permUpgrades.equippedSpawnAnim = null;
+                        }
                         try { localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades)); } catch(e) {}
                     }
                     if (Array.isArray(data.claimedChests)) {
@@ -488,6 +495,9 @@ function syncPlayerDataCloud(immediate = false) {
                     if (typeof updateUI === 'function') updateUI();
                     if (typeof updateDashboardUI === 'function') updateDashboardUI();
                     if (typeof updateHomeDashboardData === 'function') updateHomeDashboardData();
+                    if (typeof renderSpawnAnimsShop === 'function') renderSpawnAnimsShop();
+                    if (typeof renderSkinsShop === 'function') renderSkinsShop();
+                    if (typeof updateShopPageHeader === 'function') updateShopPageHeader();
                 }
                 if (ind) ind.className = 'inline-block w-2 h-2 rounded-full bg-emerald-400';
             } else {

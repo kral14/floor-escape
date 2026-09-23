@@ -60,6 +60,13 @@ def merge_perm_upgrades(existing_upgrades, client_upgrades):
         else:
             if v is not None and v != '':
                 merged[k] = v
+            elif v is None and k in ('equippedSpawnAnim', 'equippedSkin'):
+                merged[k] = None
+
+    owned_anims = merged.get('ownedSpawnAnims') or []
+    if merged.get('equippedSpawnAnim') and merged.get('equippedSpawnAnim') not in owned_anims:
+        merged['equippedSpawnAnim'] = None
+
     return merged
 
 def merge_claimed_chests(existing_chests, client_chests):

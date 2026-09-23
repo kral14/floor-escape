@@ -168,6 +168,11 @@
             };
         }
 
+        // Hərəkətli platforma önbelleğini sıfırla
+        if (currentTrack.rocks) {
+            currentTrack.rocks.forEach(r => { delete r._baseX; delete r._baseY; });
+        }
+
         // Təhlükəsizlik
         if (!currentTrack.rocks) currentTrack.rocks = [];
         if (!currentTrack.lavaSources) currentTrack.lavaSources = [];
@@ -207,6 +212,27 @@
             valRockW.textContent = rock.w;
             inputRockH.value = rock.h;
             valRockH.textContent = rock.h;
+
+            // Hərəkətli platforma UI-nı yüklə
+            const chkMoving = document.getElementById('chk-moving');
+            const movingProps = document.getElementById('moving-props');
+            const mv = rock.moving;
+            if (chkMoving) {
+                chkMoving.checked = !!(mv);
+                if (movingProps) movingProps.classList.toggle('hidden', !mv);
+            }
+            if (mv) {
+                const btnX = document.getElementById('btn-axis-x');
+                const btnY = document.getElementById('btn-axis-y');
+                if (btnX) btnX.classList.toggle('active', mv.axis !== 'y');
+                if (btnY) btnY.classList.toggle('active', mv.axis === 'y');
+                const rangeEl = document.getElementById('input-moving-range');
+                if (rangeEl) { rangeEl.value = mv.range || 150; document.getElementById('val-moving-range').textContent = rangeEl.value; }
+                const speedEl = document.getElementById('input-moving-speed');
+                if (speedEl) { speedEl.value = mv.speed || 80; document.getElementById('val-moving-speed').textContent = speedEl.value; }
+                const phaseEl = document.getElementById('input-moving-phase');
+                if (phaseEl) { phaseEl.value = mv.phase || 0; document.getElementById('val-moving-phase').textContent = parseFloat(phaseEl.value).toFixed(1); }
+            }
         } else if (type === 'lava') {
             const lava = currentTrack.lavaSources[index];
             lavaProps.classList.remove('hidden');
@@ -472,6 +498,28 @@
                     ctx.fillText(`🛑 SONLANMA (Y:${Math.round(mat.y)})`, mat.x + mat.w * 0.5, mat.y - 12);
                 }
                 ctx.restore();
+            }
+        }
+
+        // 🚦 HƏRƏKƏTLİ PLATFORMALARIN REDKATORDAKİ ANİMASİYASI (Real vaxt preview)
+        for (const rock of currentTrack.rocks) {
+            if (!rock.moving) continue;
+            const mv = rock.moving;
+            const halfW = rock.w / 2;
+            const halfH = rock.h / 2;
+            const range = mv.range || 150;
+            const spd = mv.speed || 80;
+            const freq = spd / (range * 2);
+            const angle = (animTime * freq * Math.PI * 2) + ((mv.phase || 0) * Math.PI * 2);
+            const offset = Math.sin(angle) * range;
+            // baseX/baseY: redaktora ilk əlavə edildiyi zaman saxlanılmış orijinal mövqe
+            if (rock._baseX === undefined) { rock._baseX = rock.x + halfW; rock._baseY = rock.y + halfH; }
+            if (mv.axis === 'y') {
+                rock.x = rock._baseX - halfW;
+                rock.y = rock._baseY - halfH + offset;
+            } else {
+                rock.x = rock._baseX - halfW + offset;
+                rock.y = rock._baseY - halfH;
             }
         }
 
@@ -1077,6 +1125,104 @@
             }
         });
 
+        // 🚦 HƏRƏKƏTLİ PLATFORMA KONTROLLAR
+        const chkMoving = document.getElementById('chk-moving');
+        const movingPropsEl = document.getElementById('moving-props');
+        const btnAxisX = document.getElementById('btn-axis-x');
+        const btnAxisY = document.getElementById('btn-axis-y');
+        const inputMovingRange = document.getElementById('input-moving-range');
+        const inputMovingSpeed = document.getElementById('input-moving-speed');
+        const inputMovingPhase = document.getElementById('input-moving-phase');
+
+        function getOrCreateMoving() {
+            if (selectedType !== 'rock' || !currentTrack.rocks[selectedIndex]) return null;
+            const rock = currentTrack.rocks[selectedIndex];
+            if (!rock.moving) rock.moving = { axis: 'x', range: 150, speed: 80, phase: 0 };
+            return rock.moving;
+        }
+
+        if (chkMoving) {
+            chkMoving.addEventListener('change', () => {
+                if (selectedType !== 'rock' || !currentTrack.rocks[selectedIndex]) return;
+                const rock = currentTrack.rocks[selectedIndex];
+                if (chkMoving.checked) {
+                    rock.moving = { axis: 'x', range: 150, speed: 80, phase: 0 };
+                    if (movingPropsEl) movingPropsEl.classList.remove('hidden');
+                    showToast('🚦 Hərəkətli platforma aktivləşdirildi!', 'success');
+                } else {
+                    delete rock.moving;
+                    if (movingPropsEl) movingPropsEl.classList.add('hidden');
+                    showToast('Platforma statik edildi.', 'info');
+                }
+            });
+        }
+
+        if (btnAxisX) {
+            btnAxisX.addEventListener('click', () => {
+                const mv = getOrCreateMoving(); if (!mv) return;
+                mv.axis = 'x';
+                btnAxisX.classList.add('active'); btnAxisY.classList.remove('active');
+            });
+        }
+        if (btnAxisY) {
+            btnAxisY.addEventListener('click', () => {
+                const mv = getOrCreateMoving(); if (!mv) return;
+                mv.axis = 'y';
+                btnAxisY.classList.add('active'); btnAxisX.classList.remove('active');
+            });
+        }
+        if (inputMovingRange) {
+            inputMovingRange.addEventListener('input', () => {
+                const mv = getOrCreateMoving(); if (!mv) return;
+                mv.range = parseInt(inputMovingRange.value, 10);
+                document.getElementById('val-moving-range').textContent = mv.range;
+            });
+        }
+        if (inputMovingSpeed) {
+            inputMovingSpeed.addEventListener('input', () => {
+                const mv = getOrCreateMoving(); if (!mv) return;
+                mv.speed = parseInt(inputMovingSpeed.value, 10);
+                document.getElementById('val-moving-speed').textContent = mv.speed;
+            });
+        }
+        if (inputMovingPhase) {
+            inputMovingPhase.addEventListener('input', () => {
+                const mv = getOrCreateMoving(); if (!mv) return;
+                mv.phase = parseFloat(inputMovingPhase.value);
+                document.getElementById('val-moving-phase').textContent = mv.phase.toFixed(1);
+            });
+        }
+
+        // 🌋 LAVA SÜRƏTİ DROPDOWN
+        const selectLavaSpeed = document.getElementById('select-lava-speed');
+        if (selectLavaSpeed) {
+            // Track yükləndə dropdown-u sinxronla
+            function syncLavaSpeedDropdown() {
+                if (!currentTrack) return;
+                const val = currentTrack.lavaSpeedMult || 1.0;
+                // Ən yaxın dəyəri sə
+                let best = '1.0';
+                let bestDist = Infinity;
+                for (const opt of selectLavaSpeed.options) {
+                    const d = Math.abs(parseFloat(opt.value) - val);
+                    if (d < bestDist) { bestDist = d; best = opt.value; }
+                }
+                selectLavaSpeed.value = best;
+            }
+            syncLavaSpeedDropdown();
+
+            // Track dəyişdikdə sinxronla
+            trackSelect.addEventListener('change', () => setTimeout(syncLavaSpeedDropdown, 50));
+
+            selectLavaSpeed.addEventListener('change', () => {
+                if (!currentTrack) return;
+                currentTrack.lavaSpeedMult = parseFloat(selectLavaSpeed.value);
+                const label = selectLavaSpeed.options[selectLavaSpeed.selectedIndex].text;
+                showToast(`🌋 Lava sürəti: ${label}`, 'info');
+            });
+        }
+
+
         btnCenterRock.addEventListener('click', () => {
             if (selectedType === 'rock' && currentTrack.rocks[selectedIndex]) {
                 const rock = currentTrack.rocks[selectedIndex];
@@ -1530,12 +1676,16 @@
     async function saveTrackToServer() {
         if (!currentTrack) return;
 
+        // Yadda saxlamadan əvvəl daxili önbellek sahələrini təmizlə
+        const cleanTrack = JSON.parse(JSON.stringify(currentTrack));
+        cleanTrack.rocks.forEach(r => { delete r._baseX; delete r._baseY; delete r.type; });
+
         // Massivdə yenilə
-        const idx = allTracks.findIndex(t => t.id === currentTrack.id);
+        const idx = allTracks.findIndex(t => t.id === cleanTrack.id);
         if (idx >= 0) {
-            allTracks[idx] = JSON.parse(JSON.stringify(currentTrack));
+            allTracks[idx] = cleanTrack;
         } else {
-            allTracks.push(JSON.parse(JSON.stringify(currentTrack)));
+            allTracks.push(cleanTrack);
         }
 
         try {
@@ -1543,7 +1693,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    track: currentTrack,
+                    track: cleanTrack,
                     allTracks: allTracks
                 })
             });

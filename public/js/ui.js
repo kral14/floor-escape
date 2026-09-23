@@ -90,7 +90,7 @@ function updateUI(force = false) {
     }
 
 
-    const comboKey = `${gameState.combo}_${gameState.borderOpen}`;
+    const comboKey = `${gameState.combo}`;
     if (_lastUICache.combo !== comboKey) {
         _lastUICache.combo = comboKey;
         const comboEl = document.getElementById('stat-combo');
@@ -126,17 +126,7 @@ function updateUI(force = false) {
         }
     }
 
-    const borderText = document.getElementById('border-status-text');
-    const borderDot = document.getElementById('border-icon-dot');
-    if (borderText && borderDot) {
-        if (gameState.borderOpen) {
-            borderText.innerHTML = '<span class="text-emerald-300 font-bold tracking-wider">SƏRHƏD AÇIQDIR</span>';
-            borderDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse';
-        } else {
-            borderText.innerHTML = `<span class="text-slate-300 tracking-wider">SƏRHƏD BAĞLIDIR</span> <span class="text-rose-400 font-semibold text-[11px]">(${gameState.scoreProgress}/${gameState.scoreReq})</span>`;
-            borderDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e] animate-pulse';
-        }
-    }
+
 
     const floorTimerEl = document.getElementById('floor-timer');
     if (floorTimerEl) floorTimerEl.innerText = `⏱ ${Math.floor(gameState.floorTime)}s`;

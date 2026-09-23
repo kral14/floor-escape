@@ -165,11 +165,6 @@
                 </div>
 
 
-                <!-- TƏLƏB -->
-                <div class="w-20 shrink-0 flex items-center justify-center gap-1.5 stat-panel px-2 py-1.5 rounded-xl border border-slate-700 cursor-help hover:border-slate-500 transition" title="Qat Tələbi (Sərhədin açılması üçün)">
-                    <i class="fa-solid fa-bullseye text-slate-300 text-sm"></i>
-                    <span id="stat-req-txt" class="font-orbitron text-slate-200 font-bold text-xs sm:text-sm tabular-nums text-center">0/3</span>
-                </div>
 
                 <!-- DASH -->
                 <div class="w-24 shrink-0 hidden sm:flex items-center justify-center gap-2 stat-panel px-2.5 py-1.5 rounded-xl border border-cyan-500/30 cursor-help hover:border-cyan-400/60 transition" title="Dash [SPACE] (Sürətlənmə)">
@@ -222,6 +217,12 @@
                 <button tabindex="-1" id="btn-pause" onclick="togglePause(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-amber-400 transition" title="Fasilə">
                     <i class="fa-solid fa-pause text-sm"></i>
                 </button>
+                                <!-- 🚀 CANLI FPS SAYĞACI -->
+                <div id="header-fps-box" onclick="openPerfModal(); this.blur();" class="h-9 px-2.5 rounded-xl glass-card flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-950/30 cursor-pointer hover:border-emerald-400/80 transition select-none shadow-sm" title="Real-vaxt Ekran Tezliyi / FPS (Qrafika və Tezlik Ayarları üçün klikləyin)">
+                    <span id="fps-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="stat-fps" class="font-orbitron font-bold text-xs text-emerald-400 tabular-nums">-- FPS</span>
+                </div>
+
                 <!-- ⚙️ MONITOR TEZLİYİ VƏ QRAFİKA AYARLARI -->
                 <button tabindex="-1" id="btn-perf-settings" onclick="openPerfModal(); this.blur();" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-slate-300 hover:text-cyan-400 transition" title="Monitor Tezliyi və Qrafika Ayarları">
                     <i class="fa-solid fa-sliders text-sm"></i>
@@ -348,8 +349,9 @@
                     </div>
 
                     <div class="flex flex-wrap justify-center gap-3">
-                        <button tabindex="-1" onclick="restartGame(); this.blur();" class="btn-shimmer font-orbitron font-bold text-slate-950 px-6 py-3 rounded-xl text-sm shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition">
-                            YENİDƏN BAŞLA
+                        <button tabindex="-1" onclick="restartGame(); this.blur();" class="btn-shimmer font-orbitron font-bold text-slate-950 px-6 py-3 rounded-xl text-sm shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2.5">
+                            <span>YENİDƏN BAŞLA</span>
+                            <kbd class="px-2 py-0.5 text-[11px] font-mono font-black bg-slate-950 text-cyan-400 rounded-md shadow-sm border border-cyan-400/40">R</kbd>
                         </button>
                         <button tabindex="-1" onclick="document.getElementById('modal-overlay').classList.add('hidden'); returnToDashboard(); this.blur();" class="px-5 py-3 rounded-xl glass-card font-orbitron font-bold text-xs text-amber-300 border border-amber-400/40 hover:text-white transition flex items-center gap-2">
                             <i class="fa-solid fa-house text-amber-400"></i> DAŞBORD
@@ -926,7 +928,7 @@
     <script src="js/audio/ambient.js?v=3.4"></script>
     <script src="js/audio/panel.js?v=3.4"></script>
     <script src="js/audio.js?v=3.4"></script>
-    <script src="js/state.js?v=10.0"></script>
+    <script src="js/state.js?v=12.0"></script>
     <!-- DƏRİLƏR REYESTRİ VƏ FƏRDİ MODULLAR -->
     <script src="js/skins/registry.js?v=1.0"></script>
     <script src="js/skins/default.js?v=1.0"></script>
@@ -947,7 +949,7 @@
     <script src="js/engine/spawn-effects/tesseract.js?v=1"></script>
     <script src="js/engine/spawn-effects/manager.js?v=10.0"></script>
 
-    <script src="js/entities/player.js?v=10.1"></script>
+    <script src="js/entities/player.js?v=18.0"></script>
     <script src="js/entities/monster.js?v=3.7"></script>
     <script src="js/entities/bullet.js?v=3.2"></script>
     <script src="js/entities/coin.js?v=3.2"></script>
@@ -956,23 +958,23 @@
     <script src="js/entities/escape-pass.js?v=1.0"></script>
     <script src="js/entities/floor-protection.js?v=1.0"></script>
     <script src="js/giftcodes.js?v=3.2"></script>
-    <script src="js/auth.js?v=3.3"></script>
-    <script src="js/inbox.js?v=3.4"></script>
+    <script src="js/auth.js?v=12.0"></script>
+    <script src="js/inbox.js?v=3.5"></script>
     <script src="js/ui/toasts.js?v=5.0"></script>
     <script src="js/ui/chest-modal.js?v=5.0"></script>
-    <script src="js/ui/lab-panel.js?v=5.0"></script>
-    <script src="js/ui/turrets-panel.js?v=5.0"></script>
-    <script src="js/ui/skins-shop.js?v=10.0"></script>
+    <script src="js/ui/lab-panel.js?v=12.0"></script>
+    <script src="js/ui/turrets-panel.js?v=12.0"></script>
+    <script src="js/ui/skins-shop.js?v=12.0"></script>
     <script src="js/ui.js?v=3.2"></script>
-    <script src="js/engine/input.js?v=9.1"></script>
+    <script src="js/engine/input.js?v=9.3"></script>
     <script src="js/data/floor_patterns.js?v=1.0"></script>
     <script src="js/engine/lava-waterfall.js?v=1.0"></script>
-    <script src="js/engine/platforms.js?v=1.0"></script>
+    <script src="js/engine/platforms.js?v=5.0"></script>
     <script src="js/engine/spawner.js?v=1.4"></script>
     <script src="js/engine/traps.js?v=1.0"></script>
     <script src="js/engine/intro.js?v=1.0"></script>
     <script src="js/engine/background.js?v=1"></script>
-    <script src="js/game.js?v=6.7"></script>
+    <script src="js/game.js?v=12.0"></script>
 
     <!-- ⚙️ TEZLİK VƏ QRAFİKA TƏNZİMLƏMƏLƏRİ MODALI -->
     <div id="settings-perf-modal" onclick="if (event.target === this) closePerfModal();" class="hidden fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -1014,19 +1016,45 @@
                 <label class="block text-xs font-bold font-orbitron text-slate-300 uppercase tracking-wider mb-2">
                     🎨 Qrafika & Prosessor Rejimi:
                 </label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="setGraphicsQuality('auto'); updateModalActiveState();" id="btn-q-auto" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
-                        🤖 Avtomatik
-                    </button>
+                                <div class="grid grid-cols-3 gap-2">
                     <button onclick="setGraphicsQuality('high'); updateModalActiveState();" id="btn-q-high" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
-                        🚀 GPU (Neon)
+                        🌟 Yüksək (Ultra)
+                    </button>
+                    <button onclick="setGraphicsQuality('medium'); updateModalActiveState();" id="btn-q-medium" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
+                        ⚖️ Orta (Balans)
                     </button>
                     <button onclick="setGraphicsQuality('low'); updateModalActiveState();" id="btn-q-low" class="perf-btn py-2 px-2 rounded-xl border border-slate-700 text-xs font-bold font-orbitron hover:border-cyan-400 transition text-center cursor-pointer">
-                        ⚡ CPU (Sürətli)
+                        ⚡ Aşağı (Maks FPS)
                     </button>
                 </div>
                 <div id="hardware-detected-info" class="text-[11px] text-emerald-400 mt-2 flex items-center gap-1.5 font-semibold">
                     <i class="fa-solid fa-microchip"></i> <span id="hw-status-text">Aparat Statusu yoxlanılır...</span>
+                </div>
+            </div>
+
+            
+            <!-- 3. Tək Klik Addımı (Həssaslıq Tənzimlənməsi) -->
+            <div class="mb-4 pt-3 border-t border-slate-800">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold font-orbitron text-slate-300 uppercase tracking-wider">
+                        🎯 Tək Klik Addımı (Tap Step):
+                    </label>
+                    <span id="label-tap-step-val" class="font-orbitron font-bold text-xs text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/30">10 px</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mb-2">
+                    Tək klikdə az addımlayır (lavaya ehtiyatsız düşməmək üçün), basıb saxladıqda isə tam sürətlənir.
+                </p>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-[10px] font-mono text-slate-500">4px</span>
+                    <input type="range" id="slider-tap-step" min="4" max="30" step="2" value="10" oninput="setTapStepDistance(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400">
+                    <span class="text-[10px] font-mono text-slate-500">30px</span>
+                </div>
+                <!-- Tez Seçim Düymələri -->
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button onclick="setTapStepDistance(6)" class="py-1 px-1 rounded-lg border border-slate-700 text-[10px] font-bold font-orbitron hover:border-amber-400 transition text-center cursor-pointer">6 px (Mikro)</button>
+                    <button onclick="setTapStepDistance(10)" class="py-1 px-1 rounded-lg border border-slate-700 text-[10px] font-bold font-orbitron hover:border-amber-400 transition text-center cursor-pointer">10 px (Dəqiq)</button>
+                    <button onclick="setTapStepDistance(16)" class="py-1 px-1 rounded-lg border border-slate-700 text-[10px] font-bold font-orbitron hover:border-amber-400 transition text-center cursor-pointer">16 px (Orta)</button>
+                    <button onclick="setTapStepDistance(24)" class="py-1 px-1 rounded-lg border border-slate-700 text-[10px] font-bold font-orbitron hover:border-amber-400 transition text-center cursor-pointer">24 px (Böyük)</button>
                 </div>
             </div>
 
@@ -1053,6 +1081,13 @@
             }
         }
         function updateModalActiveState() {
+            // Tap Step Slayder və Dəyər Sinxronizasiyası
+            var curTap = window.tapStepDistance || parseInt(localStorage.getItem('floor_escape_tap_step'), 10) || 10;
+            var sld = document.getElementById('slider-tap-step');
+            if (sld) sld.value = curTap;
+            var lbl = document.getElementById('label-tap-step-val');
+            if (lbl) lbl.innerText = curTap + ' px';
+
             var curFPS = (typeof targetFPS === 'number') ? targetFPS : 0;
             var curQ = (typeof savedQuality === 'string') ? savedQuality : 'auto';
 
@@ -1067,7 +1102,7 @@
                 }
             });
 
-            ['auto', 'high', 'low'].forEach(function(q) {
+            ['high', 'medium', 'low'].forEach(function(q) {
                 var btn = document.getElementById('btn-q-' + q);
                 if (btn) {
                     if (curQ === q) {
@@ -1080,7 +1115,18 @@
 
             var hwText = document.getElementById('hw-status-text');
             if (hwText && typeof hwInfo !== 'undefined') {
-                var isCPU = (window.GRAPHICS_QUALITY === 'low') || (!hwInfo.hasHardwareGPU && window.GRAPHICS_QUALITY === 'auto');
+                var q = window.GRAPHICS_QUALITY || 'high';
+                if (q === 'low') {
+                    hwText.innerHTML = "⚡ Aşağı Rejim (Maksimum FPS): Bütün arxa plan yükü və artıq zərrəciklər bağlandı!";
+                    hwText.className = "text-[11px] text-emerald-400 font-semibold";
+                } else if (q === 'medium') {
+                    hwText.innerHTML = "⚖️ Orta Rejim: Sabit 60 FPS üçün optimallaşdırılmış balans";
+                    hwText.className = "text-[11px] text-cyan-400 font-semibold";
+                } else {
+                    hwText.innerHTML = "🌟 Yüksək Rejim: Bütün vizual effektlər, hissəciklər və arxa relyef aktivdir";
+                    hwText.className = "text-[11px] text-sky-400 font-semibold";
+                }
+                return;
                 var rend = hwInfo.rendererInfo || 'Naməlum';
                 if (!hwInfo.hasHardwareGPU) {
                     hwText.innerHTML = "⚡ CPU Rejimi: " + rend + " (GPU tapılmadı, bütün kölgələr və qat yükləri avtomatik sıfırlandı)";
@@ -1155,6 +1201,26 @@
                 activeScreen: document.getElementById('game-screen-container') ? 'PRESENT' : 'NONE'
             });
         });
+    
+        // 🎯 Tək Klik Addımı Funksiyası (Tap Step Distance)
+        window.tapStepDistance = parseInt(localStorage.getItem('floor_escape_tap_step'), 10) || 10;
+
+        function setTapStepDistance(val) {
+            val = parseInt(val, 10) || 10;
+            window.tapStepDistance = val;
+            try {
+                localStorage.setItem('floor_escape_tap_step', val);
+            } catch(e) {}
+            var lbl = document.getElementById('label-tap-step-val');
+            if (lbl) lbl.innerText = val + ' px';
+            var sld = document.getElementById('slider-tap-step');
+            if (sld) sld.value = val;
+            if (typeof showToast === 'function') {
+                showToast('🎯 Tək klik addımı: ' + val + ' px olaraq təyin edildi!', 'info');
+            }
+        }
+        window.setTapStepDistance = setTapStepDistance;
+
     </script>
 </body>
 </html>

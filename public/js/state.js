@@ -380,7 +380,7 @@ function loadPermanentData() {
             if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
                 permUpgrades.ownedSpawnAnims = [];
             }
-            if (permUpgrades.equippedSpawnAnim && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim)) {
+            if (permUpgrades.equippedSpawnAnim && (!Array.isArray(permUpgrades.ownedSpawnAnims) || !permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim))) {
                 permUpgrades.equippedSpawnAnim = null;
             }
             if (typeof permUpgrades.cyberStars !== 'number' || isNaN(permUpgrades.cyberStars)) {
@@ -393,6 +393,16 @@ function loadPermanentData() {
                 permUpgrades.turretLeftType = permUpgrades.turretBulletType;
                 permUpgrades.turretRightType = permUpgrades.turretBulletType;
             }
+
+            // Köhnə versiyalardan qalmış saxta animasiyaları birdəfəlik təmizləmək
+            try {
+                if (!localStorage.getItem('floor_escape_anim_v4_clean')) {
+                    localStorage.setItem('floor_escape_anim_v4_clean', 'true');
+                    permUpgrades.ownedSpawnAnims = [];
+                    permUpgrades.equippedSpawnAnim = null;
+                    localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
+                }
+            } catch (e) {}
         }
         const savedDiamonds = localStorage.getItem('floor_escape_diamonds');
         if (savedDiamonds !== null) {

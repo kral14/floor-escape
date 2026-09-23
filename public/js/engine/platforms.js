@@ -10,11 +10,16 @@
 // ============================================================================
 
 let currentWorldHeight = 3600;
-let currentRocks = [];         // Prosedural üzən qaya adacıqları
-let initialLavaSources = [];   // Prosedural lava mənbələri
+let currentRocks = [];          // Prosedural üzən qaya adacıqları
+let movingRocksData = [];       // Hərəkətli platformaların əsas mərkəz koordinatları
+let currentLavaSpeedMult = 1.0; // Lava yüksəlmə sürəti çarpanı
+let currentLavaPulse = null;    // { onDuration, offDuration } — lava axın ritmi
+let lavaPulseTimer = 0;         // Cəri faza nə qədər sürdü (saniyə)
+let lavaPulseIsOn = true;       // true = lava axır; false = lava dayanıb
+let initialLavaSources = [];    // Prosedural lava mənbələri
 let activeLavaHazardBoxes = []; // Dəqiq və ədalətli toqquşma zonaları
-let lavaFlowOffset = 0;        // Animasiya zamanı (saniyə)
-let lavaDripParticles = [];    // Lavadan damcılayan közlər
+let lavaFlowOffset = 0;         // Animasiya zamanı (saniyə)
+let lavaDripParticles = [];     // Lavadan damcılayan közlər
 
 let cachedFloorPatterns = (typeof window !== 'undefined' && window.FLOOR_PATTERNS) ? window.FLOOR_PATTERNS : null;
 
@@ -142,6 +147,11 @@ function initFloorPlatforms(floor = 1) {
     }
 
     currentRocks = [];
+    movingRocksData = [];
+    currentLavaSpeedMult = 1.0;
+    currentLavaPulse = null;
+    lavaPulseTimer = 0;
+    lavaPulseIsOn = true;
     initialLavaSources = [];
     activeLavaHazardBoxes = [];
     lavaDripParticles = [];
@@ -153,26 +163,64 @@ function initFloorPlatforms(floor = 1) {
         const baseH = selectedTrack.worldHeight || 1800;
         currentWorldHeight = baseH * 2; // 2 QAT UZADILMIŞ YOL
 
+        // 🌋 Lava sürəti çarpanını yükləyirik
+        currentLavaSpeedMult = (typeof selectedTrack.lavaSpeedMult === 'number' && selectedTrack.lavaSpeedMult > 0)
+            ? selectedTrack.lavaSpeedMult : 1.0;
+        if (typeof window !== 'undefined') window.CURRENT_LAVA_SPEED_MULT = currentLavaSpeedMult;
+
+        // ⏱️ Lava Puls (axın ritmi) yükləyirik
+        if (selectedTrack.lavaPulse && typeof selectedTrack.lavaPulse === 'object') {
+            const p = selectedTrack.lavaPulse;
+            const on = Number(p.onDuration);
+            const off = Number(p.offDuration);
+            if (on > 0 && off > 0) {
+                currentLavaPulse = { onDuration: on, offDuration: off };
+            }
+        }
+        if (typeof window !== 'undefined') window.CURRENT_LAVA_PULSE = currentLavaPulse;
+
         // Qayaları 2 qat hündürlük boyunca (həm aşağı, həm yuxarı mərhələdə) tam yükləyirik
         // 1-ci mərhələ: Yuxarı yarı (y: 0 ... baseH)
         for (const r of (selectedTrack.rocks || [])) {
-            currentRocks.push({
+            const rock = {
                 x: Number(r.x),
                 y: Number(r.y),
                 w: Number(r.w),
                 h: Number(r.h),
                 type: 'rock'
-            });
+            };
+            // Hərəkətli platforma məlumatını qoruyuruq
+            if (r.moving && typeof r.moving === 'object') {
+                rock.moving = r.moving;
+                // Orijinal mərkəz koordinatları (hərəkət zamnaı əsas mərkəz)
+                movingRocksData.push({
+                    rock: rock,
+                    baseX: Number(r.x) + Number(r.w) / 2,
+                    baseY: Number(r.y) + Number(r.h) / 2,
+                    phase: r.moving.phase || 0
+                });
+            }
+            currentRocks.push(rock);
         }
         // 2-ci mərhələ: Aşağı yarı (y: baseH ... baseH * 2)
         for (const r of (selectedTrack.rocks || [])) {
-            currentRocks.push({
+            const rock = {
                 x: Number(r.x),
                 y: Number(r.y) + baseH,
                 w: Number(r.w),
                 h: Number(r.h),
                 type: 'rock'
-            });
+            };
+            if (r.moving && typeof r.moving === 'object') {
+                rock.moving = r.moving;
+                movingRocksData.push({
+                    rock: rock,
+                    baseX: Number(r.x) + Number(r.w) / 2,
+                    baseY: Number(r.y) + baseH + Number(r.h) / 2,
+                    phase: r.moving.phase || 0
+                });
+            }
+            currentRocks.push(rock);
         }
 
         // Lava mənbələrini 2 qat hündürlük boyunca yükləyirik
@@ -253,6 +301,61 @@ function updatePlatformsPhysics(player, dt = 0.016) {
     if (!player) return;
 
     lavaFlowOffset += dt;
+
+    // ⏱️ LAVA PULS TİMERI — Lava X saniyə axir, sonra Y saniyə dayanir
+    if (currentLavaPulse) {
+        lavaPulseTimer += dt;
+        const phaseDur = lavaPulseIsOn ? currentLavaPulse.onDuration : currentLavaPulse.offDuration;
+        if (lavaPulseTimer >= phaseDur) {
+            lavaPulseTimer = 0;
+            lavaPulseIsOn = !lavaPulseIsOn;
+            // Oyunçuya bildiriş (opsional)
+            if (typeof window !== 'undefined') window.LAVA_PULSE_IS_ON = lavaPulseIsOn;
+        }
+    }
+
+    // Sin() əsaslı düzxətli hərəkət: Platforma sola-sağa və ya yuxarı-aşağı gedir-gəlir
+    const worldTime = typeof performance !== 'undefined' ? performance.now() / 1000 : lavaFlowOffset;
+    for (const md of movingRocksData) {
+        const mv = md.rock.moving;
+        if (!mv) continue;
+        const halfW = md.rock.w / 2;
+        const halfH = md.rock.h / 2;
+        const range = mv.range || 150;
+        const spd = mv.speed || 80;
+        const freq = spd / (range * 2); // Hz: neçə dəfə/saniyə tam tur
+        const angle = (worldTime * freq * Math.PI * 2) + (md.phase * Math.PI * 2);
+        const offset = Math.sin(angle) * range;
+
+        const prevX = md.rock.x;
+        const prevY = md.rock.y;
+
+        if (mv.axis === 'y') {
+            md.rock.x = md.baseX - halfW;
+            md.rock.y = md.baseY - halfH + offset;
+        } else {
+            md.rock.x = md.baseX - halfW + offset;
+            md.rock.y = md.baseY - halfH;
+        }
+
+        // Platforma üzstə duruyorsa oyunçunu da sürüşdur
+        if (player) {
+            const dX = md.rock.x - prevX;
+            const dY = md.rock.y - prevY;
+            const pr = player.radius || 16;
+            // Oyunçunun platforma üzstə olub-olmadığını yoxla
+            const onTop = player.x >= md.rock.x - pr && player.x <= md.rock.x + md.rock.w + pr &&
+                          player.y + pr >= md.rock.y - 4 && player.y + pr <= md.rock.y + 12;
+            if (onTop) {
+                player.x += dX;
+                if (mv.axis === 'y') player.y += dY;
+            }
+        }
+    }
+    // Kaskad keşəni invalidat et (hərəkətli platformalar olduqda)
+    if (movingRocksData.length > 0) {
+        window._cachedCascadePaths = null;
+    }
 
     const pr = player.radius || 16;
     const prSq = pr * pr;
@@ -528,6 +631,25 @@ function drawPlatforms(ctx) {
     const viewH = 750;
     const enableShadows = (typeof window === 'undefined' || window.GRAPHICS_QUALITY !== 'low');
 
+    // ⏱️ LAVA PULS — "off" fazada lava sönük görünür və zərər vermir
+    // "on" faza: tam görünür, zərər verir
+    // "off" faza: soluq/şəffaf, zərər yoxdur (kec-get!)
+    let lavaPulseAlpha = 1.0;
+    let lavaPulseHazardActive = true;
+    if (currentLavaPulse) {
+        if (!lavaPulseIsOn) {
+            // "off" fazında: sönük, keccək (təhlükəsiz)
+            const fadeRatio = Math.max(0, 1 - lavaPulseTimer / Math.max(0.1, currentLavaPulse.offDuration));
+            lavaPulseAlpha = 0.15 + fadeRatio * 0.25; // 0.15..0.4 arasında sönük
+            lavaPulseHazardActive = false;
+        } else {
+            // "on" fazında: əvvəlcə ᗸılırır (warning effect), sonra tam parlaq
+            const ratio = Math.min(1, lavaPulseTimer / Math.max(0.1, currentLavaPulse.onDuration));
+            lavaPulseAlpha = 0.5 + ratio * 0.5;
+            lavaPulseHazardActive = true;
+        }
+    }
+
     // ========================================================================
     // A) ŞƏLALƏLƏR VƏ QAYALARIN ÜZƏRİNDƏN AXAN LAVA
     // ========================================================================
@@ -546,13 +668,15 @@ function drawPlatforms(ctx) {
             const isTerminatedFall = !!(path.terminated && isLastFall);
             const isMidAir = !!fall.isMidAir;
 
-            // Şaquli lava şəlaləsinin faktiki zərər zonası həmişə aktiv qalır
-            activeLavaHazardBoxes.push({
-                x: fall.x + 4,
-                y: fall.y,
-                w: Math.max(12, fall.w - 8),
-                h: fall.h
-            });
+            // ⏱️ Lava puls: "off" fazada zərər qutusu əlavə edilmir
+            if (lavaPulseHazardActive) {
+                activeLavaHazardBoxes.push({
+                    x: fall.x + 4,
+                    y: fall.y,
+                    w: Math.max(12, fall.w - 8),
+                    h: fall.h
+                });
+            }
 
             // 🎯 OFF-SCREEN CULLING: Yalnız ekranda görünən şəlalə qrafikası çəkilir
             if (fall.y + fall.h < camY - 80 || fall.y > camY + viewH + 80) {
@@ -560,6 +684,8 @@ function drawPlatforms(ctx) {
             }
 
             if (useEngine) {
+                c.save();
+                c.globalAlpha = lavaPulseAlpha;
                 LavaEngine.drawPlatformWaterfall(c, t + fIdx * 0.75, fall.x, fall.y, fall.w, fall.h, isTerminatedFall, isMidAir);
                 if (isMidAir && typeof LavaEngine.drawMidAirLavaTip === 'function') {
                     LavaEngine.drawMidAirLavaTip(c, t, fall.x, fall.bottomY, fall.w);
@@ -567,6 +693,8 @@ function drawPlatforms(ctx) {
                 if (fIdx > 0 && !isMidAir) {
                     LavaEngine.drawSpillwayLip(c, fall.x, fall.w, fall.y + 2);
                 }
+                c.globalAlpha = 1;
+                c.restore();
             }
         }
 
@@ -600,19 +728,41 @@ function drawPlatforms(ctx) {
         }
 
         // 2. Əsas Qaya Gövdəsi
+        const isMovingRock = !!(rock.moving);
         const rockGrad = c.createLinearGradient(rock.x, rock.y, rock.x, rock.y + rock.h);
-        rockGrad.addColorStop(0, '#334155');
-        rockGrad.addColorStop(0.35, '#1e293b');
-        rockGrad.addColorStop(1, '#0f172a');
+        if (isMovingRock) {
+            rockGrad.addColorStop(0, '#1e3a5f');
+            rockGrad.addColorStop(0.35, '#0f2744');
+            rockGrad.addColorStop(1, '#071828');
+        } else {
+            rockGrad.addColorStop(0, '#334155');
+            rockGrad.addColorStop(0.35, '#1e293b');
+            rockGrad.addColorStop(1, '#0f172a');
+        }
 
         c.fillStyle = rockGrad;
-        c.strokeStyle = '#475569';
-        c.lineWidth = 2.5;
+        c.strokeStyle = isMovingRock ? '#38bdf8' : '#475569';
+        c.lineWidth = isMovingRock ? 3 : 2.5;
+        if (isMovingRock && enableShadows) {
+            c.shadowColor = 'rgba(56,189,248,0.5)';
+            c.shadowBlur = 10;
+        }
         c.beginPath();
         c.roundRect(rock.x, rock.y, rock.w, rock.h, 8);
         c.fill();
         c.stroke();
         c.shadowBlur = 0;
+
+        // Hərəkətli platformada ox ikonu
+        if (isMovingRock) {
+            c.fillStyle = 'rgba(56,189,248,0.85)';
+            c.font = 'bold 13px sans-serif';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            const arrow = rock.moving.axis === 'y' ? '↕' : '↔';
+            c.fillText(arrow, rock.x + rock.w / 2, rock.y + rock.h / 2);
+        }
+
 
         // 3. Üst kənar parlaqlığı
         c.strokeStyle = '#94a3b8';

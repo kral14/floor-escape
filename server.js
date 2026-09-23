@@ -95,8 +95,14 @@ function mergePermUpgrades(existingUpgrades, clientUpgrades) {
         } else {
             if (v !== undefined && v !== null && v !== '') {
                 merged[k] = v;
+            } else if (v === null && (k === 'equippedSpawnAnim' || k === 'equippedSkin')) {
+                merged[k] = null;
             }
         }
+    }
+    const ownedAnims = Array.isArray(merged.ownedSpawnAnims) ? merged.ownedSpawnAnims : [];
+    if (merged.equippedSpawnAnim && !ownedAnims.includes(merged.equippedSpawnAnim)) {
+        merged.equippedSpawnAnim = null;
     }
     return merged;
 }

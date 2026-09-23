@@ -1074,10 +1074,6 @@ function playSummonIntro(onFinish) {
     if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
     if (typeof clearBullets === 'function') clearBullets();
 
-    const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
-
-    gameState.isIntroPlaying = true;
     const worldH = (typeof getFloorWorldHeight === 'function') ? getFloorWorldHeight(gameState.floor) : canvasHeight;
     monster.y = worldH - 38; // Lava həmişə ekranın alt kənarında sabit görünür
 
@@ -1089,6 +1085,27 @@ function playSummonIntro(onFinish) {
     if (gameState.floor === 1) {
         showFirstFloorLavaWarning();
     }
+
+    const owned = (typeof permUpgrades !== 'undefined' && Array.isArray(permUpgrades.ownedSpawnAnims)) ? permUpgrades.ownedSpawnAnims : [];
+    const equippedAnim = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim && owned.includes(permUpgrades.equippedSpawnAnim)) ? permUpgrades.equippedSpawnAnim : null;
+
+    // Əgər oyunçunun aktiv təchiz edilmiş animasiyası YOXDURSA, birbaşa animasiyasız başla!
+    if (!equippedAnim) {
+        gameState.isIntroPlaying = false;
+        gameState.dashInvulnerable = 60;
+        monsPortal = null;
+        lastFrameTime = performance.now();
+        physicsAccumulator = 0;
+        initIngameQuantumTheme();
+        if (typeof onFinish === 'function') onFinish();
+        return;
+    }
+
+    // Əgər xüsusi animasiya alınıb və təchiz edilibsə, animasiya ilə başla!
+    const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
+    const animType = equippedAnim;
+
+    gameState.isIntroPlaying = true;
 
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
     if (SpawnClass) {
@@ -1194,8 +1211,19 @@ function playFloorTeleportTransition() {
     if (typeof screenPulse !== 'undefined') screenPulse.alpha = 0;
     if (typeof clearBullets === 'function') clearBullets();
 
+    const owned = (typeof permUpgrades !== 'undefined' && Array.isArray(permUpgrades.ownedSpawnAnims)) ? permUpgrades.ownedSpawnAnims : [];
+    const equippedAnim = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim && owned.includes(permUpgrades.equippedSpawnAnim)) ? permUpgrades.equippedSpawnAnim : null;
+
+    // Əgər aktiv animasiya yoxdursa, birbaşa növbəti qata keç
+    if (!equippedAnim) {
+        if (typeof nextFloor === 'function') {
+            nextFloor();
+        }
+        return;
+    }
+
     const skinId = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSkin) ? permUpgrades.equippedSkin : 'default';
-    let animType = (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'portal';
+    const animType = equippedAnim;
     const SpawnClass = window.MonsSpawnEffect || (typeof MonsPortalEffect !== 'undefined' ? MonsPortalEffect : null);
 
     const startX = player.x;
@@ -1365,11 +1393,12 @@ try {
         shouldPlayIntro = sessionStorage.getItem('floor_escape_play_intro') === 'true' || !hasLoadedRun;
         sessionStorage.removeItem('floor_escape_play_intro');
     }
-    if (typeof permUpgrades !== 'undefined' && permUpgrades.equippedSpawnAnim) {
+    if (typeof permUpgrades !== 'undefined') {
         if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
-            permUpgrades.ownedSpawnAnims = [permUpgrades.equippedSpawnAnim];
-        } else if (!permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
-            permUpgrades.ownedSpawnAnims.push(permUpgrades.equippedSpawnAnim);
+            permUpgrades.ownedSpawnAnims = [];
+        }
+        if (permUpgrades.equippedSpawnAnim && !permUpgrades.ownedSpawnAnims.includes(permUpgrades.equippedSpawnAnim)) {
+            permUpgrades.equippedSpawnAnim = null;
         }
     }
 } catch (e) {}

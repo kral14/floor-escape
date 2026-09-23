@@ -2168,7 +2168,7 @@
     <script src="js/audio/ambient.js?v=3.4"></script>
     <script src="js/audio/panel.js?v=3.4"></script>
     <script src="js/audio.js?v=3.4"></script>
-    <script src="js/state.js?v=10.0"></script>
+    <script src="js/state.js?v=12.0"></script>
     <!-- DƏRİLƏR REYESTRİ VƏ FƏRDİ MODULLAR -->
     <script src="js/skins/registry.js?v=1.0"></script>
     <script src="js/skins/default.js?v=1.0"></script>
@@ -2195,17 +2195,18 @@
     <script src="js/entities/floor-protection.js?v=1.0"></script>
     <script src="js/ui/lab-panel.js?v=5.0"></script>
     <script src="js/ui/turrets-panel.js?v=5.0"></script>
-    <script src="js/ui/skins-shop.js?v=10.0"></script>
+    <script src="js/ui/skins-shop.js?v=12.0"></script>
     <script src="js/ui.js?v=5.0"></script>
     <script src="js/giftcodes.js?v=2.6"></script>
-    <script src="js/auth.js?v=3.3"></script>
+    <script src="js/auth.js?v=12.0"></script>
     <script src="js/inbox.js?v=3.4"></script>
     <script src="js/chat.js?v=1.0"></script>
     <script src="js/dashboard-preview.js?v=1.0"></script>
-    <script src="js/dashboard.js?v=3.1"></script>
+    <script src="js/dashboard.js?v=12.0"></script>
     <script>
         // Səhifə yüklənəndə avtomatik marşrut yoxlanması
         document.addEventListener('DOMContentLoaded', () => {
+            if (typeof loadPermanentData === 'function') loadPermanentData();
             if (typeof ICONS !== 'undefined' && ICONS.renderDOM) ICONS.renderDOM();
             if (typeof initAuth === 'function') initAuth();
             if (typeof renderHeaderProfile === 'function') renderHeaderProfile();

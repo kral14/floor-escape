@@ -319,9 +319,9 @@ window.setPreviewSkin = setPreviewSkin;
 // ==================== 2. DOĞULUŞ ANİMASİYALARININ ÖNBAXIŞI (SPAWN FX PREVIEW) ====================
 function highlightPreviewSpawnAnimCard(previewId) {
     const animsList = getSpawnAnimsCatalog();
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : null;
     const targetPreviewId = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(previewId) ? 'singularity' : previewId;
-    const targetActiveId = ['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) ? 'singularity' : active;
+    const targetActiveId = active ? (['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) ? 'singularity' : active) : null;
 
     Object.keys(animsList).forEach(id => {
         const cardEl = document.getElementById(`spawn-anim-card-${id}`);
@@ -785,9 +785,9 @@ function renderSpawnAnimsShop() {
     if (!container) return;
 
     const animsList = getSpawnAnimsCatalog();
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity'];
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
-    const preview = currentPreviewSpawnAnimId || active;
+    const owned = (permUpgrades && Array.isArray(permUpgrades.ownedSpawnAnims)) ? permUpgrades.ownedSpawnAnims : [];
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim && owned.includes(permUpgrades.equippedSpawnAnim)) ? permUpgrades.equippedSpawnAnim : null;
+    const preview = currentPreviewSpawnAnimId || active || 'singularity';
 
     let html = '';
     Object.values(animsList).forEach(anim => {
@@ -796,8 +796,8 @@ function renderSpawnAnimsShop() {
         let multiVariantControls = '';
 
         if (isMulti) {
-            // Əgər oyunda təchiz edilmiş animasiya bu 4-dən biridirsə, default olaraq onu seç
-            if (['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) && !currentSingularityVariantId) {
+            // Əgər oyunda təchiz edilmiş animasiya bu 4-dən biridirsə, onu seç
+            if (active && ['singularity', 'supernova', 'synapse', 'abyssal'].includes(active) && !currentSingularityVariantId) {
                 currentSingularityVariantId = active;
             }
             const curVar = SINGULARITY_VARIANTS[currentSingularityVariantId] || SINGULARITY_VARIANTS.singularity;
@@ -832,7 +832,7 @@ function renderSpawnAnimsShop() {
 
         const effectiveId = displayAnim.id; // əgər multiVariant-dırsa, cari variantın ID-si
         const isOwned = owned.includes(effectiveId);
-        const isActive = (active === effectiveId);
+        const isActive = !!(active && active === effectiveId);
         const isPreviewing = (preview === anim.id || preview === effectiveId);
 
         let borderClass = 'border-slate-800 hover:border-amber-400/40 bg-slate-950/70';
@@ -863,8 +863,8 @@ function renderSpawnAnimsShop() {
                         <i class="fa-solid fa-eye text-[9px]"></i>
                     </button>
                     ${glacialUpgradeBtn}
-                    <button disabled class="flex-1 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1 cursor-default shadow-sm shadow-emerald-500/20">
-                        <i class="fa-solid fa-check-circle text-[9px]"></i> AKTİVDİR
+                    <button type="button" onclick="event.stopPropagation(); unequipSpawnAnim('${effectiveId}');" class="flex-1 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 hover:text-white border border-rose-500/50 hover:border-rose-400 font-orbitron font-bold text-[10px] flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm hover:scale-[1.02] active:scale-95" title="Animasiyanı çıxarmaq (standarta qayıtmaq) üçün klikləyin">
+                        <i class="fa-solid fa-xmark text-[10px]"></i> ÇIXART
                     </button>
                 </div>
             `;
@@ -1011,10 +1011,10 @@ function openSpawnAnimFullscreenPreview(animId) {
         badgeEl.style.backgroundColor = `${anim.color}20`;
     }
 
-    const owned = (permUpgrades && permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : ['singularity'];
-    const active = (permUpgrades && permUpgrades.equippedSpawnAnim) ? permUpgrades.equippedSpawnAnim : 'singularity';
+    const owned = (permUpgrades && Array.isArray(permUpgrades.ownedSpawnAnims)) ? permUpgrades.ownedSpawnAnims : [];
+    const active = (permUpgrades && permUpgrades.equippedSpawnAnim && owned.includes(permUpgrades.equippedSpawnAnim)) ? permUpgrades.equippedSpawnAnim : null;
     const isOwned = owned.includes(anim.id);
-    const isActive = active === anim.id;
+    const isActive = !!(active && active === anim.id);
 
     // Sahiblik etiketi
     const ownerTag = document.getElementById('fs-anim-ownership-tag');
@@ -1209,7 +1209,7 @@ function openSpawnAnimFullscreenPreview(animId) {
     const actionSlot = document.getElementById('fs-anim-action-slot');
     if (actionSlot) {
         if (isActive) {
-            actionSlot.innerHTML = `<div class="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 font-orbitron font-bold text-xs text-center flex items-center justify-center gap-1.5"><i class="fa-solid fa-check-circle"></i> BU ANİMASİYA HAL-HAZIRDA AKTİVDİR</div>`;
+            actionSlot.innerHTML = `<button type="button" onclick="unequipSpawnAnim('${anim.id}'); closeSpawnAnimFullscreenPreview();" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-orbitron font-bold text-xs shadow-lg shadow-rose-500/30 cursor-pointer transition hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5"><i class="fa-solid fa-xmark"></i> ANİMASİYANI ÇIXART (STANDART REJİM)</button>`;
         } else if (isOwned) {
             actionSlot.innerHTML = `<button type="button" onclick="buyOrEquipSpawnAnim('${anim.id}'); closeSpawnAnimFullscreenPreview();" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-orbitron font-black text-xs shadow-lg shadow-amber-500/30 cursor-pointer transition hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5"><i class="fa-solid fa-hand-pointer"></i> Oyunda Təchiz Et</button>`;
         } else {
@@ -1502,11 +1502,23 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
+function unequipSpawnAnim(animId) {
+    if (typeof permUpgrades === 'undefined') return;
+    permUpgrades.equippedSpawnAnim = null;
+    savePermanentData();
+    renderSpawnAnimsShop();
+    highlightPreviewSpawnAnimCard(currentPreviewSpawnAnimId || 'singularity');
+    if (typeof showToast === 'function') {
+        showToast('Standart animasiyaya qaytarıldı (xüsusi animasiya çıxarıldı).', 'info');
+    }
+}
+window.unequipSpawnAnim = unequipSpawnAnim;
+
 function buyOrEquipSpawnAnim(animId) {
     const animsList = getSpawnAnimsCatalog();
     const anim = SINGULARITY_VARIANTS[animId] || animsList[animId];
     if (!anim) return;
-    if (!permUpgrades.ownedSpawnAnims || !Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = ['singularity'];
+    if (!permUpgrades.ownedSpawnAnims || !Array.isArray(permUpgrades.ownedSpawnAnims)) permUpgrades.ownedSpawnAnims = [];
 
     if (SINGULARITY_VARIANTS[animId]) {
         currentSingularityVariantId = animId;
