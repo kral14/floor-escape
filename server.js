@@ -69,6 +69,44 @@ function hashPin(pin) {
     return crypto.createHash('sha256').update(String(pin).trim()).digest('hex');
 }
 
+function mergePermUpgrades(existingUpgrades, clientUpgrades) {
+    const existing = (existingUpgrades && typeof existingUpgrades === 'object') ? existingUpgrades : {};
+    const client = (clientUpgrades && typeof clientUpgrades === 'object') ? clientUpgrades : {};
+    const merged = { ...existing };
+
+    for (const [k, v] of Object.entries(client)) {
+        if (!(k in merged)) {
+            merged[k] = v;
+            continue;
+        }
+        const exVal = merged[k];
+        if (typeof v === 'number' && typeof exVal === 'number') {
+            if (k === 'turretInterval') {
+                merged[k] = (v > 0) ? Math.min(exVal, v) : exVal;
+            } else if (k === 'cyberStars' || k === 'maxCyberStars') {
+                merged[k] = Math.max(exVal, v);
+            } else {
+                merged[k] = Math.max(exVal, v);
+            }
+        } else if (Array.isArray(v) && Array.isArray(exVal)) {
+            merged[k] = Array.from(new Set([...exVal, ...v]));
+        } else if (typeof v === 'boolean' && typeof exVal === 'boolean') {
+            merged[k] = exVal || v;
+        } else {
+            if (v !== undefined && v !== null && v !== '') {
+                merged[k] = v;
+            }
+        }
+    }
+    return merged;
+}
+
+function mergeClaimedChests(existingChests, clientChests) {
+    const ex = Array.isArray(existingChests) ? existingChests : [];
+    const cl = Array.isArray(clientChests) ? clientChests : [];
+    return Array.from(new Set([...ex, ...cl]));
+}
+
 function generatePlayerId() {
     return 'G-' + Math.floor(100000 + Math.random() * 900000);
 }
@@ -367,26 +405,45 @@ const server = http.createServer(async (req, res) => {
                 if (!playerId) return sendJson({ success: false, message: 'ID tələb olunur' }, 200);
 
                 try {
-                    const gold = parseFloat(data.gold) || 0;
-                    const diamonds = Math.max(0, parseInt(data.diamonds) || 0);
-                    const redDiamonds = Math.max(0, parseInt(data.redDiamonds) || 0);
-                    const bestFloor = Math.max(1, parseInt(data.bestFloor) || 1);
-                    const totalScore = Math.max(0, parseInt(data.totalScore) || 0);
-                    const permUpgrades = JSON.stringify(data.permUpgrades || {});
-                    const claimedChests = JSON.stringify(data.claimedChests || []);
+                    const exRes = await pool.query(
+                        `SELECT gold, diamonds, red_diamonds, best_floor, total_score, perm_upgrades, claimed_chests 
+                         FROM players WHERE player_id = $1`,
+                        [playerId]
+                    );
+                    if (exRes.rows.length === 0) {
+                        return sendJson({ success: false, message: 'Oyunçu tapılmadı' }, 200);
+                    }
+                    const existing = exRes.rows[0];
+
+                    const gold = (data.gold !== undefined) ? parseFloat(data.gold) : (parseFloat(existing.gold) || 0);
+                    const clientDiamonds = (data.diamonds !== undefined) ? Math.max(0, parseInt(data.diamonds) || 0) : (existing.diamonds || 0);
+                    const clientRed = (data.redDiamonds !== undefined) ? Math.max(0, parseInt(data.redDiamonds) || 0) : (existing.red_diamonds || 0);
+                    const bestFloor = Math.max(existing.best_floor || 1, parseInt(data.bestFloor) || 1);
+                    const totalScore = Math.max(existing.total_score || 0, parseInt(data.totalScore) || 0);
+
+                    const mergedUpgrades = mergePermUpgrades(existing.perm_upgrades, data.permUpgrades);
+                    const mergedChests = mergeClaimedChests(existing.claimed_chests, data.claimedChests);
 
                     await pool.query(
                         `UPDATE players 
                          SET gold = $1, diamonds = $2, red_diamonds = $3, 
-                             best_floor = GREATEST(best_floor, $4), 
-                             total_score = GREATEST(total_score, $5),
+                             best_floor = $4, total_score = $5,
                              perm_upgrades = $6, claimed_chests = $7,
                              last_login = CURRENT_TIMESTAMP
                          WHERE player_id = $8`,
-                        [gold, diamonds, redDiamonds, bestFloor, totalScore, permUpgrades, claimedChests, playerId]
+                        [gold, clientDiamonds, clientRed, bestFloor, totalScore, JSON.stringify(mergedUpgrades), JSON.stringify(mergedChests), playerId]
                     );
 
-                    return sendJson({ success: true, message: 'Məlumatlar PostgreSQL-də saxlanıldı!' });
+                    return sendJson({ 
+                        success: true, 
+                        message: 'Məlumatlar PostgreSQL-də saxlanıldı!',
+                        gold,
+                        diamonds: clientDiamonds,
+                        redDiamonds: clientRed,
+                        bestFloor,
+                        permUpgrades: mergedUpgrades,
+                        claimedChests: mergedChests
+                    });
                 } catch (err) {
                     return sendJson({ success: false, message: err.message }, 500);
                 }

@@ -380,16 +380,6 @@ function loadPermanentData() {
             if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
                 permUpgrades.ownedSpawnAnims = [];
             }
-            // 4 Kvant variantının (və portalın) hər birinin 55 Fancy ilə tək-tək alınması üçün təmizləmə
-            const quantumCleaned = localStorage.getItem('floor_escape_quantum_clean_v3');
-            if (!quantumCleaned) {
-                permUpgrades.ownedSpawnAnims = permUpgrades.ownedSpawnAnims.filter(id => !['singularity', 'supernova', 'synapse', 'abyssal', 'portal'].includes(id));
-                if (['singularity', 'supernova', 'synapse', 'abyssal', 'portal'].includes(permUpgrades.equippedSpawnAnim)) {
-                    permUpgrades.equippedSpawnAnim = null;
-                }
-                localStorage.setItem('floor_escape_quantum_clean_v3', 'true');
-                savePermanentData();
-            }
             if (permUpgrades.equippedSpawnAnim && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim)) {
                 permUpgrades.equippedSpawnAnim = null;
             }
@@ -426,11 +416,21 @@ function savePermanentData() {
         if (typeof permUpgrades !== 'undefined') {
             localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
         }
+        if (typeof diamonds !== 'undefined') {
+            localStorage.setItem('floor_escape_diamonds', String(diamonds));
+        }
+        if (typeof redDiamonds !== 'undefined') {
+            localStorage.setItem('floor_escape_red_diamonds', String(redDiamonds));
+        }
+        if (typeof claimedChests !== 'undefined') {
+            localStorage.setItem('floor_escape_claimed_chests', JSON.stringify(claimedChests));
+        }
         const p = window.currentPlayer || (typeof currentPlayer !== 'undefined' ? currentPlayer : null);
         if (p) {
             p.permUpgrades = permUpgrades;
             if (typeof diamonds !== 'undefined') p.diamonds = diamonds;
             if (typeof redDiamonds !== 'undefined') p.redDiamonds = redDiamonds;
+            if (typeof claimedChests !== 'undefined') p.claimedChests = claimedChests;
             localStorage.setItem('floor_escape_player', JSON.stringify(p));
         }
         if (typeof syncPlayerDataCloud === 'function') {

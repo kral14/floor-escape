@@ -3,6 +3,7 @@
 let currentPlayer = null;
 let authMode = 'login'; // 'login' və ya 'register'
 let syncTimeout = null;
+let initialCloudSyncDone = false;
 
 // Səhifə yüklənəndə oyunçunu yoxlayırıq
 function initAuth() {
@@ -79,7 +80,10 @@ window.dismissAppBootCurtain = dismissAppBootCurtain;
 // Serverdən ən son oyunçu məlumatlarını çəkib real olaraq tətbiq etmək (Verilənlər Bazasından real oxuma)
 async function fetchLatestPlayerData() {
     const p = window.currentPlayer || currentPlayer;
-    if (!p || !p.playerId) return;
+    if (!p || !p.playerId) {
+        initialCloudSyncDone = true;
+        return;
+    }
     try {
         const res = await fetch(`/api/player/profile?playerId=${encodeURIComponent(p.playerId)}`);
         if (!res.ok) return;
@@ -89,6 +93,8 @@ async function fetchLatestPlayerData() {
         }
     } catch (e) {
         console.log('Serverlə əlaqə qurulmadı (oflayn rejim):', e.message);
+    } finally {
+        initialCloudSyncDone = true;
     }
 }
 
@@ -319,6 +325,7 @@ async function handleAuthSubmit() {
             currentPlayer = data.player;
             window.currentPlayer = currentPlayer;
             localStorage.setItem('floor_escape_player', JSON.stringify(currentPlayer));
+            applyPlayerDataFromCloud(data.player);
 
             updatePlayerHeaderUI();
             if (typeof renderHeaderProfile === 'function') renderHeaderProfile();
@@ -347,22 +354,21 @@ function applyPlayerDataFromCloud(player) {
     if (player.diamonds !== undefined) {
         diamonds = parseInt(player.diamonds) || 0;
         if (typeof gameState !== 'undefined') gameState.diamonds = diamonds;
+        try { localStorage.setItem('floor_escape_diamonds', String(diamonds)); } catch(e) {}
     }
     if (player.redDiamonds !== undefined) {
         redDiamonds = parseInt(player.redDiamonds) || 0;
         if (typeof gameState !== 'undefined') gameState.redDiamonds = redDiamonds;
+        try { localStorage.setItem('floor_escape_red_diamonds', String(redDiamonds)); } catch(e) {}
     }
     if (player.gold !== undefined && typeof gameState !== 'undefined') {
         gameState.gold = parseFloat(player.gold) || 0;
     }
     if (player.bestFloor !== undefined && typeof gameState !== 'undefined') {
         gameState.bestFloor = Math.max(1, parseInt(player.bestFloor) || 1);
+        try { localStorage.setItem('floor_escape_best_floor', String(gameState.bestFloor)); } catch(e) {}
     }
     if (player.permUpgrades && typeof player.permUpgrades === 'object') {
-        const localSaved = JSON.parse(localStorage.getItem('floor_escape_perm_upgrades') || '{}');
-        const localEquipped = localSaved.equippedSpawnAnim;
-        const localOwned = Array.isArray(localSaved.ownedSpawnAnims) ? localSaved.ownedSpawnAnims : [];
-
         permUpgrades = { ...DEFAULT_PERM_UPGRADES, ...player.permUpgrades };
         if (!Array.isArray(permUpgrades.ownedSkins) || permUpgrades.ownedSkins.length === 0) {
             permUpgrades.ownedSkins = ['default'];
@@ -371,14 +377,19 @@ function applyPlayerDataFromCloud(player) {
             permUpgrades.equippedSkin = 'default';
         }
         
-        const cloudOwned = Array.isArray(permUpgrades.ownedSpawnAnims) ? permUpgrades.ownedSpawnAnims : [];
-        permUpgrades.ownedSpawnAnims = Array.from(new Set([...cloudOwned, ...localOwned, 'singularity', 'portal', 'seed']));
-
-        if (localEquipped && (typeof SPAWN_ANIMS === 'undefined' || SPAWN_ANIMS[localEquipped] || ['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(localEquipped))) {
-            permUpgrades.equippedSpawnAnim = localEquipped;
-        } else if (!permUpgrades.equippedSpawnAnim || (typeof SPAWN_ANIMS !== 'undefined' && !SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] && !['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim))) {
-            permUpgrades.equippedSpawnAnim = 'seed';
+        if (!Array.isArray(permUpgrades.ownedSpawnAnims)) {
+            permUpgrades.ownedSpawnAnims = [];
         }
+
+        if (permUpgrades.equippedSpawnAnim && (typeof SPAWN_ANIMS === 'undefined' || SPAWN_ANIMS[permUpgrades.equippedSpawnAnim] || ['singularity', 'supernova', 'synapse', 'abyssal', 'seed', 'glacial', 'tesseract'].includes(permUpgrades.equippedSpawnAnim))) {
+            // retain valid equipped anim
+        } else {
+            permUpgrades.equippedSpawnAnim = null;
+        }
+
+        try {
+            localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades));
+        } catch(e) {}
 
         if (typeof player !== 'undefined' && player && typeof player.reset === 'function') {
             player.reset();
@@ -387,6 +398,18 @@ function applyPlayerDataFromCloud(player) {
     }
     if (Array.isArray(player.claimedChests)) {
         claimedChests = player.claimedChests;
+        try { localStorage.setItem('floor_escape_claimed_chests', JSON.stringify(claimedChests)); } catch(e) {}
+    }
+
+    const p = window.currentPlayer || currentPlayer;
+    if (p) {
+        p.diamonds = diamonds;
+        p.redDiamonds = redDiamonds;
+        p.gold = (typeof gameState !== 'undefined' && gameState.gold !== undefined) ? gameState.gold : (p.gold || 0);
+        p.bestFloor = (typeof gameState !== 'undefined' && gameState.bestFloor !== undefined) ? gameState.bestFloor : (p.bestFloor || 1);
+        p.permUpgrades = permUpgrades;
+        p.claimedChests = claimedChests;
+        try { localStorage.setItem('floor_escape_player', JSON.stringify(p)); } catch(e) {}
     }
 
     if (typeof updateUI === 'function') updateUI();
@@ -401,6 +424,9 @@ function applyPlayerDataFromCloud(player) {
 function syncPlayerDataCloud(immediate = false) {
     const p = window.currentPlayer || currentPlayer;
     if (!p || !p.playerId) return;
+
+    // Səhifə açılışında ilkin profil hələ bazadan gəlməyibsə, köhnə keşi bazaya yazmamaq üçün arxa plan sinxronu gözləyir
+    if (!initialCloudSyncDone && !immediate) return;
 
     if (syncTimeout) clearTimeout(syncTimeout);
 
@@ -429,16 +455,35 @@ function syncPlayerDataCloud(immediate = false) {
             if (res.ok) {
                 const data = await res.json();
                 if (data.success) {
+                    // Mərkəzi bazadan birləşdirilmiş (merge edilmiş) avtoritar datanı tətbiq edirik
+                    if (data.permUpgrades && typeof data.permUpgrades === 'object') {
+                        permUpgrades = { ...DEFAULT_PERM_UPGRADES, ...data.permUpgrades };
+                        try { localStorage.setItem('floor_escape_perm_upgrades', JSON.stringify(permUpgrades)); } catch(e) {}
+                    }
+                    if (Array.isArray(data.claimedChests)) {
+                        claimedChests = data.claimedChests;
+                        try { localStorage.setItem('floor_escape_claimed_chests', JSON.stringify(claimedChests)); } catch(e) {}
+                    }
                     if (data.diamonds !== undefined) {
                         diamonds = data.diamonds;
                         if (typeof gameState !== 'undefined') gameState.diamonds = diamonds;
+                        try { localStorage.setItem('floor_escape_diamonds', String(diamonds)); } catch(e) {}
                     }
                     if (data.redDiamonds !== undefined) {
                         redDiamonds = data.redDiamonds;
                         if (typeof gameState !== 'undefined') gameState.redDiamonds = redDiamonds;
+                        try { localStorage.setItem('floor_escape_red_diamonds', String(redDiamonds)); } catch(e) {}
                     }
                     if (data.bestFloor !== undefined && typeof gameState !== 'undefined') {
                         gameState.bestFloor = Math.max(gameState.bestFloor || 1, data.bestFloor);
+                        try { localStorage.setItem('floor_escape_best_floor', String(gameState.bestFloor)); } catch(e) {}
+                    }
+                    if (p) {
+                        p.permUpgrades = permUpgrades;
+                        p.claimedChests = claimedChests;
+                        p.diamonds = diamonds;
+                        p.redDiamonds = redDiamonds;
+                        try { localStorage.setItem('floor_escape_player', JSON.stringify(p)); } catch(e) {}
                     }
                     if (typeof updateUI === 'function') updateUI();
                     if (typeof updateDashboardUI === 'function') updateDashboardUI();

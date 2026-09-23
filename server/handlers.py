@@ -31,6 +31,44 @@ def safe_parse_json(val, default=None):
             return default if default is not None else {}
     return default if default is not None else {}
 
+def merge_perm_upgrades(existing_upgrades, client_upgrades):
+    existing = safe_parse_json(existing_upgrades, {})
+    client = safe_parse_json(client_upgrades, {})
+    if not existing:
+        return client if client else {}
+    if not client:
+        return existing
+
+    merged = dict(existing)
+    for k, v in client.items():
+        if k not in merged:
+            merged[k] = v
+            continue
+
+        ex_val = merged[k]
+        if isinstance(v, (int, float)) and isinstance(ex_val, (int, float)):
+            if k == 'turretInterval':
+                merged[k] = min(ex_val, v) if v > 0 else ex_val
+            elif k in ('cyberStars', 'maxCyberStars'):
+                merged[k] = max(ex_val, v)
+            else:
+                merged[k] = max(ex_val, v)
+        elif isinstance(v, list) and isinstance(ex_val, list):
+            merged[k] = list(dict.fromkeys(ex_val + v))
+        elif isinstance(v, bool) and isinstance(ex_val, bool):
+            merged[k] = ex_val or v
+        else:
+            if v is not None and v != '':
+                merged[k] = v
+    return merged
+
+def merge_claimed_chests(existing_chests, client_chests):
+    ex = safe_parse_json(existing_chests, [])
+    cl = safe_parse_json(client_chests, [])
+    if not isinstance(ex, list): ex = []
+    if not isinstance(cl, list): cl = []
+    return list(dict.fromkeys(ex + cl))
+
 def handle_get(req, parsed):
     # 1. API: Hədiyyə kodlarının siyahısı
     if parsed.path == '/api/giftcode/list':
@@ -296,19 +334,24 @@ def handle_post(req, parsed, data):
         try:
             with get_db() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT diamonds, red_diamonds, gold, best_floor, total_score FROM players WHERE player_id = ?', (player_id,))
+                cursor.execute('SELECT diamonds, red_diamonds, gold, best_floor, total_score, perm_upgrades, claimed_chests FROM players WHERE player_id = ?', (player_id,))
                 existing = cursor.fetchone()
                 if not existing:
                     req.send_json({'success': False, 'message': 'Oyunçu tapılmadı!'}, 200)
                     return True
 
-                gold = float(data.get('gold', 0))
-                client_diamonds = int(data.get('diamonds', 0))
-                client_red = int(data.get('redDiamonds', 0))
+                gold = float(data.get('gold', existing.get('gold') or 0))
+                client_diamonds = int(data.get('diamonds', existing.get('diamonds') or 0))
+                client_red = int(data.get('redDiamonds', existing.get('red_diamonds') or 0))
                 best_floor = int(data.get('bestFloor', 1))
                 total_score = int(data.get('totalScore', 0))
-                upgrades_json = json.dumps(data.get('permUpgrades', {}))
-                chests_json = json.dumps(data.get('claimedChests', []))
+
+                # Ağıllı Birləşdirmə (Smart Merge & Anti-Downgrade)
+                merged_upgrades = merge_perm_upgrades(existing.get('perm_upgrades'), data.get('permUpgrades'))
+                merged_chests = merge_claimed_chests(existing.get('claimed_chests'), data.get('claimedChests'))
+
+                upgrades_json = json.dumps(merged_upgrades)
+                chests_json = json.dumps(merged_chests)
 
                 final_diamonds = max(0, client_diamonds)
                 final_red = max(0, client_red)
@@ -327,9 +370,12 @@ def handle_post(req, parsed, data):
                 req.send_json({
                     'success': True,
                     'message': 'Məlumatlar mərkəzi bazada saxlanıldı!',
+                    'gold': gold,
                     'diamonds': final_diamonds,
                     'redDiamonds': final_red,
-                    'bestFloor': final_floor
+                    'bestFloor': final_floor,
+                    'permUpgrades': merged_upgrades,
+                    'claimedChests': merged_chests
                 })
                 return True
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
